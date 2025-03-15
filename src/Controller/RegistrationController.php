@@ -103,52 +103,17 @@ class RegistrationController extends AbstractController
                 $writer = new PngWriter();
                 $qrResult = $writer->write($qrCode);
 
-                // Stockage du QR Code sur FTP (seul le QR code est envoyé sur FTP)
-                $ftpServer   = "ftpupload.net";
-                $ftpUsername = "if0_38455727";
-                $ftpPassword = "DCSMCOMMERCE";
-                // Répertoire FTP : assurez-vous que le chemin correspond à votre configuration
-                $ftpDirectory = "/daniel-project-cdn.free.nf/htdocs/uploads/user/";
+                // Stockage du QR Code dans le dossier public (par exemple "public/uploads/users/")
+                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/users/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
                 $qrCodeFileName = $referralCode . '.png';
-
-                // Connexion FTP sur le port 21
-                $ftpConnection = ftp_connect($ftpServer, 21);
-                if (!$ftpConnection) {
-                    throw new \Exception('Impossible de se connecter au serveur FTP.');
-                }
-
-                $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
-                if (!$loginResult) {
-                    throw new \Exception('Échec de la connexion FTP.');
-                }
-
-                // Pour forcer l'utilisation du mode actif (stockage sur le port 21)
-                ftp_pasv($ftpConnection, false);
-
-                // Vérifier si le répertoire existe, sinon le créer
-                if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
-                    if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
-                        throw new \Exception('Impossible de créer le répertoire sur le serveur FTP.');
-                    }
-                    ftp_chdir($ftpConnection, $ftpDirectory); // Accéder au répertoire
-                }
-
-                // Créer un fichier temporaire sur le serveur local pour l'upload
-                $tempFilePath = '/tmp/' . $qrCodeFileName;
-                file_put_contents($tempFilePath, $qrResult->getString());
-
-                // Uploader le QR Code sur le serveur FTP
-                $uploadResult = ftp_put($ftpConnection, $qrCodeFileName, $tempFilePath, FTP_BINARY);
-                if (!$uploadResult) {
-                    throw new \Exception('L\'upload du fichier a échoué.');
-                }
-
-                // Fermer la connexion FTP et supprimer le fichier temporaire
-                ftp_close($ftpConnection);
-                unlink($tempFilePath);
+                $filePath = $uploadDir . $qrCodeFileName;
+                file_put_contents($filePath, $qrResult->getString());
 
                 // Construire l'URL publique du QR Code
-                $publicQrCodeUrl = 'https://daniel-project-cdn.free.nf/uploads/users/' . $qrCodeFileName;
+                $publicQrCodeUrl = '/uploads/users/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 
@@ -171,7 +136,7 @@ class RegistrationController extends AbstractController
         }
 
         return $this->render('registration/register.html.twig', [
-            'registrationForm' => $form,
+            'registrationForm' => $form->createView(),
         ]);
     }
 
@@ -191,7 +156,6 @@ class RegistrationController extends AbstractController
         $mailer->send($email);
     }
 
-    // Les routes pour la vérification d'email restent inchangées
     #[Route('/verify/email', name: 'app_verify_email')]
     public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
     {

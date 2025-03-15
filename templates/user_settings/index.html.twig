@@ -42,7 +42,7 @@
 		<div class="row">
 			<div class="col-lg-4 text-center">
 				<h4 class="mb-3">Votre Photo de Profil</h4>
-				{% if app.user.googleId and app.user.photo starts with 'http' %}
+				{% if app.user.googleId %}
 					<img id="profileImage" src="{{ app.user.photo }}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
 				{% else %}
 					<img id="profileImage" src="http://daniel-project-cdn.free.nf/dcsm-commerce/users/img/{{app.user.photo}}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">

@@ -146,7 +146,7 @@ class RegistrationController extends AbstractController
         
         if (!$user) {
             // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
-            return $this->redirectToRoute('app_home');
+            return $this->redirectToRoute('app_main');
         }
 
         try {

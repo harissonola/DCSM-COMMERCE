@@ -103,7 +103,7 @@ class GoogleController extends AbstractController
             mkdir($uploadDir, 0755, true);
         }
         $qrCodeFileName = $referralCode . '.png';
-        $filePath = $uploadDir . $qrCodeFileName;
+        $filePath = $uploadDir ."/". $qrCodeFileName;
         file_put_contents($filePath, $qrResult->getString());
 
         // Construire l'URL publique absolue

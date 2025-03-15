@@ -88,7 +88,7 @@ class RegistrationController extends AbstractController
                     }
                     $user->setPhoto($newFilename);
                 } else {
-                    $user->setPhoto("default" . rand(1, 7) . ".jpg");
+                    $user->setPhoto("/users/img/"."default" . rand(1, 7) . ".jpg");
                 }
 
                 $entityManager->persist($user);

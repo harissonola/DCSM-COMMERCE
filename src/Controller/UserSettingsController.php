@@ -27,9 +27,12 @@ final class UserSettingsController extends AbstractController
     }
 
     #[Route('/user/settings/update', name: 'app_user_settings_update', methods: ['POST'])]
-    public function update(Request $request, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher, SluggerInterface $slugger): Response
-    {
-        // Récupérer l'utilisateur connecté
+    public function update(
+        Request $request, 
+        EntityManagerInterface $entityManager, 
+        UserPasswordHasherInterface $passwordHasher, 
+        SluggerInterface $slugger
+    ): Response {
         /** @var User $user */
         $user = $this->getUser();
 
@@ -44,87 +47,82 @@ final class UserSettingsController extends AbstractController
             $user->setEmail($request->request->get('email'));
         }
 
-        // 📌 Chemin du répertoire des images des utilisateurs sur FTP
+        // 📌 Chemin du répertoire des images sur le serveur FTP
         $ftpDirectory = "/htdocs/dcsm-commerce/users/img/";
 
-        // ✅ Mise à jour de la photo de profil
+        // Mise à jour de la photo de profil
         $avatarFile = $request->files->get('avatarUpload');
         if ($avatarFile) {
-            // 🔥 Suppression de l'ancienne image s'il y en a une
+            // Suppression de l'ancienne image si elle existe
             if ($user->getPhoto()) {
                 $oldAvatarPath = $ftpDirectory . $user->getPhoto();
-                // Vérifier si le fichier existe avant de tenter de le supprimer
                 if (file_exists($oldAvatarPath)) {
-                    unlink($oldAvatarPath); // Supprimer l'ancienne image
+                    unlink($oldAvatarPath);
                 }
             }
 
-            // 📌 Génération d'un nom unique pour la nouvelle image
+            // Génération d'un nom unique pour la nouvelle image
             $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
 
-            // Connexion FTP
-            $ftpServer = "ftpupload.net";
+            // Paramètres FTP
+            $ftpServer   = "ftpupload.net";
             $ftpUsername = "if0_34880738";
             $ftpPassword = "WODanielH2006";
 
-            // Connexion FTP avec délai d'attente
-            $ftpConnection = ftp_connect($ftpServer);
+            // Connexion FTP avec timeout de 120 secondes
+            $ftpConnection = ftp_connect($ftpServer, 21, 120);
             if (!$ftpConnection) {
                 $this->addFlash('danger', 'Impossible de se connecter au serveur FTP.');
                 return $this->redirectToRoute('app_user_settings');
             }
-
             $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
             if (!$loginResult) {
                 $this->addFlash('danger', 'Échec de la connexion FTP.');
                 ftp_close($ftpConnection);
                 return $this->redirectToRoute('app_user_settings');
             }
+            ftp_set_option($ftpConnection, FTP_TIMEOUT_SEC, 120);
 
-            // Changer de répertoire, vérifier si le répertoire existe sinon créer
-            if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
-                // Si le répertoire n'existe pas, créer le répertoire
-                if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
-                    $this->addFlash('danger', 'Impossible de créer le répertoire sur le serveur FTP.');
-                    ftp_close($ftpConnection);
-                    return $this->redirectToRoute('app_user_settings');
-                }
-                ftp_chdir($ftpConnection, $ftpDirectory); // Accéder au répertoire
-            }
+            // Activer le mode passif (pour éviter les problèmes de ports dynamiques)
+            ftp_pasv($ftpConnection, true);
 
-            // 📌 Sauvegarder le fichier sur le serveur FTP
+            // Créer récursivement le répertoire s'il n'existe pas
+            ftpMkdirRecursive($ftpConnection, $ftpDirectory);
+            ftp_chdir($ftpConnection, $ftpDirectory);
+
+            // Créer un fichier temporaire pour l'upload
             $tempFilePath = '/tmp/' . $newFilename;
+            // Déplacer le fichier téléchargé dans /tmp
             try {
-                $avatarFile->move('/tmp', $newFilename); // Déplacer l'image dans un répertoire temporaire
-
-                // Vérifiez si le fichier a bien été déplacé avant d'essayer de l'envoyer via FTP
-                if (!file_exists($tempFilePath)) {
-                    $this->addFlash('danger', 'Le fichier n\'a pas été déplacé correctement vers le répertoire temporaire.');
-                    ftp_close($ftpConnection);
-                    return $this->redirectToRoute('app_user_settings');
-                }
-
-                // Téléchargez le fichier sur le FTP
-                $uploadResult = ftp_put($ftpConnection, $newFilename, $tempFilePath, FTP_BINARY);
-
-                if ($uploadResult) {
-                    $user->setPhoto($newFilename); // Mettre à jour le nom de la photo
-                } else {
-                    $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
-                }
-
-                // Supprimer le fichier temporaire après l'upload
-                unlink($tempFilePath);
-
+                $avatarFile->move('/tmp', $newFilename);
             } catch (FileException $e) {
-                $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
+                $this->addFlash('danger', 'Erreur lors du déplacement de l\'image.');
+                ftp_close($ftpConnection);
+                return $this->redirectToRoute('app_user_settings');
             }
 
-            // Fermer la connexion FTP
+            // Vérifier que le fichier temporaire existe
+            if (!file_exists($tempFilePath)) {
+                $this->addFlash('danger', 'Le fichier n\'a pas été déplacé correctement vers le répertoire temporaire.');
+                ftp_close($ftpConnection);
+                return $this->redirectToRoute('app_user_settings');
+            }
+
+            // Uploader le fichier sur le serveur FTP en mode binaire
+            $uploadResult = ftp_put($ftpConnection, $newFilename, $tempFilePath, FTP_BINARY);
+            if (!$uploadResult) {
+                $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
+                ftp_close($ftpConnection);
+                return $this->redirectToRoute('app_user_settings');
+            }
             ftp_close($ftpConnection);
+            unlink($tempFilePath);
+
+            // Mettre à jour le nom de la photo dans l'utilisateur
+            $user->setPhoto($newFilename);
         }
 
-        // ✅ Mise à jour du mot de passe
+        // Mise à jour du mot de passe
         if ($request->request->has('currentPassword') && $request->request->has('newPassword') && $request->request->has('confirmPassword')) {
             $currentPassword = $request->request->get('currentPassword');
             $newPassword = $request->request->get('newPassword');
@@ -142,17 +140,30 @@ final class UserSettingsController extends AbstractController
             }
         }
 
-        // ✅ Mise à jour des préférences de notifications par e-mail
+        // Mise à jour des préférences de notifications par e-mail
         $emailNotifications = $request->request->has('emailNotifications');
         $user->setEmailNotifications($emailNotifications);
 
-        // ✅ Enregistrer les modifications dans la base de données
+        // Enregistrer les modifications
         $entityManager->persist($user);
         $entityManager->flush();
 
         $this->addFlash('success', 'Vos informations ont été mises à jour avec succès.');
-
-        // ✅ Redirection après la mise à jour
         return $this->redirectToRoute('app_user_settings');
+    }
+}
+
+// Fonction utilitaire pour créer récursivement un répertoire FTP
+function ftpMkdirRecursive($ftpConnection, string $directory): void {
+    $directory = ltrim($directory, '/');
+    $parts = explode('/', $directory);
+    $path = '';
+    foreach ($parts as $part) {
+        $path .= '/' . $part;
+        if (!@ftp_chdir($ftpConnection, $path)) {
+            if (!ftp_mkdir($ftpConnection, $path)) {
+                throw new \Exception("Impossible de créer le répertoire FTP : $path");
+            }
+        }
     }
 }

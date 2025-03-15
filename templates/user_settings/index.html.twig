@@ -42,11 +42,8 @@
 		<div class="row">
 			<div class="col-lg-4 text-center">
 				<h4 class="mb-3">Votre Photo de Profil</h4>
-				{% if app.user.googleId %}
-					<img id="profileImage" src="{{ app.user.photo }}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
-				{% else %}
-					<img id="profileImage" src="http://daniel-project-cdn.free.nf/dcsm-commerce/users/img/{{app.user.photo}}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
-				{% endif %}
+				
+				<img id="profileImage" src="{{ app.user.photo }}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
 
 				<!-- Formulaire de mise à jour de l'avatar -->
 				<form action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data">
@@ -109,16 +106,16 @@
 
 	<!-- Script pour prévisualiser l'image sélectionnée -->
 	 <script>
-						    function previewImage(event) {
-						        const input = event.target;
-						        const reader = new FileReader();
-						        reader.onload = function() {
-						            const imageElement = document.getElementById('profileImage');
-						            imageElement.src = reader.result;
-						        };
-						        if (input.files && input.files[0]) {
-						            reader.readAsDataURL(input.files[0]);
-						        }
-						    }
-						</script>
+							    function previewImage(event) {
+							        const input = event.target;
+							        const reader = new FileReader();
+							        reader.onload = function() {
+							            const imageElement = document.getElementById('profileImage');
+							            imageElement.src = reader.result;
+							        };
+							        if (input.files && input.files[0]) {
+							            reader.readAsDataURL(input.files[0]);
+							        }
+							    }
+							</script>
 {% endblock %}

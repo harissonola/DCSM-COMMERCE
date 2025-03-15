@@ -127,7 +127,7 @@ final class UserSettingsController extends AbstractController
             unlink($tempFilePath);
 
             // Mettre à jour le nom de la photo dans l'utilisateur
-            $user->setPhoto("http://daniel-project-cdn.free.nf/users/img/".$newFilename);
+            $user->setPhoto("https://daniel-project-cdn.free.nf/users/img/".$newFilename);
         }
 
         // Mise à jour du mot de passe

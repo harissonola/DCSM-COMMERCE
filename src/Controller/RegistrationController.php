@@ -148,7 +148,7 @@ class RegistrationController extends AbstractController
                 unlink($tempFilePath);
 
                 // Construire l'URL publique du QR Code
-                $publicQrCodeUrl = 'http://daniel-project-cdn.free.nf/uploads/users/' . $qrCodeFileName;
+                $publicQrCodeUrl = 'https://daniel-project-cdn.free.nf/uploads/users/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 

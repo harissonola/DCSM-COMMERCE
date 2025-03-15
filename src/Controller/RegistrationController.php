@@ -105,8 +105,8 @@ class RegistrationController extends AbstractController
 
                 // Stockage du QR Code sur FTP (seul le QR code est envoyé sur FTP)
                 $ftpServer   = "ftpupload.net";
-                $ftpUsername = "if0_34880738";
-                $ftpPassword = "WODanielH2006";
+                $ftpUsername = "if0_38455727";
+                $ftpPassword = "DCSMCOMMERCE";
                 // Répertoire FTP : assurez-vous que le chemin correspond à votre configuration
                 $ftpDirectory = "/htdocs/uploads/users/";
                 $qrCodeFileName = $referralCode . '.png';
@@ -148,7 +148,7 @@ class RegistrationController extends AbstractController
                 unlink($tempFilePath);
 
                 // Construire l'URL publique du QR Code
-                $publicQrCodeUrl = 'http://daniel-whannou.free.nf/uploads/users/' . $qrCodeFileName;
+                $publicQrCodeUrl = 'http://daniel-project-cdn.free.nf/uploads/users/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 

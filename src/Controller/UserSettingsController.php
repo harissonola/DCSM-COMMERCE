@@ -3,243 +3,156 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Form\RegistrationFormType;
-use App\Security\AppAuthenticator;
-use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
-use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
-class RegistrationController extends AbstractController
+final class UserSettingsController extends AbstractController
 {
-    public function __construct(private EmailVerifier $emailVerifier) {}
-
-    #[Route('/register', name: 'app_register')]
-    public function register(
-        Request $request, 
-        UserPasswordHasherInterface $userPasswordHasher, 
-        Security $security, 
-        EntityManagerInterface $entityManager, 
-        UrlGeneratorInterface $urlGenerator, 
-        MailerInterface $mailer
-    ): Response {
-        if ($this->getUser()) {
-            return $this->redirectToRoute('app_dashboard');
-        }
-
-        $user = new User();
-        $form = $this->createForm(RegistrationFormType::class, $user);
-
-        $referredBy = $request->query->get('ref');
-        if ($referredBy) {
-            $form->get('referredBy')->setData($referredBy);
-        }
-
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $plainPassword = $form->get('plainPassword')->getData();
-            $confirmPassword = $form->get('confirmPassword')->getData();
-
-            if ($plainPassword !== $confirmPassword) {
-                $form->addError(new FormError('Les mots de passe ne correspondent pas.'));
-            } else {
-                // Génération d'un code d'affiliation
-                $referralCode = uniqid('ref_');
-                $user->setReferralCode($referralCode);
-
-                $referredBy = $form->get('referredBy')->getData();
-                if ($referredBy) {
-                    $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
-                    if ($referrer) {
-                        $user->setReferredBy($referredBy);
-                    }
-                }
-
-                // Hashage du mot de passe et configuration de l'utilisateur
-                $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
-                $user->setCreatedAt(new \DateTimeImmutable())
-                     ->setMiningBotActive(0);
-
-                // Traitement de l'image (stockage local)
-                $image = $form->get('photo')->getData();
-                if ($image) {
-                    $newFilename = uniqid() . '.' . $image->guessExtension();
-                    try {
-                        $image->move($this->getParameter('users_img_directory'), $newFilename);
-                    } catch (FileException $e) {
-                        $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
-                        return $this->redirectToRoute('app_register');
-                    }
-                    $user->setPhoto($newFilename);
-                } else {
-                    $user->setPhoto("default" . rand(1, 7) . ".jpg");
-                }
-
-                $entityManager->persist($user);
-                $entityManager->flush();
-
-                // Générer le lien d'affiliation
-                $referralLink = $urlGenerator->generate(
-                    'app_register', 
-                    ['ref' => $referralCode], 
-                    UrlGeneratorInterface::ABSOLUTE_URL
-                );
-                $qrCode = new QrCode($referralLink);
-                $writer = new PngWriter();
-                $qrResult = $writer->write($qrCode);
-
-                // Stockage du QR Code sur FTP (seul le QR code est envoyé sur FTP)
-                $ftpServer   = "ftpupload.net";
-                $ftpUsername = "if0_34880738";
-                $ftpPassword = "WODanielH2006";
-                // Répertoire FTP (vérifiez que ce chemin correspond à votre configuration)
-                $ftpDirectory = "/htdocs/uploads/users/";
-                $qrCodeFileName = $referralCode . '.png';
-
-                // Connexion FTP sur le port 21
-                $ftpConnection = ftp_connect($ftpServer, 21);
-                if (!$ftpConnection) {
-                    throw new \Exception('Impossible de se connecter au serveur FTP.');
-                }
-
-                $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
-                if (!$loginResult) {
-                    throw new \Exception('Échec de la connexion FTP.');
-                }
-
-                // Pour forcer le mode actif (vous pouvez modifier en mode passif si nécessaire)
-                ftp_pasv($ftpConnection, false);
-
-                // Vérifier ou créer récursivement le répertoire sur le serveur FTP
-                ftpMkdirRecursive($ftpConnection, $ftpDirectory);
-                ftp_chdir($ftpConnection, $ftpDirectory);
-
-                // Créer un fichier temporaire pour le QR Code
-                $tempFilePath = '/tmp/' . $qrCodeFileName;
-                file_put_contents($tempFilePath, $qrResult->getString());
-
-                // Uploader le QR Code sur le serveur FTP
-                $uploadResult = ftp_put($ftpConnection, $qrCodeFileName, $tempFilePath, FTP_BINARY);
-                if (!$uploadResult) {
-                    throw new \Exception('L\'upload du fichier a échoué.');
-                }
-                ftp_close($ftpConnection);
-                unlink($tempFilePath);
-
-                // Construire l'URL publique du QR Code
-                $publicQrCodeUrl = 'http://daniel-whannou.free.nf/uploads/users/' . $qrCodeFileName;
-                $user->setQrCodePath($publicQrCodeUrl);
-                $entityManager->flush();
-
-                // Envoi de l'email de confirmation d'inscription
-                $this->emailVerifier->sendEmailConfirmation(
-                    'app_verify_email',
-                    $user,
-                    (new TemplatedEmail())
-                        ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                        ->to((string) $user->getEmail())
-                        ->subject('Confirmer votre adresse mail')
-                        ->htmlTemplate('registration/confirmation_email.html.twig')
-                );
-
-                // Envoi de l'email de parrainage (incluant le lien d'affiliation et le QR code)
-                $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
-
-                return $security->login($user, AppAuthenticator::class, 'main');
-            }
-        }
-
-        return $this->render('registration/register.html.twig', [
-            'registrationForm' => $form,
-        ]);
-    }
-
-    private function sendReferralEmail(User $user, string $referralLink, string $qrCodeUrl, MailerInterface $mailer): void
+    #[Route('/user/settings', name: 'app_user_settings')]
+    public function index(): Response
     {
-        $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-            ->to($user->getEmail())
-            ->subject('Votre lien d\'affiliation et QR Code')
-            ->htmlTemplate('emails/referral_email.html.twig')
-            ->context([
-                'user' => $user,
-                'referralLink' => $referralLink,
-                'qrCodeUrl' => $qrCodeUrl,
-            ]);
-        
-        $mailer->send($email);
-    }
-
-    #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        try {
-            $user = $this->getUser();
-            $this->emailVerifier->handleEmailConfirmation($request, $user);
-        } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('verify_email_error', $translator->trans($exception->getReason(), [], 'VerifyEmailBundle'));
-            return $this->redirectToRoute('app_register');
-        }
-
-        $this->addFlash('success', 'Votre adresse e-mail a été vérifiée.');
-        return $this->redirectToRoute('app_dashboard');
-    }
-
-    #[Route('/verify/emailSend', name: 'app_verify_email_send')]
-    public function send(): Response
-    {
-        $user = $this->getUser();
-        
-        if (!$user) {
-            $this->addFlash('error', 'Vous devez être connecté pour vérifier votre email.');
+        if (!$this->getUser()) {
             return $this->redirectToRoute('app_login');
         }
 
-        $this->emailVerifier->sendEmailConfirmation(
-            'app_verify_email',
-            $user,
-            (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                ->to((string) $user->getEmail())
-                ->subject('Confirmer votre adresse mail')
-                ->htmlTemplate('registration/confirmation_email.html.twig')
-        );
-
-        return $this->redirectToRoute('app_dashboard');
+        return $this->render('user_settings/index.html.twig', [
+            'controller_name' => 'UserSettingsController',
+        ]);
     }
-}
 
-// Fonction utilitaire pour créer récursivement un répertoire FTP
-function ftpMkdirRecursive($ftpConnection, string $directory): void {
-    // Supprime le slash initial s'il existe
-    $directory = ltrim($directory, '/');
-    $parts = explode('/', $directory);
-    $path = '';
-    foreach ($parts as $part) {
-        $path .= '/' . $part;
-        // Essayer de changer de répertoire
-        if (!@ftp_chdir($ftpConnection, $path)) {
-            // Si ça échoue, essayer de créer le répertoire
-            if (!ftp_mkdir($ftpConnection, $path)) {
-                throw new \Exception("Impossible de créer le répertoire FTP : $path");
+    #[Route('/user/settings/update', name: 'app_user_settings_update', methods: ['POST'])]
+    public function update(Request $request, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher, SluggerInterface $slugger): Response
+    {
+        // Récupérer l'utilisateur connecté
+        /** @var User $user */
+        $user = $this->getUser();
+
+        if (!$user) {
+            $this->addFlash('danger', 'Utilisateur non authentifié.');
+            return $this->redirectToRoute('app_login');
+        }
+
+        // Mise à jour des informations de profil
+        if ($request->request->has('username') && $request->request->has('email')) {
+            $user->setUsername($request->request->get('username'));
+            $user->setEmail($request->request->get('email'));
+        }
+
+        // 📌 Chemin du répertoire des images des utilisateurs sur FTP
+        $ftpDirectory = "/htdocs/dcsm-commerce/users/img/";
+
+        // ✅ Mise à jour de la photo de profil
+        $avatarFile = $request->files->get('avatarUpload');
+        if ($avatarFile) {
+            // 🔥 Suppression de l'ancienne image s'il y en a une
+            if ($user->getPhoto()) {
+                $oldAvatarPath = $ftpDirectory . $user->getPhoto();
+                // Vérifier si le fichier existe avant de tenter de le supprimer
+                if (file_exists($oldAvatarPath)) {
+                    unlink($oldAvatarPath); // Supprimer l'ancienne image
+                }
+            }
+
+            // 📌 Génération d'un nom unique pour la nouvelle image
+            $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
+
+            // Connexion FTP
+            $ftpServer = "ftpupload.net";
+            $ftpUsername = "if0_34880738";
+            $ftpPassword = "WODanielH2006";
+
+            // Connexion FTP avec délai d'attente
+            $ftpConnection = ftp_connect($ftpServer);
+            if (!$ftpConnection) {
+                $this->addFlash('danger', 'Impossible de se connecter au serveur FTP.');
+                return $this->redirectToRoute('app_user_settings');
+            }
+
+            $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
+            if (!$loginResult) {
+                $this->addFlash('danger', 'Échec de la connexion FTP.');
+                ftp_close($ftpConnection);
+                return $this->redirectToRoute('app_user_settings');
+            }
+
+            // Changer de répertoire, vérifier si le répertoire existe sinon créer
+            if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
+                // Si le répertoire n'existe pas, créer le répertoire
+                if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
+                    $this->addFlash('danger', 'Impossible de créer le répertoire sur le serveur FTP.');
+                    ftp_close($ftpConnection);
+                    return $this->redirectToRoute('app_user_settings');
+                }
+                ftp_chdir($ftpConnection, $ftpDirectory); // Accéder au répertoire
+            }
+
+            // 📌 Sauvegarder le fichier sur le serveur FTP
+            $tempFilePath = '/tmp/' . $newFilename;
+            try {
+                $avatarFile->move('/tmp', $newFilename); // Déplacer l'image dans un répertoire temporaire
+
+                // Vérifiez si le fichier a bien été déplacé avant d'essayer de l'envoyer via FTP
+                if (!file_exists($tempFilePath)) {
+                    $this->addFlash('danger', 'Le fichier n\'a pas été déplacé correctement vers le répertoire temporaire.');
+                    ftp_close($ftpConnection);
+                    return $this->redirectToRoute('app_user_settings');
+                }
+
+                // Téléchargez le fichier sur le FTP
+                $uploadResult = ftp_put($ftpConnection, $newFilename, $tempFilePath, FTP_BINARY);
+
+                if ($uploadResult) {
+                    $user->setPhoto($newFilename); // Mettre à jour le nom de la photo
+                } else {
+                    $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
+                }
+
+                // Supprimer le fichier temporaire après l'upload
+                unlink($tempFilePath);
+
+            } catch (FileException $e) {
+                $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
+            }
+
+            // Fermer la connexion FTP
+            ftp_close($ftpConnection);
+        }
+
+        // ✅ Mise à jour du mot de passe
+        if ($request->request->has('currentPassword') && $request->request->has('newPassword') && $request->request->has('confirmPassword')) {
+            $currentPassword = $request->request->get('currentPassword');
+            $newPassword = $request->request->get('newPassword');
+            $confirmPassword = $request->request->get('confirmPassword');
+
+            if ($passwordHasher->isPasswordValid($user, $currentPassword)) {
+                if ($newPassword === $confirmPassword) {
+                    $hashedPassword = $passwordHasher->hashPassword($user, $newPassword);
+                    $user->setPassword($hashedPassword);
+                } else {
+                    $this->addFlash('danger', 'Les nouveaux mots de passe ne correspondent pas.');
+                }
+            } else {
+                $this->addFlash('danger', 'Le mot de passe actuel est incorrect.');
             }
         }
+
+        // ✅ Mise à jour des préférences de notifications par e-mail
+        $emailNotifications = $request->request->has('emailNotifications');
+        $user->setEmailNotifications($emailNotifications);
+
+        // ✅ Enregistrer les modifications dans la base de données
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Vos informations ont été mises à jour avec succès.');
+
+        // ✅ Redirection après la mise à jour
+        return $this->redirectToRoute('app_user_settings');
     }
 }

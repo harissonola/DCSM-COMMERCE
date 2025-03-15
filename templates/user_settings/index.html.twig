@@ -45,7 +45,7 @@
 				{% if app.user.googleId and app.user.photo starts with 'http' %}
 					<img id="profileImage" src="{{ app.user.photo }}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
 				{% else %}
-					<img id="profileImage" src="{{ asset("public/users/img/"~app.user.photo) }}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
+					<img id="profileImage" src="http://daniel-whannou.free.nf/dcsm-commerce/users/img/{{app.user.photo}}" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
 				{% endif %}
 
 				<!-- Formulaire de mise à jour de l'avatar -->

@@ -24,7 +24,6 @@ class GoogleController extends AbstractController
 {
     private $ftpService;
 
-    // Injecte le service FtpService (qui n'est plus utilisé ici mais gardé pour compatibilité éventuelle)
     public function __construct(FtpService $ftpService)
     {
         $this->ftpService = $ftpService;
@@ -98,8 +97,8 @@ class GoogleController extends AbstractController
         $writer = new PngWriter();
         $qrResult = $writer->write($qrCode);
 
-        // Stockage local dans le dossier public (par exemple "public/uploads/user/")
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/user/';
+        // Stockage local dans le dossier configuré
+        $uploadDir = $this->getParameter('qr_code_directory') . '/';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -108,7 +107,7 @@ class GoogleController extends AbstractController
         file_put_contents($filePath, $qrResult->getString());
 
         // Construire l'URL publique relative
-        $publicQrCodeUrl = '/uploads/user/' . $qrCodeFileName;
+        $publicQrCodeUrl = 'uploads/' . $qrCodeFileName;
         $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 

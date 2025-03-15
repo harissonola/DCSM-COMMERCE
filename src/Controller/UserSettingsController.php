@@ -20,7 +20,7 @@ final class UserSettingsController extends AbstractController
         if (!$this->getUser()) {
             return $this->redirectToRoute('app_login');
         }
-        
+
         return $this->render('user_settings/index.html.twig', [
             'controller_name' => 'UserSettingsController',
         ]);
@@ -29,7 +29,6 @@ final class UserSettingsController extends AbstractController
     #[Route('/user/settings/update', name: 'app_user_settings_update', methods: ['POST'])]
     public function update(Request $request, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher, SluggerInterface $slugger): Response
     {
-
         // Récupérer l'utilisateur connecté
         /** @var User $user */
         $user = $this->getUser();
@@ -45,29 +44,75 @@ final class UserSettingsController extends AbstractController
             $user->setEmail($request->request->get('email'));
         }
 
-        // 📌 Chemin du répertoire des images des utilisateurs
-        $uploadDir = $this->getParameter('users_img_directory');
+        // 📌 Chemin du répertoire des images des utilisateurs sur FTP
+        $ftpDirectory = "/htdocs/dcsm-commerce/users/img/";
 
         // ✅ Mise à jour de la photo de profil
         $avatarFile = $request->files->get('avatarUpload');
         if ($avatarFile) {
             // 🔥 Suppression de l'ancienne image s'il y en a une
             if ($user->getPhoto()) {
-                $oldAvatarPath = $uploadDir . '/' . $user->getPhoto();
+                $oldAvatarPath = $ftpDirectory . $user->getPhoto();
+                // Vérifier si le fichier existe avant de tenter de le supprimer
                 if (file_exists($oldAvatarPath)) {
-                    unlink($oldAvatarPath);
+                    unlink($oldAvatarPath); // Supprimer l'ancienne image
                 }
             }
 
             // 📌 Génération d'un nom unique pour la nouvelle image
             $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
 
+            // Connexion FTP
+            $ftpServer = "ftpupload.net";
+            $ftpUsername = "if0_34880738";
+            $ftpPassword = "WODanielH2006";
+
+            // Connexion FTP
+            $ftpConnection = ftp_connect($ftpServer);
+            if (!$ftpConnection) {
+                $this->addFlash('danger', 'Impossible de se connecter au serveur FTP.');
+                return $this->redirectToRoute('app_user_settings');
+            }
+
+            $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
+            if (!$loginResult) {
+                $this->addFlash('danger', 'Échec de la connexion FTP.');
+                ftp_close($ftpConnection);
+                return $this->redirectToRoute('app_user_settings');
+            }
+
+            // Changer de répertoire
+            if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
+                // Si le répertoire n'existe pas, le créer
+                if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
+                    $this->addFlash('danger', 'Impossible de créer le répertoire sur le serveur FTP.');
+                    ftp_close($ftpConnection);
+                    return $this->redirectToRoute('app_user_settings');
+                }
+                ftp_chdir($ftpConnection, $ftpDirectory); // Accéder au répertoire
+            }
+
+            // 📌 Sauvegarder le fichier sur le serveur FTP
+            $tempFilePath = '/tmp/' . $newFilename;
             try {
-                $avatarFile->move($uploadDir, $newFilename);
-                $user->setPhoto($newFilename);
+                $avatarFile->move('/tmp', $newFilename); // Déplacer l'image dans un répertoire temporaire
+                $uploadResult = ftp_put($ftpConnection, $newFilename, $tempFilePath, FTP_BINARY);
+
+                if ($uploadResult) {
+                    $user->setPhoto($newFilename); // Mettre à jour le nom de la photo
+                } else {
+                    $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
+                }
+
+                // Supprimer le fichier temporaire
+                unlink($tempFilePath);
+
             } catch (FileException $e) {
                 $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
             }
+
+            // Fermer la connexion FTP
+            ftp_close($ftpConnection);
         }
 
         // ✅ Mise à jour du mot de passe

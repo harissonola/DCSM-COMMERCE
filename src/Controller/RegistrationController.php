@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\User;
@@ -16,9 +15,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
@@ -26,7 +24,12 @@ use Symfony\Component\Mailer\MailerInterface;
 
 class RegistrationController extends AbstractController
 {
-    public function __construct(private EmailVerifier $emailVerifier) {}
+    private EmailVerifier $emailVerifier;
+
+    public function __construct(EmailVerifier $emailVerifier)
+    {
+        $this->emailVerifier = $emailVerifier;
+    }
 
     #[Route('/register', name: 'app_register')]
     public function register(
@@ -90,6 +93,7 @@ class RegistrationController extends AbstractController
                 $entityManager->persist($user);
                 $entityManager->flush();
 
+                // Générer le lien de référence
                 $referralLink = $urlGenerator->generate(
                     'app_register', 
                     ['ref' => $referralCode], 
@@ -111,6 +115,7 @@ class RegistrationController extends AbstractController
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 
+                // Envoi de l'email de confirmation
                 $this->emailVerifier->sendEmailConfirmation(
                     'app_verify_email',
                     $user,
@@ -121,8 +126,10 @@ class RegistrationController extends AbstractController
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
+                // Envoi du lien de référence avec QR Code
                 $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
 
+                // Connecter l'utilisateur après l'inscription
                 return $security->login($user, AppAuthenticator::class, 'main');
             }
         }
@@ -130,5 +137,31 @@ class RegistrationController extends AbstractController
         return $this->render('registration/register.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
+    }
+
+    #[Route('/verify/email', name: 'app_verify_email')]
+    public function verifyEmail(Request $request): Response
+    {
+        $user = $this->getUser();
+        
+        if (!$user) {
+            // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
+            return $this->redirectToRoute('app_home');
+        }
+
+        try {
+            // Valider et gérer la confirmation de l'email
+            $this->emailVerifier->handleEmailConfirmation($request, $user);
+
+            // Afficher un message de succès
+            $this->addFlash('success', 'Votre adresse email a été confirmée avec succès.');
+
+            return $this->redirectToRoute('app_dashboard');
+        } catch (VerifyEmailExceptionInterface $exception) {
+            // Gérer les erreurs de validation de l'email
+            $this->addFlash('error', 'L\'adresse email n\'est pas valide.');
+
+            return $this->redirectToRoute('app_home');
+        }
     }
 }

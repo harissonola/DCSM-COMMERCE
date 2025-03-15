@@ -67,7 +67,7 @@ final class UserSettingsController extends AbstractController
             $ftpUsername = "if0_34880738";
             $ftpPassword = "WODanielH2006";
 
-            // Connexion FTP
+            // Connexion FTP avec délai d'attente
             $ftpConnection = ftp_connect($ftpServer);
             if (!$ftpConnection) {
                 $this->addFlash('danger', 'Impossible de se connecter au serveur FTP.');
@@ -81,9 +81,9 @@ final class UserSettingsController extends AbstractController
                 return $this->redirectToRoute('app_user_settings');
             }
 
-            // Changer de répertoire
+            // Changer de répertoire, vérifier si le répertoire existe sinon créer
             if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
-                // Si le répertoire n'existe pas, le créer
+                // Si le répertoire n'existe pas, créer le répertoire
                 if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
                     $this->addFlash('danger', 'Impossible de créer le répertoire sur le serveur FTP.');
                     ftp_close($ftpConnection);
@@ -96,6 +96,15 @@ final class UserSettingsController extends AbstractController
             $tempFilePath = '/tmp/' . $newFilename;
             try {
                 $avatarFile->move('/tmp', $newFilename); // Déplacer l'image dans un répertoire temporaire
+
+                // Vérifiez si le fichier a bien été déplacé avant d'essayer de l'envoyer via FTP
+                if (!file_exists($tempFilePath)) {
+                    $this->addFlash('danger', 'Le fichier n\'a pas été déplacé correctement vers le répertoire temporaire.');
+                    ftp_close($ftpConnection);
+                    return $this->redirectToRoute('app_user_settings');
+                }
+
+                // Téléchargez le fichier sur le FTP
                 $uploadResult = ftp_put($ftpConnection, $newFilename, $tempFilePath, FTP_BINARY);
 
                 if ($uploadResult) {
@@ -104,7 +113,7 @@ final class UserSettingsController extends AbstractController
                     $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
                 }
 
-                // Supprimer le fichier temporaire
+                // Supprimer le fichier temporaire après l'upload
                 unlink($tempFilePath);
 
             } catch (FileException $e) {

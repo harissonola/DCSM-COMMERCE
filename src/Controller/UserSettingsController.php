@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Service\FtpService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -12,14 +11,15 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 final class UserSettingsController extends AbstractController
 {
-    private $ftpService;
+    private string $uploadDirectory;
 
-    public function __construct(FtpService $ftpService)
+    public function __construct(ParameterBagInterface $params)
     {
-        $this->ftpService = $ftpService;
+        $this->uploadDirectory = $params->get('users_img_directory');
     }
 
     #[Route('/user/settings', name: 'app_user_settings')]
@@ -55,79 +55,27 @@ final class UserSettingsController extends AbstractController
             $user->setEmail($request->request->get('email'));
         }
 
-        // 📌 Chemin du répertoire des images sur le serveur FTP
-        $ftpDirectory = "/daniel-project-cdn.free.nf/htdocs/dcsm-commerce/users/img/";
+        // Vérifier si le dossier existe, sinon le créer
+        if (!is_dir($this->uploadDirectory)) {
+            mkdir($this->uploadDirectory, 0775, true);
+        }
 
         // Mise à jour de la photo de profil
         $avatarFile = $request->files->get('avatarUpload');
         if ($avatarFile) {
-            // Suppression de l'ancienne image si elle existe
-            if ($user->getPhoto()) {
-                $oldAvatarPath = $ftpDirectory . $user->getPhoto();
-                if (file_exists($oldAvatarPath)) {
-                    unlink($oldAvatarPath);
-                }
-            }
-
             // Génération d'un nom unique pour la nouvelle image
             $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
 
-            // Paramètres FTP
-            $ftpServer   = "ftpupload.net";
-            $ftpUsername = "if0_34880738";
-            $ftpPassword = "WODanielH2006";
-
-            // Connexion FTP avec timeout de 120 secondes
-            $ftpConnection = ftp_connect($ftpServer, 21, 120);
-            if (!$ftpConnection) {
-                $this->addFlash('danger', 'Impossible de se connecter au serveur FTP.');
-                return $this->redirectToRoute('app_user_settings');
-            }
-            $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
-            if (!$loginResult) {
-                $this->addFlash('danger', 'Échec de la connexion FTP.');
-                ftp_close($ftpConnection);
-                return $this->redirectToRoute('app_user_settings');
-            }
-            ftp_set_option($ftpConnection, FTP_TIMEOUT_SEC, 120);
-
-            // Activer le mode passif (pour éviter les problèmes de ports dynamiques)
-            ftp_pasv($ftpConnection, true);
-
-            // Créer récursivement le répertoire s'il n'existe pas
-            $this->ftpService->ftpMkdirRecursive($ftpConnection, $ftpDirectory);
-            ftp_chdir($ftpConnection, $ftpDirectory);
-
-            // Créer un fichier temporaire pour l'upload
-            $tempFilePath = '/tmp/' . $newFilename;
-            // Déplacer le fichier téléchargé dans /tmp
+            // Déplacer le fichier dans le dossier défini par le paramètre
             try {
-                $avatarFile->move('/tmp', $newFilename);
+                $avatarFile->move($this->uploadDirectory, $newFilename);
             } catch (FileException $e) {
-                $this->addFlash('danger', 'Erreur lors du déplacement de l\'image.');
-                ftp_close($ftpConnection);
+                $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image.');
                 return $this->redirectToRoute('app_user_settings');
             }
-
-            // Vérifier que le fichier temporaire existe
-            if (!file_exists($tempFilePath)) {
-                $this->addFlash('danger', 'Le fichier n\'a pas été déplacé correctement vers le répertoire temporaire.');
-                ftp_close($ftpConnection);
-                return $this->redirectToRoute('app_user_settings');
-            }
-
-            // Uploader le fichier sur le serveur FTP en mode binaire
-            $uploadResult = ftp_put($ftpConnection, $newFilename, $tempFilePath, FTP_BINARY);
-            if (!$uploadResult) {
-                $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
-                ftp_close($ftpConnection);
-                return $this->redirectToRoute('app_user_settings');
-            }
-            ftp_close($ftpConnection);
-            unlink($tempFilePath);
 
             // Mettre à jour le nom de la photo dans l'utilisateur
-            $user->setPhoto("https://daniel-project-cdn.free.nf/users/img/".$newFilename);
+            $user->setPhoto("https://dcsm-commerce.alwaysdata.net/users/img/" . $newFilename);
         }
 
         // Mise à jour du mot de passe

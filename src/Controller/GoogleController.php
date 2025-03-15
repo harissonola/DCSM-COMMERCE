@@ -24,7 +24,7 @@ class GoogleController extends AbstractController
 {
     private $ftpService;
 
-    // Injecte le service FtpService
+    // Injecte le service FtpService (qui n'est plus utilisé ici mais gardé pour compatibilité éventuelle)
     public function __construct(FtpService $ftpService)
     {
         $this->ftpService = $ftpService;
@@ -98,44 +98,17 @@ class GoogleController extends AbstractController
         $writer = new PngWriter();
         $qrResult = $writer->write($qrCode);
 
-        // Paramètres FTP
-        $ftpServer = "ftpupload.net";
-        $ftpUsername = "if0_38455727";
-        $ftpPassword = "DCSMCOMMERCE";
-        $ftpDirectory = "/daniel-project-cdn.free.nf/htdocs/uploads/user/"; // Ajustez ce chemin selon votre configuration
+        // Stockage local dans le dossier public (par exemple "public/uploads/user/")
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/user/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
         $qrCodeFileName = $referralCode . '.png';
+        $filePath = $uploadDir . $qrCodeFileName;
+        file_put_contents($filePath, $qrResult->getString());
 
-        // Connexion FTP avec un timeout de 120 sec
-        $ftpConnection = ftp_connect($ftpServer, 21, 120);
-        if (!$ftpConnection) {
-            throw new \Exception('Impossible de se connecter au serveur FTP.');
-        }
-        $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
-        if (!$loginResult) {
-            throw new \Exception('Échec de la connexion FTP.');
-        }
-        ftp_set_option($ftpConnection, FTP_TIMEOUT_SEC, 120);
-
-        // Activer le mode passif pour éviter les problèmes de ports dynamiques
-        ftp_pasv($ftpConnection, true);
-
-        // Appeler le service FtpService pour créer le répertoire récursivement
-        $this->ftpService->ftpMkdirRecursive($ftpConnection, $ftpDirectory);
-        ftp_chdir($ftpConnection, $ftpDirectory);
-
-        // Créer un fichier temporaire pour le QR Code
-        $tempFilePath = '/tmp/' . $qrCodeFileName;
-        file_put_contents($tempFilePath, $qrResult->getString());
-
-        // Uploader le fichier sur le serveur FTP en mode binaire
-        $uploadResult = ftp_put($ftpConnection, $qrCodeFileName, $tempFilePath, FTP_BINARY);
-        if (!$uploadResult) {
-            throw new \Exception('L\'upload du fichier a échoué.');
-        }
-        ftp_close($ftpConnection);
-
-        // URL publique pour accéder au QR Code
-        $publicQrCodeUrl = 'https://daniel-project-cdn.free.nf/upload/user/' . $qrCodeFileName;
+        // Construire l'URL publique relative
+        $publicQrCodeUrl = '/uploads/user/' . $qrCodeFileName;
         $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 

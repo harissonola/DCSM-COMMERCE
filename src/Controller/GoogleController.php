@@ -144,7 +144,7 @@ class GoogleController extends AbstractController
         return $authenticator->authenticateUser($user, $appAuthenticator, $request);
     }
 
-    private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
+    private function sendReferralEmail(User $user, string $qrCodeFileName, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
     {
         $email = (new TemplatedEmail())
             ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Service\FtpService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
@@ -14,6 +15,13 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 
 final class UserSettingsController extends AbstractController
 {
+    private $ftpService;
+
+    public function __construct(FtpService $ftpService)
+    {
+        $this->ftpService = $ftpService;
+    }
+
     #[Route('/user/settings', name: 'app_user_settings')]
     public function index(): Response
     {
@@ -87,7 +95,7 @@ final class UserSettingsController extends AbstractController
             ftp_pasv($ftpConnection, true);
 
             // Créer récursivement le répertoire s'il n'existe pas
-            ftpMkdirRecursive($ftpConnection, $ftpDirectory);
+            $this->ftpService->ftpMkdirRecursive($ftpConnection, $ftpDirectory);
             ftp_chdir($ftpConnection, $ftpDirectory);
 
             // Créer un fichier temporaire pour l'upload
@@ -150,20 +158,5 @@ final class UserSettingsController extends AbstractController
 
         $this->addFlash('success', 'Vos informations ont été mises à jour avec succès.');
         return $this->redirectToRoute('app_user_settings');
-    }
-}
-
-// Fonction utilitaire pour créer récursivement un répertoire FTP
-function ftpMkdirRecursive($ftpConnection, string $directory): void {
-    $directory = ltrim($directory, '/');
-    $parts = explode('/', $directory);
-    $path = '';
-    foreach ($parts as $part) {
-        $path .= '/' . $part;
-        if (!@ftp_chdir($ftpConnection, $path)) {
-            if (!ftp_mkdir($ftpConnection, $path)) {
-                throw new \Exception("Impossible de créer le répertoire FTP : $path");
-            }
-        }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Service\FtpService;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,6 +22,14 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class GoogleController extends AbstractController
 {
+    private $ftpService;
+
+    // Injecte le service FtpService
+    public function __construct(FtpService $ftpService)
+    {
+        $this->ftpService = $ftpService;
+    }
+
     #[Route('/connect/google', name: 'connect_google_start')]
     public function connectGoogle(ClientRegistry $clientRegistry): Response
     {
@@ -110,8 +119,8 @@ class GoogleController extends AbstractController
         // Activer le mode passif pour éviter les problèmes de ports dynamiques
         ftp_pasv($ftpConnection, true);
 
-        // Créer récursivement le répertoire si nécessaire
-        ftpMkdirRecursive($ftpConnection, $ftpDirectory);
+        // Appeler le service FtpService pour créer le répertoire récursivement
+        $this->ftpService->ftpMkdirRecursive($ftpConnection, $ftpDirectory);
         ftp_chdir($ftpConnection, $ftpDirectory);
 
         // Créer un fichier temporaire pour le QR Code
@@ -148,20 +157,5 @@ class GoogleController extends AbstractController
                 'qrCodeUrl' => $qrCodePath,
             ]);
         $mailer->send($email);
-    }
-}
-
-// Fonction utilitaire pour créer récursivement un répertoire FTP
-function ftpMkdirRecursive($ftpConnection, string $directory): void {
-    $directory = ltrim($directory, '/');
-    $parts = explode('/', $directory);
-    $path = '';
-    foreach ($parts as $part) {
-        $path .= '/' . $part;
-        if (!@ftp_chdir($ftpConnection, $path)) {
-            if (!ftp_mkdir($ftpConnection, $path)) {
-                throw new \Exception("Impossible de créer le répertoire FTP : $path");
-            }
-        }
     }
 }

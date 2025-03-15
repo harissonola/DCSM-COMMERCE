@@ -72,7 +72,7 @@
 					{% if app.user.googleId and app.user.photo starts with 'http' %}
 						<img src="{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
 					{% else %}
-						<img src="public/users/img/{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
+						<img src="http://daniel-whannou.free.nf/dcsm-commerce/users/img/{{app.user.photo}}" alt="Photo de profil" class="profile-img me-3 img-fluid">
 					{% endif %}
 					<div>
 						<h2 class="mb-0">{{ app.user.fname }} {{ app.user.lname }}</h2>

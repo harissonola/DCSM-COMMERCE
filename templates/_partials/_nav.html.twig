@@ -35,7 +35,7 @@
 							{% if app.user.googleId and app.user.photo starts with 'http' %}
 								<img src="{{app.user.photo}}" alt="User Avatar" class="rounded-circle" width="30" height="30">
 							{% else %}
-								<img src="{{ asset("public/users/img/"~app.user.photo) }}" alt="User Avatar" class="rounded-circle" width="30" height="30">
+								<img src="http://daniel-whannou.free.nf/dcsm-commerce/users/img/{{app.user.photo}}" alt="User Avatar" class="rounded-circle" width="30" height="30">
 							{% endif %}
 
 							<span class="ms-2">{{ app.user.username }}</span>

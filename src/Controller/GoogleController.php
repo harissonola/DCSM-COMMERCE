@@ -154,7 +154,7 @@ class GoogleController extends AbstractController
             ->context([
                 'user' => $user,
                 'referralLink' => $referralLink,
-                'qrCodeUrl' => $qrCodePath,
+                'qrCodePath' => $qrCodePath,
             ]);
         $mailer->send($email);
     }

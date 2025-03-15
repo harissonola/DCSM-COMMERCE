@@ -97,8 +97,8 @@ class GoogleController extends AbstractController
         $writer = new PngWriter();
         $qrResult = $writer->write($qrCode);
 
-        // Stockage local dans le dossier configuré
-        $uploadDir = $this->getParameter('qr_code_directory') . '/';
+        // Stockage local dans le dossier public (par exemple "public/uploads/user/")
+        $uploadDir = $this->getParameter('qr_code_directory');
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
@@ -106,8 +106,8 @@ class GoogleController extends AbstractController
         $filePath = $uploadDir . $qrCodeFileName;
         file_put_contents($filePath, $qrResult->getString());
 
-        // Construire l'URL publique relative
-        $publicQrCodeUrl = 'uploads/' . $qrCodeFileName;
+        // Construire l'URL publique absolue
+        $publicQrCodeUrl = $this->generateUrl('homepage', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
         $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 

@@ -107,7 +107,7 @@ class RegistrationController extends AbstractController
                 $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
                 file_put_contents($filePath, $qrResult->getString());
 
-                $publicQrCodeUrl = '/uploads/qr_codes/' . $qrCodeFileName;
+                $publicQrCodeUrl = $this->generateUrl('homepage', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/qr_codes/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 

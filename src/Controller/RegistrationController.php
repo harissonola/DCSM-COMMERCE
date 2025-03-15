@@ -130,7 +130,7 @@ class RegistrationController extends AbstractController
                     if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
                         throw new \Exception('Impossible de créer le répertoire sur le serveur FTP.');
                     }
-                    ftp_chdir($ftpConnection, $ftpDirectory);
+                    ftp_chdir($ftpConnection, $ftpDirectory); // Accéder au répertoire
                 }
 
                 // Créer un fichier temporaire sur le serveur local pour l'upload

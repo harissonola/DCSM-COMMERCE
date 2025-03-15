@@ -1,0 +1,16 @@
+{# templates/bundles/TwigBundle/Exception/error500.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}500 - Erreur serveur
+{% endblock %}
+
+{% block body %}
+	<div class="py-5 mt-3">
+		<div class="error-container" style="text-align: center; padding: 50px; background-color: #2d1e1e; color: #ff4500; font-family: Arial, sans-serif;">
+			<img src="/img/500.webp" alt="500 Internal Server Error" width="300" style="max-width: 100%; border-radius: 10px;">
+			<h1 style="font-size: 3em;">500 - Erreur serveur</h1>
+			<p style="font-size: 1.2em;">Une erreur interne du serveur s'est produite.</p>
+			<a href="{{path("app_main")}}" style="padding: 10px 20px; background: #ff4500; color: white; text-decoration: none; border-radius: 5px;">Retour à l'accueil</a>
+		</div>
+	</div>
+{% endblock %}

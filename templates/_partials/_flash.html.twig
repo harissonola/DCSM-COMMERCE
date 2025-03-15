@@ -1,0 +1,23 @@
+{% for label, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="pt-5 mt-4 container">
+      {{ app.current_route starts with 'app_admin' ? "<div class='py-5 mt-5 mb-0'>" }}
+      <div class="alert alert-{{ label }} alert-dismissible py-4 mt-5" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      {{ app.current_route starts with 'app_admin' ? '</div>' }}
+    </div>
+  {% endfor %}
+{% endfor %}
+
+{% if app.user %}
+  {% if app.user.isVerified == 0 %}
+    <div class="pt-5 mt-4 container">
+      <div class="alert alert-danger alert-dismissible" role="alert">
+        Votre compte n'est pas active veillez verifier votre boite mail ! <a href="{{ path('app_verify_email_send') }}">Renvoyer le lien ?</a>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}

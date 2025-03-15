@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+  Dashboard
+{% endblock %}
+
+{% block body %}
+  <style>
+    .price-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 10px;
+      transition: transform 0.3s;
+      margin-top: 30px;
+    }
+    
+    .price-card img {
+      border-top-left-radius: 10px;
+      border-top-right-radius: 10px;
+    }
+    
+    .price-card:hover {
+      transform: translateY(-10px);
+    }
+    
+    .price-card h3 {
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+  </style>
+
+  {# main #}
+  <main id="main" class="main container py-5">
+    <h2 class="text-center text-warning py-4 fw-bold" data-aos-duration="2000" data-aos="flip-left" data-aos-delay="300">Nos Boutiques</h2>
+
+    <div class="row" id="shop-container">
+      {# Skeleton loaders affichés en attendant le vrai contenu #}
+      {% if shops %}
+              {% for shop in shops %}
+                <div class="col-md-4">
+                  <div class="card price-card">
+                    <img src="{{ asset('img/' ~ shop.image) }}" class="card-img-top" alt="..." />
+                    <div class="card-body">
+                      <h5 class="card-title">
+                        <a class="text-decoration-none" href="{{ path('app_shop', { slug: shop.slug }) }}">{{ shop.name }}</a>
+                      </h5>
+                      <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
+                      <p class="card-text">{{ shop.description }}</p>
+                      <br />
+                      <a href="{{ path('app_shop', { slug: shop.slug }) }}" class="btn btn-warning float-end">Voir plus...</a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <h5 class="text-center text-danger">Aucune boutique disponible pour le moment.</h5>
+            {% endif %}
+    </div>
+  </main>
+  
+{% endblock %}
+
+{% block customScript %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const shopContainer = document.getElementById('shop-container');
+        if (shopContainer) {
+          shopContainer.innerHTML = `
+            {% if shops %}
+              {% for shop in shops %}
+                <div class="col-md-4">
+                  <div class="card price-card">
+                    <img src="{{ asset('img/' ~ shop.image) }}" class="card-img-top" alt="..." />
+                    <div class="card-body">
+                      <h5 class="card-title">
+                        <a class="text-decoration-none" href="{{ path('app_shop', { slug: shop.slug }) }}">{{ shop.name }}</a>
+                      </h5>
+                      <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
+                      <p class="card-text">{{ shop.description }}</p>
+                      <br />
+                      <a href="{{ path('app_shop', { slug: shop.slug }) }}" class="btn btn-warning float-end">Voir plus...</a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <h5 class="text-center text-danger">Aucune boutique disponible pour le moment.</h5>
+            {% endif %}
+          `;
+        }
+    });
+  </script>
+{% endblock %}

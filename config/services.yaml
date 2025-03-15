@@ -1,0 +1,27 @@
+# Ce fichier est le point d'entrée pour configurer vos propres services.
+# Les fichiers dans le sous-répertoire packages/ configurent vos dépendances.
+
+# Définissez ici les paramètres qui ne changent pas selon la machine où l'application est déployée
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    users_img_directory: '%kernel.project_dir%/public/users/img'
+    qr_code_directory: '%kernel.project_dir%/public/uploads/qrcodes'
+
+services:
+    # Configuration pour les services
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\Service\CryptoService:
+        arguments:
+            $apiKey: '%env(COINPAYMENTS_API_KEY)%'
+            $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%' # Ensure you set this in your .env file
+
+    # Autres services
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'

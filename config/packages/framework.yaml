@@ -1,0 +1,23 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    session: true
+
+    # Configuration du cache applicatif
+    cache:
+        app: cache.adapter.filesystem
+        pools:
+            cache.annotations:
+                adapter: cache.adapter.filesystem
+
+    # Autorise la surcharge des méthodes HTTP (utile pour PUT, DELETE via formulaires)
+    http_method_override: true
+
+    # Garde les vérifications strictes pour le routeur
+    router:
+        strict_requirements: true
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

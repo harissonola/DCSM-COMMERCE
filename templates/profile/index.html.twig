@@ -1,0 +1,178 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Profil Utilisateur{% endblock %}
+
+{% block body %}
+	<style>
+		body {
+			background: linear-gradient(135deg, #FFA500, #1E90FF);
+			min-height: 100vh;
+			color: #fff;
+			font-family: 'Arial', sans-serif;
+		}
+		.profile-card {
+			background-color: rgba(255, 255, 255, 0.15);
+			backdrop-filter: blur(10px);
+			border-radius: 15px;
+			padding: 30px;
+			margin-top: 50px;
+			box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+		}
+		.profile-img {
+			width: 100px;
+			height: 100px;
+			object-fit: cover;
+			border: 5px solid #fff;
+			border-radius: 50%;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+		}
+		.btn-deposit,
+		.btn-withdraw,
+		.btn-edit {
+			border: none;
+			color: #fff;
+			padding: 10px 20px;
+			border-radius: 5px;
+			transition: background-color 0.3s;
+			text-decoration: none;
+		}
+		.btn-deposit {
+			background-color: #FFA500;
+		}
+		.btn-deposit:hover {
+			background-color: #e69500;
+		}
+		.btn-withdraw {
+			background-color: #1E90FF;
+		}
+		.btn-withdraw:hover {
+			background-color: #187bcd;
+		}
+		.btn-edit {
+			background-color: #28a745;
+		}
+		.btn-edit:hover {
+			background-color: #218838;
+		}
+		.table-custom {
+			background-color: rgba(255, 255, 255, 0.2);
+		}
+		.table-custom th,
+		.table-custom td {
+			color: #fff;
+		}
+		.table-custom thead th {
+			border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+		}
+	</style>
+	<div class="container">
+		<div class="row justify-content-center py-5 mt-3">
+			<div class="col-md-8 profile-card">
+				<div class="d-flex align-items-center mb-4">
+					{% if app.user.googleId and app.user.photo starts with 'http' %}
+						<img src="{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
+					{% else %}
+						<img src="public/users/img/{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
+					{% endif %}
+					<div>
+						<h2 class="mb-0">{{ app.user.fname }} {{ app.user.lname }}</h2>
+						<small class="text-muted">{{ app.user.username }}</small>
+						<p>{{ app.user.email }}</p>
+						<h5>Solde:
+							<span class="fw-bold">${{ app.user.balance }}</span>
+						</h5>
+					</div>
+				</div>
+				<div class="mb-4">
+					<a href="{{ path('app_user_settings') }}" class="btn-edit me-2 btn btn-success">Modifier le profil</a>
+					<a href="#" class="btn-deposit me-2 btn btn-warning" data-bs-toggle="modal" data-bs-target="#depositModal">Faire un dépôt</a>
+					<a href="#" class="btn-withdraw btn btn-primary" data-bs-toggle="modal" data-bs-target="#withdrawModal">Retirer des fonds</a>
+				</div>
+
+				<div>
+					<h4>Historique des transactions</h4>
+					<div class="table-responsive">
+						<table class="table table-custom table-striped">
+							<thead>
+								<tr>
+									<th>Date</th>
+									<th>Méthode</th>
+									<th>Montant</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for transaction in transactions %}
+									<tr>
+										<td>{{ transaction.date|date('d/m/Y') }}</td>
+										<td>{{ transaction.method }}</td>
+										<td>${{ transaction.amount }}</td>
+									</tr>
+								{% else %}
+									<tr>
+										<td colspan="3">Aucune transaction trouvée.</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Dépôt -->
+	<div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="depositModalLabel">Faire un dépôt</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form action="{{ path('app_deposit') }}" method="post">
+						<div class="mb-3">
+							<label for="amount" class="form-label">Montant (USDT)</label>
+							<input type="number" name="amount" required class="form-control">
+						</div>
+						<div class="mb-3">
+							<label for="paymentMethod" class="form-label">Méthode de paiement</label>
+							<select name="paymentMethod" required class="form-control">
+								<option value="crypto">Crypto</option>
+								<option value="paypal">PayPal</option>
+								<option value="mobilemoney">Mobile Money</option>
+								<option value="carte">Carte</option>
+							</select>
+						</div>
+						<button type="submit" class="btn-deposit">Déposer</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Retrait -->
+	<div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="withdrawModalLabel">Retirer des fonds</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form action="{{ path('app_withdraw') }}" method="post">
+						<div class="mb-3">
+							<label for="amount" class="form-label">Montant (USDT)</label>
+							<input type="number" name="amount" required class="form-control">
+						</div>
+						<div class="mb-3">
+							<label for="recipient" class="form-label">Adresse de réception</label>
+							<input type="text" name="recipient" required class="form-control">
+						</div>
+						<button type="submit" class="btn-withdraw">Retirer</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+{% endblock %}

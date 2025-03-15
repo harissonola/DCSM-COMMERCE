@@ -1,0 +1,134 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+  Acheter | {{ prod.name }}
+{% endblock %}
+
+{% block customScript %}
+  <script src="https://cdn.cinetpay.com/seamless/main.js"></script>
+  <script src="https://cdn.paydunya.com/js/checkout.min.js"></script>
+{% endblock %}
+
+{% block body %}
+  <style>
+    main {
+      padding: 100px 20px;
+      text-align: center;
+      background: no-repeat center center/cover;
+      position: relative;
+    }
+    
+    .prod-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 10px;
+      margin-top: 30px;
+    }
+    
+    .img {
+      border-radius: 10px;
+    }
+    .prod-card h3 {
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+  </style>
+  <main>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-7">
+          <div class="row">
+            <div class="col-md-4">
+              <img class="img-fluid img" src="{{ prod.image }}" alt="..." />
+            </div>
+            <div class="col-md-8">
+              <div class="row">
+                <div class="col-md-12">
+                  <h4 class="card-title float-start text-warning">{{ prod.name }}</h4>
+                </div>
+                <div class="col-md-12">
+                  <small class="text-muted float-start">{{ prod.price }} CFA</small>
+                </div>
+                <p class="float-start">{{ prod.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card prod-card">
+            <div class="card-body">
+              <h4 class="card-title text-primary">Acheter - {{ prod.name }}</h4>
+              <small class="card-text text-muted">Veuillez choisir votre mode de paiement.</small>
+
+              <!-- Formulaire de paiement CinetPay -->
+              <form id="cinetpay_form">
+                <button type="button" class="btn btn-success mb-3" id="payBtn">Payer avec CinetPay</button>
+              </form>
+
+              <!-- Formulaire de paiement PayDunya -->
+              <form id="paydunya_form">
+                <button type="button" class="btn btn-primary" id="paydunyaBtn">Payer avec PayDunya</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Inclusion des scripts de paiement -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        if (typeof CinetPay === "undefined") {
+            console.error("CinetPay n'est pas chargé correctement.");
+            return;
+        }
+
+        document.getElementById("payBtn").addEventListener("click", function () {
+            CinetPay.setConfig({
+                apikey: "{{ apiKey }}",
+                site_id: "{{ siteId }}",
+                notify_url: "{{ notifyUrl }}",
+                return_url: "{{ returnUrl }}",
+                mode: "PRODUCTION"
+            });
+
+            CinetPay.getCheckout({
+                transaction_id: "{{ transactionId }}",
+                amount: {{ prod.price }},
+                currency: "XOF",
+                channels: "ALL",
+                description: "Achat de {{ prod.name }}"
+            });
+
+            CinetPay.waitResponse(function (data) {
+                if (data.status === "ACCEPTED") {
+                    alert("Paiement réussi avec CinetPay !");
+                    window.location.href = "{{ path('app_payment_success') }}";
+                } else {
+                    alert("Paiement annulé ou échoué avec CinetPay !");
+                }
+            });
+        });
+
+        document.getElementById("paydunyaBtn").addEventListener("click", function () {
+            PayDunya.Checkout.setup({
+                public_key: "{{ paydunyaPublicKey }}",
+                private_key: "{{ paydunyaPrivateKey }}",
+                token: "{{ paydunyaToken }}",
+                invoice_amount: {{ prod.price }},
+                invoice_description: "Achat de {{ prod.name }}",
+                invoice_callback: "{{ returnUrl }}",
+                invoice_currency: "XOF",
+            }, function (data) {
+                if (data.status === "completed") {
+                    alert("Paiement réussi avec PayDunya !");
+                    window.location.href = "{{ path('app_payment_success') }}";
+                } else {
+                    alert("Paiement annulé ou échoué avec PayDunya !");
+                }
+            });
+        });
+    });
+  </script>
+{% endblock %}

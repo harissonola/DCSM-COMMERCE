@@ -1,0 +1,94 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+	Dashboard |
+	{{ prod.name }}
+{% endblock %}
+
+{% block body %}
+	<!-- Chart.js CDN -->
+	 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@1.0.0"></script>
+
+		<div class="container-fluid py-5 mt-3"> <div class="overflow-hidden">
+			<canvas id="tradingChart"></canvas>
+		</div>
+
+		<div>
+			<!-- Afficher le statut du bot de minage -->
+			{% if app.user and app.user.isMiningBotActive %}
+				<p>Votre bot de minage est activé. Le minage se fait automatiquement.</p>
+			{% else %}
+				<!-- Si l'utilisateur n'a pas de bot, il peut miner manuellement -->
+				<div class="alert alert-danger" role="alert">
+					Vous n'avez pas le bot de minage. Vous pouvez miner manuellement, mais vous serez responsable de vos gains/pertes.
+				</div>
+				<button id="startManualMining" class="btn btn-primary">Démarrer le minage manuel</button>
+				<button id="buyMiningBot" class="btn btn-warning">Acheter le bot de minage</button>
+			{% endif %}
+		</div>
+	</div>
+{% endblock %}
+
+{% block customScript %}
+	 <script>
+	    document.addEventListener('turbo:load', function () {
+	      const ctx = document.getElementById('tradingChart').getContext('2d');
+	      const chartData = {{ chartData|raw }}; // Conversion depuis JSON
+	
+	      new Chart(ctx, {
+	        type: 'line',
+	        data: {
+	          datasets: [
+	            {
+	              label: '{{ prod.name }}',
+	              data: chartData,
+	              borderColor: 'blue',
+	              borderWidth: 2,
+	              pointRadius: 2,
+	              tension: 0.2
+	            }
+	          ]
+	        },
+	        options: {
+	          responsive: true,
+	          plugins: {
+	            legend: { display: true }
+	          },
+	          scales: {
+	            x: { 
+	              type: 'time', 
+	              time: { unit: 'day' } 
+	            },
+	            y: { 
+	              beginAtZero: false 
+	            }
+	          }
+	        }
+	      });
+	
+	      // Gérer le clic sur le bouton de minage manuel
+	      document.getElementById('startManualMining').addEventListener('click', function() {
+	        fetch('/products/{{ prod.slug }}/start-manual-mining', { 
+	          method: 'POST', 
+	          headers: {
+	            'Content-Type': 'application/json',
+	            'X-Requested-With': 'XMLHttpRequest',
+	          },
+	          body: JSON.stringify({
+	            productId: {{ prod.id }}
+	          })
+	        }).then(response => {
+	          if (response.ok) {
+	            alert('Minage manuel démarré !');
+	          }
+	        });
+	      });
+	
+	      // Gérer le clic sur le bouton d'achat du bot
+	      document.getElementById('buyMiningBot').addEventListener('click', function() {
+	        window.location.href = '/products/buy-mining-bot';  // Rediriger vers la page d'achat du bot
+	      });
+	    });
+	  </script>
+{% endblock %}

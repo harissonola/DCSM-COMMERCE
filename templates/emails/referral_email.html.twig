@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Lien d'affiliation - DCSM COMMERCE</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				background-color: #f3f3f3;
+			}
+			.email-container {
+				background-color: #fff;
+				padding: 20px;
+				border-radius: 8px;
+				max-width: 600px;
+				margin: 20px auto;
+				box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			}
+			.header {
+				text-align: center;
+				margin-bottom: 20px;
+			}
+			.header img {
+				max-width: 150px;
+			}
+			.content {
+				text-align: center;
+			}
+			.content h2 {
+				color: #333;
+			}
+			.content p {
+				color: #666;
+				line-height: 1.5;
+			}
+			.btn {
+				background-color: #007bff;
+				color: #fff;
+				padding: 10px 20px;
+				border-radius: 5px;
+				text-decoration: none;
+				display: inline-block;
+				margin: 10px 0;
+			}
+			.btn:hover {
+				background-color: #0056b3;
+			}
+			.qr-code {
+				margin: 20px 0;
+			}
+			.footer {
+				text-align: center;
+				color: #999;
+				margin-top: 30px;
+				font-size: 12px;
+			}
+			.social-icons img {
+				width: 30px;
+				margin: 0 5px;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div
+			class="email-container">
+			<!-- Header avec le logo -->
+			<div class="header">
+				<img src="https://daniel-whannou.free.nf/uploads/dcsm-logo.svg" alt="DCSM COMMERCE">
+			</div>
+
+			<!-- Contenu principal -->
+			<div class="content">
+				<h2>Bienvenue,
+					{{ user.username }}
+					! 👋</h2>
+				<p>Merci de vous être inscrit sur
+					<strong>DCSM COMMERCE</strong>. Nous sommes ravis de vous accueillir parmi nous.</p>
+
+				<p>Voici votre lien d'affiliation :</p>
+				<a href="{{ referralLink }}" class="btn">Visitez votre lien d'affiliation</a>
+
+				<p>Ou scannez ce QR Code :</p>
+				<div class="qr-code">
+					<img src="{{ qrCodeUrl }}" alt="QR Code">
+				</div>
+
+				<p>Partagez ce lien avec vos amis et gagnez des récompenses !</p>
+			</div>
+
+			<!-- Footer avec les réseaux sociaux -->
+			<div class="footer">
+				<p>Suivez-nous sur les réseaux sociaux :</p>
+				<div class="social-icons">
+					<a href="https://facebook.com/DCSM"><img src="{{ asset('images/facebook.png') }}" alt="Facebook"></a>
+					<a href="https://instagram.com/DCSM"><img src="{{ asset('images/instagram.png') }}" alt="Instagram"></a>
+					<a href="https://twitter.com/DCSM"><img src="{{ asset('images/twitter.png') }}" alt="Twitter"></a>
+				</div>
+				<p>&copy;
+					{{ "now"|date("Y") }}
+					DCSM COMMERCE. Tous droits réservés.</p>
+			</div>
+		</div>
+
+	</body>
+</html>

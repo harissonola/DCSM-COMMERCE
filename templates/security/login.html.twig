@@ -1,0 +1,176 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+  Se Connecter
+{% endblock %}
+
+{% block body %}
+  <style>
+    body {
+      background: linear-gradient(180deg, #1a1f35 0%, #0f1521 100%);
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+      perspective: 1000px;
+      overflow: hidden;
+    }
+    
+    .login-container {
+      background: rgba(26, 31, 53, 0.9);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      box-shadow: 0 0 20px rgba(0, 195, 255, 0.2);
+      animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%,
+      100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+    
+    .grid-bg {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50vh;
+      background-image: linear-gradient(0deg, rgba(0, 195, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 195, 255, 0.2) 1px, transparent 1px);
+      background-size: 40px 40px;
+      perspective: 1000px;
+      transform: rotateX(60deg);
+      transform-origin: bottom;
+    }
+    
+    .title {
+      font-size: 2.5rem;
+      color: white;
+      text-align: center;
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+      letter-spacing: 2px;
+    }
+    
+    .form-control {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 30px;
+      color: white;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 15px rgba(0, 195, 255, 0.1);
+    }
+    
+    .form-control:focus {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 20px rgba(0, 195, 255, 0.3);
+      color: white;
+    }
+    
+    .btn-login {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 30px;
+      background: linear-gradient(45deg, #00c3ff, #0066ff);
+      border: none;
+      color: white;
+      font-weight: bold;
+      margin-top: 1rem;
+      box-shadow: 0 0 15px rgba(0, 195, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(0, 195, 255, 0.5);
+    }
+    
+    .forgot-password {
+      color: rgba(255, 255, 255, 0.7);
+      text-align: center;
+      display: block;
+      margin-top: 1rem;
+      text-decoration: none;
+      transition: all 0.3s ease;
+    }
+    
+    .forgot-password:hover {
+      color: #00c3ff;
+      text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+    }
+    
+    .bitcoin-icons {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(0, 195, 255, 0.3);
+      color: #fff;
+    }
+    
+    .bitcoin-1 {
+      top: -20px;
+      left: -20px;
+    }
+    .bitcoin-2 {
+      top: -20px;
+      right: -20px;
+    }
+    .bitcoin-3 {
+      bottom: -20px;
+      left: -20px;
+    }
+    .bitcoin-4 {
+      bottom: -20px;
+      right: -20px;
+    }
+  </style>
+  <div class="grid-bg"></div>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="login-container">
+          <div class="bitcoin-icons bitcoin-1">₿</div>
+          <div class="bitcoin-icons bitcoin-2">₿</div>
+          <div class="bitcoin-icons bitcoin-3">₿</div>
+          <div class="bitcoin-icons bitcoin-4">₿</div>
+
+          <h1 class="title text-uppercase">Connexion</h1>
+          {% if error %}
+            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+          {% endif %}
+          <form method="post">
+            <div class="mb-3">
+              <input value="{{ last_username }}" name="username" type="text" class="form-control" placeholder="USERNAME ou EMAIL" autocomplete="username" required autofocus />
+            </div>
+            <div class="mb-3">
+              <input type="password" name="password" class="form-control" placeholder="MOT DE PASSE" autocomplete="current-password" required />
+            </div>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}" />
+            <div class="form-check">
+              <input type="checkbox" id="remember"  name="_remember_me" class="form-check-input" value="1" />
+              <label class="text-light text-uppercase form-check-label required" for="remember">Se Souvenir de Moi</label>
+            </div>
+            <button type="submit" class="btn btn-login text-uppercase">Connexion</button>
+            <!-- Bouton Google -->
+						<a href="{{ path('connect_google_start') }}" class="btn btn-warning text-center" style="margin-top: 30px;">Se Connecter avec Google</a>
+            <a href="{{ path('app_register') }}" class="forgot-password text-uppercase">Vous n'avez un compte?</a>
+            <a href="{{ path('app_forgot_password_request') }}" class="forgot-password text-uppercase">Mot de passe oublie?</a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

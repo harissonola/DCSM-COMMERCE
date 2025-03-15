@@ -1,0 +1,22 @@
+# Définit index.php comme point d'entrée principal
+DirectoryIndex index.php
+
+# Désactive MultiViews pour éviter des problèmes de réécriture d'URL
+<IfModule mod_negotiation.c>
+    Options -MultiViews
+</IfModule>
+
+# Activation du module de réécriture
+<IfModule mod_rewrite.c>
+    Options +SymLinksIfOwnerMatch
+    RewriteEngine On
+
+    # Assure que l'autorisation HTTP est bien transmise
+    RewriteCond %{HTTP:Authorization} .+
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%0]
+
+    # Redirige toutes les requêtes vers index.php sauf si le fichier ou dossier existe
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

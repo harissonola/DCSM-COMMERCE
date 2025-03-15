@@ -82,6 +82,9 @@
 							<span class="fw-bold">${{ app.user.balance }}</span>
 						</h5>
 					</div>
+					<div class="float-end">
+						<img src="{{ qrCodeUrl }}" alt="QR Code" class="img-fluid">
+					</div>
 				</div>
 				<div class="mb-4">
 					<a href="{{ path('app_user_settings') }}" class="btn-edit me-2 btn btn-success">Modifier le profil</a>

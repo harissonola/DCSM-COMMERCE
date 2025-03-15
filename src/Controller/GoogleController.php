@@ -83,16 +83,54 @@ class GoogleController extends AbstractController
         $entityManager->persist($user);
         $entityManager->flush();
 
+        // Générer le lien d'affiliation et le QR Code
         $referralLink = $urlGenerator->generate('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL);
         $qrCode = new QrCode($referralLink);
         $writer = new PngWriter();
         $qrResult = $writer->write($qrCode);
-        $qrCodePath = 'uploads/users/' . $referralCode . '.png';
-        file_put_contents($qrCodePath, $qrResult->getString());
-        $user->setQrCodePath($qrCodePath);
+
+        // Paramètres FTP
+        $ftpServer = "ftpupload.net";
+        $ftpUsername = "if0_34880738";
+        $ftpPassword = "WODanielH2006";
+        $ftpDirectory = "/htdocs/uploads/user/"; // Ajustez ce chemin selon votre configuration
+        $qrCodeFileName = $referralCode . '.png';
+
+        // Connexion FTP avec un timeout de 120 sec
+        $ftpConnection = ftp_connect($ftpServer, 21, 120);
+        if (!$ftpConnection) {
+            throw new \Exception('Impossible de se connecter au serveur FTP.');
+        }
+        $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
+        if (!$loginResult) {
+            throw new \Exception('Échec de la connexion FTP.');
+        }
+        ftp_set_option($ftpConnection, FTP_TIMEOUT_SEC, 120);
+
+        // Activer le mode passif pour éviter les problèmes de ports dynamiques
+        ftp_pasv($ftpConnection, true);
+
+        // Créer récursivement le répertoire si nécessaire
+        ftpMkdirRecursive($ftpConnection, $ftpDirectory);
+        ftp_chdir($ftpConnection, $ftpDirectory);
+
+        // Créer un fichier temporaire pour le QR Code
+        $tempFilePath = '/tmp/' . $qrCodeFileName;
+        file_put_contents($tempFilePath, $qrResult->getString());
+
+        // Uploader le fichier sur le serveur FTP en mode binaire
+        $uploadResult = ftp_put($ftpConnection, $qrCodeFileName, $tempFilePath, FTP_BINARY);
+        if (!$uploadResult) {
+            throw new \Exception('L\'upload du fichier a échoué.');
+        }
+        ftp_close($ftpConnection);
+
+        // URL publique pour accéder au QR Code
+        $publicQrCodeUrl = 'http://daniel-whannou.free.nf/dcsm-commerce/upload/user/' . $qrCodeFileName;
+        $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 
-        $this->sendReferralEmail($user, $referralLink, $qrCodePath, $mailer);
+        $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
 
         return $authenticator->authenticateUser($user, $appAuthenticator, $request);
     }
@@ -110,5 +148,20 @@ class GoogleController extends AbstractController
                 'qrCodePath' => $qrCodePath,
             ]);
         $mailer->send($email);
+    }
+}
+
+// Fonction utilitaire pour créer récursivement un répertoire FTP
+function ftpMkdirRecursive($ftpConnection, string $directory): void {
+    $directory = ltrim($directory, '/');
+    $parts = explode('/', $directory);
+    $path = '';
+    foreach ($parts as $part) {
+        $path .= '/' . $part;
+        if (!@ftp_chdir($ftpConnection, $path)) {
+            if (!ftp_mkdir($ftpConnection, $path)) {
+                throw new \Exception("Impossible de créer le répertoire FTP : $path");
+            }
+        }
     }
 }

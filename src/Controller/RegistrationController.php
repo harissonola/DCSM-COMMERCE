@@ -20,8 +20,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
-use Endroid\QrCode\Writer\PngWriter;
 use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Component\Mailer\MailerInterface;
 
 class RegistrationController extends AbstractController
@@ -29,15 +29,21 @@ class RegistrationController extends AbstractController
     public function __construct(private EmailVerifier $emailVerifier) {}
 
     #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, MailerInterface $mailer): Response
-    {
+    public function register(
+        Request $request, 
+        UserPasswordHasherInterface $userPasswordHasher, 
+        Security $security, 
+        EntityManagerInterface $entityManager, 
+        UrlGeneratorInterface $urlGenerator, 
+        MailerInterface $mailer
+    ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
 
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
-        
+
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
             $form->get('referredBy')->setData($referredBy);
@@ -52,6 +58,7 @@ class RegistrationController extends AbstractController
             if ($plainPassword !== $confirmPassword) {
                 $form->addError(new FormError('Les mots de passe ne correspondent pas.'));
             } else {
+                // Génération d'un code d'affiliation
                 $referralCode = uniqid('ref_');
                 $user->setReferralCode($referralCode);
 
@@ -63,9 +70,12 @@ class RegistrationController extends AbstractController
                     }
                 }
 
+                // Hashage du mot de passe et configuration de l'utilisateur
                 $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
-                $user->setCreatedAt(new \DateTimeImmutable())->setMiningBotActive(0);
+                $user->setCreatedAt(new \DateTimeImmutable())
+                     ->setMiningBotActive(0);
 
+                // Traitement de l'image (stockage local)
                 $image = $form->get('photo')->getData();
                 if ($image) {
                     $newFilename = uniqid() . '.' . $image->guessExtension();
@@ -84,62 +94,65 @@ class RegistrationController extends AbstractController
                 $entityManager->flush();
 
                 // Générer le lien d'affiliation
-                $referralLink = $urlGenerator->generate('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL);
+                $referralLink = $urlGenerator->generate(
+                    'app_register', 
+                    ['ref' => $referralCode], 
+                    UrlGeneratorInterface::ABSOLUTE_URL
+                );
                 $qrCode = new QrCode($referralLink);
                 $writer = new PngWriter();
                 $qrResult = $writer->write($qrCode);
 
-                // Stockage du QR Code sur FTP
-                $ftpServer = "ftpupload.net";
+                // Stockage du QR Code sur FTP (seul le QR code est envoyé sur FTP)
+                $ftpServer   = "ftpupload.net";
                 $ftpUsername = "if0_34880738";
                 $ftpPassword = "WODanielH2006";
-                $ftpDirectory = "/uploads/users/";
+                // Répertoire FTP : assurez-vous que le chemin correspond à votre configuration
+                $ftpDirectory = "/htdocs/uploads/users/";
                 $qrCodeFileName = $referralCode . '.png';
 
-                // Dossier de stockage sous /htdocs ou public_html
-$ftpDirectory = "/htdocs/uploads/users/";
+                // Connexion FTP sur le port 21
+                $ftpConnection = ftp_connect($ftpServer, 21);
+                if (!$ftpConnection) {
+                    throw new \Exception('Impossible de se connecter au serveur FTP.');
+                }
 
-// Connexion FTP
-$ftpConnection = ftp_connect($ftpServer);
-if (!$ftpConnection) {
-    throw new \Exception('Impossible de se connecter au serveur FTP.');
-}
+                $loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
+                if (!$loginResult) {
+                    throw new \Exception('Échec de la connexion FTP.');
+                }
 
-$loginResult = ftp_login($ftpConnection, $ftpUsername, $ftpPassword);
-if (!$loginResult) {
-    throw new \Exception('Échec de la connexion FTP.');
-}
+                // Pour forcer l'utilisation du mode actif (stockage sur le port 21)
+                ftp_pasv($ftpConnection, false);
 
-// Vérifier si le répertoire existe, sinon le créer
-if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
-    // Si le répertoire n'existe pas, le créer
-    if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
-        throw new \Exception('Impossible de créer le répertoire sur le serveur FTP.');
-    }
-    // Changer ensuite dans le répertoire nouvellement créé
-    ftp_chdir($ftpConnection, $ftpDirectory);
-}
+                // Vérifier si le répertoire existe, sinon le créer
+                if (!ftp_chdir($ftpConnection, $ftpDirectory)) {
+                    if (!ftp_mkdir($ftpConnection, $ftpDirectory)) {
+                        throw new \Exception('Impossible de créer le répertoire sur le serveur FTP.');
+                    }
+                    ftp_chdir($ftpConnection, $ftpDirectory);
+                }
 
-// Créer un fichier temporaire sur le serveur
-$tempFilePath = '/tmp/' . $qrCodeFileName;
-file_put_contents($tempFilePath, $qrResult->getString());
+                // Créer un fichier temporaire sur le serveur local pour l'upload
+                $tempFilePath = '/tmp/' . $qrCodeFileName;
+                file_put_contents($tempFilePath, $qrResult->getString());
 
-// Uploader le QR Code sur le serveur FTP
-$uploadResult = ftp_put($ftpConnection, $qrCodeFileName, $tempFilePath, FTP_BINARY);
-if (!$uploadResult) {
-    throw new \Exception('L\'upload du fichier a échoué.');
-}
+                // Uploader le QR Code sur le serveur FTP
+                $uploadResult = ftp_put($ftpConnection, $qrCodeFileName, $tempFilePath, FTP_BINARY);
+                if (!$uploadResult) {
+                    throw new \Exception('L\'upload du fichier a échoué.');
+                }
 
-// Fermer la connexion FTP
-ftp_close($ftpConnection);
+                // Fermer la connexion FTP et supprimer le fichier temporaire
+                ftp_close($ftpConnection);
+                unlink($tempFilePath);
 
-// URL publique pour accéder au QR Code, dans ce cas, accessible sous /uploads/users/
-$publicQrCodeUrl = 'http://daniel-whannou.free.nf/uploads/users/' . $qrCodeFileName;
-$user->setQrCodePath($publicQrCodeUrl);
-$entityManager->flush();
+                // Construire l'URL publique du QR Code
+                $publicQrCodeUrl = 'http://daniel-whannou.free.nf/uploads/users/' . $qrCodeFileName;
+                $user->setQrCodePath($publicQrCodeUrl);
+                $entityManager->flush();
 
-
-                // Envoi de l'email de confirmation
+                // Envoi de l'email de confirmation d'inscription
                 $this->emailVerifier->sendEmailConfirmation(
                     'app_verify_email',
                     $user,
@@ -150,6 +163,7 @@ $entityManager->flush();
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
+                // Envoi de l'email de parrainage (incluant le lien d'affiliation et le QR code)
                 $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
 
                 return $security->login($user, AppAuthenticator::class, 'main');
@@ -171,12 +185,13 @@ $entityManager->flush();
             ->context([
                 'user' => $user,
                 'referralLink' => $referralLink,
-                'qrCodeUrl' => $qrCodeUrl, // Pass the public URL of the QR Code
+                'qrCodeUrl' => $qrCodeUrl,
             ]);
         
         $mailer->send($email);
     }
 
+    // Les routes pour la vérification d'email restent inchangées
     #[Route('/verify/email', name: 'app_verify_email')]
     public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
     {

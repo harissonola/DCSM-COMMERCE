@@ -100,8 +100,8 @@ class GoogleController extends AbstractController
 
         // Paramètres FTP
         $ftpServer = "ftpupload.net";
-        $ftpUsername = "if0_34880738";
-        $ftpPassword = "WODanielH2006";
+        $ftpUsername = "if0_38455727";
+        $ftpPassword = "DCSMCOMMERCE";
         $ftpDirectory = "/htdocs/uploads/user/"; // Ajustez ce chemin selon votre configuration
         $qrCodeFileName = $referralCode . '.png';
 
@@ -135,7 +135,7 @@ class GoogleController extends AbstractController
         ftp_close($ftpConnection);
 
         // URL publique pour accéder au QR Code
-        $publicQrCodeUrl = 'http://daniel-whannou.free.nf/dcsm-commerce/upload/user/' . $qrCodeFileName;
+        $publicQrCodeUrl = 'http://daniel-project-cdn.free.nf/upload/user/' . $qrCodeFileName;
         $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 

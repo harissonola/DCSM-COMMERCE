@@ -58,7 +58,6 @@ class RegistrationController extends AbstractController
             if ($plainPassword !== $confirmPassword) {
                 $form->addError(new FormError('Les mots de passe ne correspondent pas.'));
             } else {
-                // Génération d'un code d'affiliation
                 $referralCode = uniqid('ref_');
                 $user->setReferralCode($referralCode);
 
@@ -70,12 +69,10 @@ class RegistrationController extends AbstractController
                     }
                 }
 
-                // Hashage du mot de passe et configuration de l'utilisateur
                 $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
                 $user->setCreatedAt(new \DateTimeImmutable())
                      ->setMiningBotActive(0);
 
-                // Traitement de l'image (stockage local)
                 $image = $form->get('photo')->getData();
                 if ($image) {
                     $newFilename = uniqid() . '.' . $image->guessExtension();
@@ -93,7 +90,6 @@ class RegistrationController extends AbstractController
                 $entityManager->persist($user);
                 $entityManager->flush();
 
-                // Générer le lien d'affiliation
                 $referralLink = $urlGenerator->generate(
                     'app_register', 
                     ['ref' => $referralCode], 
@@ -103,21 +99,18 @@ class RegistrationController extends AbstractController
                 $writer = new PngWriter();
                 $qrResult = $writer->write($qrCode);
 
-                // Stockage du QR Code dans le dossier public (par exemple "public/uploads/users/")
-                $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/users/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
+                $qrCodeDirectory = $this->getParameter('qr_code_directory');
+                if (!is_dir($qrCodeDirectory)) {
+                    mkdir($qrCodeDirectory, 0755, true);
                 }
                 $qrCodeFileName = $referralCode . '.png';
-                $filePath = $uploadDir . $qrCodeFileName;
+                $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
                 file_put_contents($filePath, $qrResult->getString());
 
-                // Construire l'URL publique du QR Code
-                $publicQrCodeUrl = '/uploads/users/' . $qrCodeFileName;
+                $publicQrCodeUrl = '/uploads/qr_codes/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 
-                // Envoi de l'email de confirmation d'inscription
                 $this->emailVerifier->sendEmailConfirmation(
                     'app_verify_email',
                     $user,
@@ -128,7 +121,6 @@ class RegistrationController extends AbstractController
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
-                // Envoi de l'email de parrainage (incluant le lien d'affiliation et le QR code)
                 $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
 
                 return $security->login($user, AppAuthenticator::class, 'main');
@@ -138,61 +130,5 @@ class RegistrationController extends AbstractController
         return $this->render('registration/register.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
-    }
-
-    private function sendReferralEmail(User $user, string $referralLink, string $qrCodeUrl, MailerInterface $mailer): void
-    {
-        $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-            ->to($user->getEmail())
-            ->subject('Votre lien d\'affiliation et QR Code')
-            ->htmlTemplate('emails/referral_email.html.twig')
-            ->context([
-                'user' => $user,
-                'referralLink' => $referralLink,
-                'qrCodeUrl' => $qrCodeUrl,
-            ]);
-        
-        $mailer->send($email);
-    }
-
-    #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyUserEmail(Request $request, TranslatorInterface $translator): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        try {
-            $user = $this->getUser();
-            $this->emailVerifier->handleEmailConfirmation($request, $user);
-        } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('verify_email_error', $translator->trans($exception->getReason(), [], 'VerifyEmailBundle'));
-            return $this->redirectToRoute('app_register');
-        }
-
-        $this->addFlash('success', 'Votre adresse e-mail a été vérifiée.');
-        return $this->redirectToRoute('app_dashboard');
-    }
-
-    #[Route('/verify/emailSend', name: 'app_verify_email_send')]
-    public function send(): Response
-    {
-        $user = $this->getUser();
-        
-        if (!$user) {
-            $this->addFlash('error', 'Vous devez être connecté pour vérifier votre email.');
-            return $this->redirectToRoute('app_login');
-        }
-
-        $this->emailVerifier->sendEmailConfirmation(
-            'app_verify_email',
-            $user,
-            (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                ->to((string) $user->getEmail())
-                ->subject('Confirmer votre adresse mail')
-                ->htmlTemplate('registration/confirmation_email.html.twig')
-        );
-
-        return $this->redirectToRoute('app_dashboard');
     }
 }

@@ -31,12 +31,9 @@
 				<ul class="navbar-nav ms-auto">
 					<li class="nav-item dropdown">
 						<a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							
+							<img src="{{app.user.photo}}" alt="User Avatar" class="rounded-circle" width="30" height="30">
 
-							{% if app.user.googleId and app.user.photo starts with 'http' %}
-								<img src="{{app.user.photo}}" alt="User Avatar" class="rounded-circle" width="30" height="30">
-							{% else %}
-								<img src="http://daniel-whannou.free.nf/dcsm-commerce/users/img/{{app.user.photo}}" alt="User Avatar" class="rounded-circle" width="30" height="30">
-							{% endif %}
 
 							<span class="ms-2">{{ app.user.username }}</span>
 							<!-- Affichage du nom de l'utilisateur -->

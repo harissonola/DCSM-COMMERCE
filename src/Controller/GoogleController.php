@@ -135,7 +135,7 @@ class GoogleController extends AbstractController
         ftp_close($ftpConnection);
 
         // URL publique pour accéder au QR Code
-        $publicQrCodeUrl = 'http://daniel-project-cdn.free.nf/upload/user/' . $qrCodeFileName;
+        $publicQrCodeUrl = 'https://daniel-project-cdn.free.nf/upload/user/' . $qrCodeFileName;
         $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\User;
@@ -33,11 +34,11 @@ class RegistrationController extends AbstractController
 
     #[Route('/register', name: 'app_register')]
     public function register(
-        Request $request, 
-        UserPasswordHasherInterface $userPasswordHasher, 
-        Security $security, 
-        EntityManagerInterface $entityManager, 
-        UrlGeneratorInterface $urlGenerator, 
+        Request $request,
+        UserPasswordHasherInterface $userPasswordHasher,
+        Security $security,
+        EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator,
         MailerInterface $mailer
     ): Response {
         if ($this->getUser()) {
@@ -74,7 +75,7 @@ class RegistrationController extends AbstractController
 
                 $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
                 $user->setCreatedAt(new \DateTimeImmutable())
-                     ->setMiningBotActive(0);
+                    ->setMiningBotActive(0);
 
                 $image = $form->get('photo')->getData();
                 if ($image) {
@@ -95,8 +96,8 @@ class RegistrationController extends AbstractController
 
                 // Générer le lien de référence
                 $referralLink = $urlGenerator->generate(
-                    'app_register', 
-                    ['ref' => $referralCode], 
+                    'app_register',
+                    ['ref' => $referralCode],
                     UrlGeneratorInterface::ABSOLUTE_URL
                 );
                 $qrCode = new QrCode($referralLink);
@@ -143,7 +144,7 @@ class RegistrationController extends AbstractController
     public function verifyEmail(Request $request): Response
     {
         $user = $this->getUser();
-        
+
         if (!$user) {
             // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
             return $this->redirectToRoute('app_main');
@@ -163,6 +164,38 @@ class RegistrationController extends AbstractController
 
             return $this->redirectToRoute('app_main');
         }
+    }
+
+    #[Route('/verify/email/resend', name: 'app_verify_email_send')]
+    public function resendEmailConfirmation(MailerInterface $mailer): Response
+    {
+        $user = $this->getUser();
+
+        if (!$user) {
+            // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
+            return $this->redirectToRoute('app_main');
+        }
+
+        // Vérifie si l'utilisateur a déjà confirmé son email
+        if ($user->isVerified()) {
+            $this->addFlash('info', 'Votre email est déjà confirmé.');
+            return $this->redirectToRoute('app_dashboard');
+        }
+
+        // Envoie l'email de confirmation
+        $this->emailVerifier->sendEmailConfirmation(
+            'app_verify_email',
+            $user,
+            (new TemplatedEmail())
+                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+                ->to((string) $user->getEmail())
+                ->subject('Confirmer votre adresse mail')
+                ->htmlTemplate('registration/confirmation_email.html.twig')
+        );
+
+        $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé à votre adresse email.');
+
+        return $this->redirectToRoute('app_dashboard');
     }
 
     private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void

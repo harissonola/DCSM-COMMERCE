@@ -56,7 +56,7 @@ final class UserSettingsController extends AbstractController
         }
 
         // 📌 Chemin du répertoire des images sur le serveur FTP
-        $ftpDirectory = "daniel-project-cdn.free.nf/htdocs/dcsm-commerce/users/img/";
+        $ftpDirectory = "/daniel-project-cdn.free.nf/htdocs/dcsm-commerce/users/img/";
 
         // Mise à jour de la photo de profil
         $avatarFile = $request->files->get('avatarUpload');

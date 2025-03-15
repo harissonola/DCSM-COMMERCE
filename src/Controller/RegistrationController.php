@@ -161,7 +161,7 @@ class RegistrationController extends AbstractController
             // Gérer les erreurs de validation de l'email
             $this->addFlash('error', 'L\'adresse email n\'est pas valide.');
 
-            return $this->redirectToRoute('app_home');
+            return $this->redirectToRoute('app_main');
         }
     }
 }

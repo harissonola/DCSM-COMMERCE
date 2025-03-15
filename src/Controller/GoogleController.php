@@ -102,7 +102,7 @@ class GoogleController extends AbstractController
         $ftpServer = "ftpupload.net";
         $ftpUsername = "if0_38455727";
         $ftpPassword = "DCSMCOMMERCE";
-        $ftpDirectory = "daniel-project-cdn.free.nf/htdocs/uploads/user/"; // Ajustez ce chemin selon votre configuration
+        $ftpDirectory = "/daniel-project-cdn.free.nf/htdocs/uploads/user/"; // Ajustez ce chemin selon votre configuration
         $qrCodeFileName = $referralCode . '.png';
 
         // Connexion FTP avec un timeout de 120 sec

@@ -108,7 +108,7 @@ class RegistrationController extends AbstractController
                 $ftpUsername = "if0_38455727";
                 $ftpPassword = "DCSMCOMMERCE";
                 // Répertoire FTP : assurez-vous que le chemin correspond à votre configuration
-                $ftpDirectory = "daniel-project-cdn.free.nf/htdocs/uploads/users/";
+                $ftpDirectory = "/daniel-project-cdn.free.nf/htdocs/uploads/users/";
                 $qrCodeFileName = $referralCode . '.png';
 
                 // Connexion FTP sur le port 21

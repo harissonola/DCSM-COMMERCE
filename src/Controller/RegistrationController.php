@@ -164,4 +164,19 @@ class RegistrationController extends AbstractController
             return $this->redirectToRoute('app_main');
         }
     }
+
+    private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
+    {
+        $email = (new TemplatedEmail())
+            ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+            ->to($user->getEmail())
+            ->subject('Votre lien d\'affiliation et QR Code')
+            ->htmlTemplate('emails/referral_email.html.twig')
+            ->context([
+                'user' => $user,
+                'referralLink' => $referralLink,
+                'qrCodePath' => $qrCodePath,
+            ]);
+        $mailer->send($email);
+    }
 }

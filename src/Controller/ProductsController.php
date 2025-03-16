@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 #[Route('/products', name: '')]
 class ProductsController extends AbstractController
@@ -90,42 +91,55 @@ class ProductsController extends AbstractController
 
 
 
-    #[Route('/{slug}/buy', name: 'app_buy_product')]
-    public function buy(string $slug, ProductRepository $productRepository, UrlGeneratorInterface $urlGenerator): Response
-    {
-        if (!$this->getUser()) {
-            return $this->redirectToRoute("app_main");
+     /**
+     * Route pour finaliser l'achat d'un produit.
+     * Le prix du produit est stocké en CFA dans la base de données et le solde de l'utilisateur en USD.
+     * On suppose ici que 600 CFA = 1 USD.
+     */
+    #[Route('/sell-product/{slug}', name: 'app_sell_product', methods: ['POST'])]
+    public function sellProduct(
+        Request $request, 
+        ProductRepository $productRepository, 
+        EntityManagerInterface $em,
+        string $slug
+    ): JsonResponse {
+        // Vérifier que la requête est de type AJAX
+        if (!$request->isXmlHttpRequest()) {
+            return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
         }
-
-        $prod = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$prod) {
-            throw $this->createNotFoundException("Produit introuvable !");
+        
+        // Récupérer l'utilisateur courant
+        $user = $this->getUser();
+        if (!$user) {
+            return new JsonResponse(['success' => false, 'message' => 'Utilisateur non authentifié'], 401);
         }
-
-        // Récupérer les valeurs depuis .env
-        $apiKey = $_ENV['CINETPAY_API_KEY'];
-        $siteId = $_ENV['CINETPAY_SITE_ID'];
-        $paydunyaPublicKey = $_ENV['PAYDUNYA_PUBLIC_KEY'];
-        $paydunyaPrivateKey = $_ENV['PAYDUNYA_PRIVATE_KEY'];
-        $paydunyaToken = $_ENV['PAYDUNYA_TOKEN'];
-
-        $transactionId = uniqid("ORDER_");
-        $notifyUrl = $urlGenerator->generate('app_cinetpay_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
-        $returnUrl = $urlGenerator->generate('app_payment_success', [], UrlGeneratorInterface::ABSOLUTE_URL);
-        $cancelUrl = $urlGenerator->generate('app_payment_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
-
-        return $this->render('products/buy.html.twig', [
-            'prod' => $prod,
-            'apiKey' => $apiKey,
-            'siteId' => $siteId,
-            'transactionId' => $transactionId,
-            'notifyUrl' => $notifyUrl,
-            'returnUrl' => $returnUrl,
-            'cancelUrl' => $cancelUrl,
-            'paydunyaPublicKey' => $paydunyaPublicKey,
-            'paydunyaPrivateKey' => $paydunyaPrivateKey,
-            'paydunyaToken' => $paydunyaToken,
-        ]);
+        
+        // Récupérer le produit via son slug
+        $product = $productRepository->findOneBy(['slug' => $slug]);
+        if (!$product) {
+            return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
+        }
+        
+        // Taux de conversion : 601.56 CFA = 1 USD
+        $conversionRate = 601.56;
+        $priceCFA = $product->getPrice(); // Prix en CFA
+        $priceUSD = $priceCFA / $conversionRate; // Prix converti en USD
+        
+        // Vérifier si le solde de l'utilisateur est suffisant
+        if ($user->getBalance() < $priceUSD) {
+            return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
+        }
+        
+        // Déduire le montant du solde utilisateur
+        $user->setBalance($user->getBalance() - $priceUSD);
+        
+        // Optionnel : Enregistrer une transaction ou associer le produit à l'utilisateur
+        $user->addProduct($product);
+        
+        $em->persist($user);
+        $em->flush();
+        
+        return new JsonResponse(['success' => true, 'message' => 'Achat réussi'], 200);
     }
 
     #[Route('/{slug}/start-mining', name: 'start_mining', methods: ['POST'])]

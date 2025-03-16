@@ -1,16 +1,16 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}
-	Dashboard |
-	{{ prod.name }}
+	Dashboard | {{ prod.name }}
 {% endblock %}
 
 {% block body %}
 	<!-- Chart.js CDN -->
-	 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@1.0.0"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 
-		<div class="container-fluid py-5 mt-3"> <canvas id="tradingChart" width="400" height="400"></canvas>
+	<div class="container-fluid py-5 mt-3">
+		<canvas id="tradingChart" width="400" height="400"></canvas>
 	</div>
 
 	<div>
@@ -50,25 +50,24 @@
         console.log("✅ Données reçues :", chartData);
 
         // Transformation des données pour Chart.js
-        chartData = chartData
-            .map(item => {
-                if (typeof item !== "object" || !item.x || !item.y) {
-                    console.warn("⚠️ Donnée incorrecte détectée :", item);
-                    return null;
-                }
+        chartData = chartData.map(item => {
+            if (typeof item !== "object" || !item.x || !item.y) {
+                console.warn("⚠️ Donnée incorrecte détectée :", item);
+                return null;
+            }
 
-                const parsedDate = Date.parse(item.x); // Convertir en timestamp
-                if (isNaN(parsedDate)) {
-                    console.warn("⚠️ Format de date invalide :", item.x);
-                    return null;
-                }
+            let parsedDate = new Date(item.x); // Conversion en objet Date
 
-                return {
-                    x: new Date(parsedDate),
-                    y: parseFloat(item.y)
-                };
-            })
-            .filter(item => item !== null); // Évite les erreurs
+            if (isNaN(parsedDate.getTime())) {
+                console.warn("⚠️ Format de date invalide :", item.x);
+                return null;
+            }
+
+            return {
+                x: parsedDate,
+                y: parseFloat(item.y)
+            };
+        }).filter(item => item !== null);
 
         console.log("✅ Données formatées :", chartData);
 
@@ -126,5 +125,3 @@
     });
 </script>
 {% endblock %}
-
-

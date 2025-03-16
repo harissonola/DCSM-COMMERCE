@@ -135,7 +135,8 @@
 	</section>
 
 	<!-- Features Section -->
-	<section class="features container" id="features">
+	<section
+		class="features container" id="features">
 		<!-- Ajout d'un titre de section pour la hiérarchie -->
 		<h2 class="text-center mb-5">Fonctionnalités</h2>
 		<div class="row text-center">
@@ -171,14 +172,16 @@
 
 	<!-- Price Section -->
 	<section class="price" id="price">
-		<div class="container">
+		<div
+			class="container">
 			<!-- Passage de h1 à h2 pour la hiérarchie, car la page possède déjà un h1 -->
 			<h2 data-aos-duration="2000" data-aos="fade-down" data-aos-delay="350" class="text-center text-warning mt-0" id="priceTitle"></h2>
 			<div class="row">
 				<div class="col-md-4" data-aos-duration="2000" data-aos="zoom-in-right" data-aos-delay="350">
 					<div class="card price-card">
 						<img src="{{ asset('img/VIP_A.webp') }}" class="card-img-top" alt="VIP A"/>
-						<div class="card-body">
+						<div
+							class="card-body">
 							<!-- Remplacement de h5 par h3 pour assurer la cohérence -->
 							<h3 class="card-title">VIP A</h3>
 							<h4 class="card-subtitle mb-2 text-muted">Card subtitle</h4>
@@ -210,8 +213,8 @@
 		</div>
 	</section>
 
-	<script src="{{ asset('typed.umd.js') }}"></script>
-	<script>
+	 <script src="{{ asset('typed.umd.js') }}"></script>
+ <script>
 		var typingEffect = new Typed('#priceTitle', {
 			strings: ['Nos Boutiques'],
 			loop: true,
@@ -222,25 +225,38 @@
 	</script>
 
 
+	 <script src="{{ asset('particles/particles.js') }}"></script>
+	 <script src="{{ asset('particles/app.js') }}"></script>
 
-	<script src="{{ asset('particles/particles.js') }}"></script>
-	<script src="{{ asset('particles/app.js') }}"></script>
+	<!--Start of Tawk.to Script-->
+	 <script type="text/javascript">
+	var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+	(function(){
+	var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+	s1.async=true;
+	s1.src='https://embed.tawk.to/67d633b0fb4e6a190b9e9490/1imebjqf5';
+	s1.charset='UTF-8';
+	s1.setAttribute('crossorigin','*');
+	s0.parentNode.insertBefore(s1,s0);
+	})();
+	</script>
+	<!--End of Tawk.to Script-->
 {% endblock %}
 
 {% block customScript %}
-	<script>
-		document.addEventListener('turbo:load', function () {
-			setTimeout(() => {
-				const navbar = document.getElementById('navbar');
-				const formCtr = document.getElementById('form-control-skeleton');
-				const navS = document.getElementById('navbar-skeleton');
-				const btnS = document.getElementById('btn-skeleton');
-				navbar.classList.remove('navbar-loading');
-				navbar.classList.toggle('navbar-unloading');
-				formCtr.classList.toggle("d-none");
-				navS.classList.toggle("d-none");
-				btnS.classList.toggle("d-none");
-			}, 2000);
-		});
-	</script>
+	 <script>
+			document.addEventListener('turbo:load', function () {
+				setTimeout(() => {
+					const navbar = document.getElementById('navbar');
+					const formCtr = document.getElementById('form-control-skeleton');
+					const navS = document.getElementById('navbar-skeleton');
+					const btnS = document.getElementById('btn-skeleton');
+					navbar.classList.remove('navbar-loading');
+					navbar.classList.toggle('navbar-unloading');
+					formCtr.classList.toggle("d-none");
+					navS.classList.toggle("d-none");
+					btnS.classList.toggle("d-none");
+				}, 2000);
+			});
+		</script>
 {% endblock %}

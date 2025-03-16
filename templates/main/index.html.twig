@@ -69,7 +69,6 @@
 			margin-top: 15px;
 			margin-bottom: 15px;
 		}
-
 		.price-card {
 			background: rgba(255, 255, 255, 0.1);
 			border: none;
@@ -77,12 +76,10 @@
 			transition: transform 0.3s;
 			margin-top: 30px;
 		}
-
 		.price-card img {
 			border-top-left-radius: 10px;
 			border-top-right-radius: 10px;
 		}
-
 		.price-card:hover {
 			transform: translateY(-10px);
 		}
@@ -90,7 +87,6 @@
 			margin-top: 15px;
 			margin-bottom: 15px;
 		}
-
 		.price {
 			background: linear-gradient(157deg, #1a1a2e, #0b2a79);
 			padding: 60px 20px;
@@ -125,11 +121,10 @@
 		</div>
 	</nav>
 
-
 	<!-- Hero Section -->
 	<section class="overflow-hidden hero" style="background: linear-gradient(94.41deg, #193D91 -6.4%, #091F51 105.25%); height: 60vh;">
 		<div id="particles-js" class="bg-holder opacity-50" style="background-position:14%;background-size: contain; height: 80vh; width: 100%; z-index: 500; position:absolute" data-gsap-parallax="{&quot;y&quot;:&quot;-40%&quot;}">
-			<canvas class="particles-js-canvas-el" width="1361" height="655" style='width: 100%; height: 100%;'></canvas>
+			<canvas class="particles-js-canvas-el" width="1361" height="655" style="width: 100%; height: 100%;"></canvas>
 		</div>
 		<div class="container position-relative py-8">
 			<div class="hero-content container" data-aos-duration="2000" data-aos="zoom-in" data-aos-delay="300">
@@ -141,11 +136,13 @@
 
 	<!-- Features Section -->
 	<section class="features container" id="features">
+		<!-- Ajout d'un titre de section pour la hiérarchie -->
+		<h2 class="text-center mb-5">Fonctionnalités</h2>
 		<div class="row text-center">
 			<div class="col-md-4 mb-4">
 				<div class="card feature-card h-100">
 					<div class="card-body">
-						<img src="{{asset("img/dash.webp")}}" alt="Dashboard Icon" class="mb-3 img-fluid"/>
+						<img src="{{ asset('img/dash.webp') }}" alt="Dashboard Icon" class="mb-3 img-fluid"/>
 						<h3>Tableau de Bord Interactif</h3>
 						<p>Visualisez et gérez vos investissements en temps réel.</p>
 					</div>
@@ -154,7 +151,7 @@
 			<div class="col-md-4 mb-4">
 				<div class="card feature-card h-100">
 					<div class="card-body">
-						<img src="{{asset("img/charts.webp")}}" alt="Charts Icon" class="mb-3 img-fluid"/>
+						<img src="{{ asset('img/charts.webp') }}" alt="Charts Icon" class="mb-3 img-fluid"/>
 						<h3>Graphiques Dynamiques</h3>
 						<p>Suivez les tendances du marché avec des graphiques actualisés.</p>
 					</div>
@@ -163,7 +160,7 @@
 			<div class="col-md-4 mb-4">
 				<div class="card feature-card h-100">
 					<div class="card-body">
-						<img src="{{asset("img/notifIcon.webp")}}" alt="Notifications Icon" class="mb-3 img-fluid"/>
+						<img src="{{ asset('img/notifIcon.webp') }}" alt="Notifications Icon" class="mb-3 img-fluid"/>
 						<h3>Notifications en Temps Réel</h3>
 						<p>Recevez des alertes sur les fluctuations et opportunités du marché.</p>
 					</div>
@@ -175,34 +172,36 @@
 	<!-- Price Section -->
 	<section class="price" id="price">
 		<div class="container">
-			<h1 data-aos-duration="2000" data-aos="fade-down" data-aos-delay="350" class="text-center text-warning mt-0" id="priceTitle"></h1>
+			<!-- Passage de h1 à h2 pour la hiérarchie, car la page possède déjà un h1 -->
+			<h2 data-aos-duration="2000" data-aos="fade-down" data-aos-delay="350" class="text-center text-warning mt-0" id="priceTitle"></h2>
 			<div class="row">
 				<div class="col-md-4" data-aos-duration="2000" data-aos="zoom-in-right" data-aos-delay="350">
 					<div class="card price-card">
-						<img src="{{ asset('img/VIP_A.webp') }}" class="card-img-top" alt="..."/>
+						<img src="{{ asset('img/VIP_A.webp') }}" class="card-img-top" alt="VIP A"/>
 						<div class="card-body">
-							<h5 class="card-title">VIP A</h5>
-							<h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
+							<!-- Remplacement de h5 par h3 pour assurer la cohérence -->
+							<h3 class="card-title">VIP A</h3>
+							<h4 class="card-subtitle mb-2 text-muted">Card subtitle</h4>
 							<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
 						</div>
 					</div>
 				</div>
 				<div class="col-md-4" data-aos-duration="2000" data-aos="zoom-in-left" data-aos-delay="390">
 					<div class="card price-card">
-						<img src="{{ asset('img/VIP_B.webp') }}" class="card-img-top" alt="..."/>
+						<img src="{{ asset('img/VIP_B.webp') }}" class="card-img-top" alt="VIP B"/>
 						<div class="card-body">
-							<h5 class="card-title">VIP B</h5>
-							<h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
+							<h3 class="card-title">VIP B</h3>
+							<h4 class="card-subtitle mb-2 text-muted">Card subtitle</h4>
 							<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
 						</div>
 					</div>
 				</div>
 				<div class="col-md-4" data-aos-duration="2000" data-aos="zoom-in-right" data-aos-delay="370">
 					<div class="card price-card">
-						<img src="{{ asset('img/VIP_C.webp') }}" class="card-img-top" alt="..."/>
+						<img src="{{ asset('img/VIP_C.webp') }}" class="card-img-top" alt="VIP C"/>
 						<div class="card-body">
-							<h5 class="card-title">VIP C</h5>
-							<h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
+							<h3 class="card-title">VIP C</h3>
+							<h4 class="card-subtitle mb-2 text-muted">Card subtitle</h4>
 							<p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
 						</div>
 					</div>
@@ -211,35 +210,35 @@
 		</div>
 	</section>
 
-	 <script src="{{asset("typed.umd.js")}}"></script>
- <script>
-    var typingEffect = new Typed('#priceTitle', {
-      strings: ['Nos Boutiques'],
-      loop: true,
-      typeSpeed: 100,
-      backSpeed: 80,
-      backDelay: 2000
-    })
-  </script>
+	<script src="{{ asset('typed.umd.js') }}"></script>
+	<script>
+		var typingEffect = new Typed('#priceTitle', {
+			strings: ['Nos Boutiques'],
+			loop: true,
+			typeSpeed: 100,
+			backSpeed: 80,
+			backDelay: 2000
+		});
+	</script>
 
-	 <script src="{{asset("particles/particles.js")}}"></script>
-	 <script src="{{asset("particles/app.js")}}"></script>
+	<script src="{{ asset('particles/particles.js') }}"></script>
+	<script src="{{ asset('particles/app.js') }}"></script>
 {% endblock %}
 
 {% block customScript %}
-	 <script>
-	    document.addEventListener('turbo:load', function () {
-	      setTimeout(() => {
-	        const navbar = document.getElementById('navbar')
-	        const formCtr = document.getElementById('form-control-skeleton')
-	        const navS = document.getElementById('navbar-skeleton')
-	        const btnS = document.getElementById('btn-skeleton')
-	        navbar.classList.remove('navbar-loading')
-	        navbar.classList.toggle('navbar-unloading')
-	        formCtr.classList.toggle("d-none")
-	        navS.classList.toggle("d-none")
-	        btnS.classList.toggle("d-none")
-	      }, 2000) 
-	    })
-	  </script>
+	<script>
+		document.addEventListener('turbo:load', function () {
+			setTimeout(() => {
+				const navbar = document.getElementById('navbar');
+				const formCtr = document.getElementById('form-control-skeleton');
+				const navS = document.getElementById('navbar-skeleton');
+				const btnS = document.getElementById('btn-skeleton');
+				navbar.classList.remove('navbar-loading');
+				navbar.classList.toggle('navbar-unloading');
+				formCtr.classList.toggle("d-none");
+				navS.classList.toggle("d-none");
+				btnS.classList.toggle("d-none");
+			}, 2000);
+		});
+	</script>
 {% endblock %}

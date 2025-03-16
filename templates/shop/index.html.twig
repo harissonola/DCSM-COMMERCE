@@ -1,166 +1,175 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}
-  {{ shop.name }}
+	{{ shop.name }}
 {% endblock %}
 
 {% block body %}
-  <style>
-    .hero {
-      padding: 100px 20px;
-      text-align: center;
-      background: no-repeat center center/cover;
-      position: relative;
-      background: linear-gradient(94.41deg, #193d91 -6.4%, #091f51 105.25%);
-    }
-    
-    .prods {
-      padding: 100px 20px;
-    }
+	<style>
+		.hero {
+			padding: 100px 20px;
+			text-align: center;
+			background: no-repeat center center/cover;
+			position: relative;
+			background: linear-gradient(94.41deg, #193d91 -6.4%, #091f51 105.25%);
+		}
 
-    .prod-card {
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 10px;
-      transition: transform 0.3s;
-      margin-top: 30px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      overflow: hidden;
-    }
+		.prods {
+			padding: 100px 20px;
+		}
 
-    /* Skeleton Loader en mode dark */
-    .skeleton {
-      background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
-      background-size: 200% 100%;
-      animation: loading 1.5s infinite linear;
-      border-radius: 10px;
-      position: relative;
-    }
+		.prod-card {
+			background: rgba(255, 255, 255, 0.1);
+			border: none;
+			border-radius: 10px;
+			transition: transform 0.3s;
+			margin-top: 30px;
+		}
 
-    @keyframes loading {
-      0% {
-        background-position: 200% 0;
-      }
-      100% {
-        background-position: -200% 0;
-      }
-    }
+		.prod-card img {
+			border-top-left-radius: 10px;
+			border-top-right-radius: 10px;
+		}
 
-    /* Squelette pour l'image */
-    .skeleton-box {
-      width: 100%;
-      height: 200px;
-      background-color: #2a2a2a;
-      margin-bottom: 20px;
-    }
+		.prod-card:hover {
+			transform: translateY(-10px);
+		}
+		.prod-card h3 {
+			margin-top: 15px;
+			margin-bottom: 15px;
+		}
 
-    /* Squelette pour les titres et texte */
-    .skeleton-text {
-      height: 10px;
-      width: 80%;
-      margin-bottom: 5px;
-      background-color: #2a2a2a;
-      border-radius: 5px;
-    }
+		/* Skeleton Loader en mode dark */
+		.skeleton {
+			background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+			background-size: 200% 100%;
+			animation: loading 1.5s infinite linear;
+			border-radius: 10px;
+			position: relative;
+		}
 
-    .skeleton-title {
-      height: 20px;
-      width: 60%;
-      margin-bottom: 15px;
-    }
+		@keyframes loading {
+			0% {
+				background-position: 200% 0;
+			}
+			100% {
+				background-position: -200% 0;
+			}
+		}
 
-    .skeleton-subtitle {
-      height: 15px;
-      width: 40%;
-      margin-bottom: 10px;
-    }
+		/* Squelette pour l'image */
+		.skeleton-box {
+			width: 100%;
+			height: 200px;
+			background-color: #2a2a2a;
+			margin-bottom: 20px;
+		}
 
-    .skeleton-description {
-      height: 15px;
-      width: 80%;
-      margin-bottom: 20px;
-    }
+		/* Squelette pour les titres et texte */
+		.skeleton-text {
+			height: 10px;
+			width: 80%;
+			margin-bottom: 5px;
+			background-color: #2a2a2a;
+			border-radius: 5px;
+		}
 
-    .prod-card:hover {
-      transform: translateY(-10px);
-    }
+		.skeleton-title {
+			height: 20px;
+			width: 60%;
+			margin-bottom: 15px;
+		}
 
-    .btn-skeleton {
-      width: 120px;
-      height: 35px;
-      background-color: #2a2a2a;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
+		.skeleton-subtitle {
+			height: 15px;
+			width: 40%;
+			margin-bottom: 10px;
+		}
 
-  </style>
+		.skeleton-description {
+			height: 15px;
+			width: 80%;
+			margin-bottom: 20px;
+		}
 
-  <section style="overflow: hidden;" class="hero align-items-center justify-content-center text-center">
-    <div class="container" data-aos-duration="2000" data-aos="slide-left" data-aos-delay="100">
-      <h1 class="text-primary" data-aos-duration="2000" data-aos="slide-down" data-aos-delay="700">{{ shop.name }}</h1>
-      <p class="text-muted" data-aos-duration="2000" data-aos="slide-up" data-aos-delay="900">{{ shop.description }}</p>
-    </div>
-  </section>
+		.btn-skeleton {
+			width: 120px;
+			height: 35px;
+			background-color: #2a2a2a;
+			border-radius: 5px;
+			margin-top: 10px;
+		}
+	</style>
 
-  <section class="prods" id="prods">
-    <div class="row" id="prod-container">
-      {% if prods %}
-        {% for prod in prods %}
-          <div class="col-md-4" id="prod-card-{{ loop.index }}">
-            <div class="card prod-card skeleton">
-              <div class="skeleton-box"></div> <!-- Skeleton pour l'image -->
+	<section style="overflow: hidden;" class="hero align-items-center justify-content-center text-center">
+		<div class="container" data-aos-duration="2000" data-aos="slide-left" data-aos-delay="100">
+			<h1 class="text-primary" data-aos-duration="2000" data-aos="slide-down" data-aos-delay="700">{{ shop.name }}</h1>
+			<p class="text-muted" data-aos-duration="2000" data-aos="slide-up" data-aos-delay="900">{{ shop.description }}</p>
+		</div>
+	</section>
 
-              <div class="card-body">
-                <div class="skeleton-title skeleton-text"></div> <!-- Skeleton pour le titre -->
-                <div class="skeleton-subtitle skeleton-text"></div> <!-- Skeleton pour le prix -->
-                <div class="skeleton-description skeleton-text"></div> <!-- Skeleton pour la description -->
-                <div class="btn-skeleton"></div> <!-- Skeleton pour le bouton -->
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <h5 class="text-center text-danger">Aucun produit disponible pour le moment.</h5>
-      {% endif %}
-    </div>
-  </section>
+	<section class="prods" id="prods">
+		<div class="row" id="prod-container">
+			{% if prods %}
+				{% for prod in prods %}
+					<div class="col-md-4" id="prod-card-{{ loop.index }}">
+						<div class="card prod-card skeleton">
+							<div class="skeleton-box"></div>
+							<!-- Skeleton pour l'image -->
 
-  <script>
-    document.addEventListener('turbo:load', function() {
-      // Tableau JavaScript contenant les informations des produits
-      const products = [
-        {% for prod in prods %}
-          {
-            id: {{ loop.index }},
-            name: "{{ prod.name }}",
-            price: "{{ prod.price }}",
-            image: "{{ prod.image }}",
-            description: "Some quick example text to build on the card title and make up the bulk of the card's content.",
-            url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_dashboard_product', { slug: prod.slug }) }}{% else %}{{ path('app_buy_product', { slug: prod.slug }) }}{% endif %}"
-          },
-        {% endfor %}
-      ];
+							<div class="card-body">
+								<div class="skeleton-title skeleton-text"></div>
+								<!-- Skeleton pour le titre -->
+								<div class="skeleton-subtitle skeleton-text"></div>
+								<!-- Skeleton pour le prix -->
+								<div class="skeleton-description skeleton-text"></div>
+								<!-- Skeleton pour la description -->
+								<div class="btn-skeleton"></div>
+								<!-- Skeleton pour le bouton -->
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+			{% else %}
+				<h5 class="text-center text-danger">Aucun produit disponible pour le moment.</h5>
+			{% endif %}
+		</div>
+	</section>
 
-      // Remplacer le contenu des cartes après 1 seconde
-      setTimeout(() => {
-        products.forEach(product => {
-          const card = document.getElementById(`prod-card-${product.id}`);
-          const content = `
-            <img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
-            <div class="card-body">
-              <h5 class="card-title">${product.name}</h5>
-              <h6 class="card-subtitle mb-2 text-muted">${product.price} CFA</h6>
-              <p class="card-text">${product.description}</p>
-              <a href="${product.url}" class="btn btn-primary float-end">Acheter</a>
-            </div>
-          `;
-          card.classList.remove('skeleton'); // Enlève la classe skeleton pour afficher le vrai contenu
-          card.innerHTML = content;
-        });
-      }, 1000);
-    });
-  </script>
+	 <script>
+	    document.addEventListener('turbo:load', function() {
+	      // Tableau JavaScript contenant les informations des produits
+	      const products = [
+	        {% for prod in prods %}
+	          {
+	            id: {{ loop.index }},
+	            name: "{{ prod.name }}",
+	            price: "{{ prod.price }}",
+	            image: "{{ prod.image }}",
+	            description: "Some quick example text to build on the card title and make up the bulk of the card's content.",
+	            url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_dashboard_product', { slug: prod.slug }) }}{% else %}{{ path('app_buy_product', { slug: prod.slug }) }}{% endif %}"
+	          },
+	        {% endfor %}
+	      ];
+	
+	      // Remplacer le contenu des cartes après 1 seconde
+	      setTimeout(() => {
+	        products.forEach(product => {
+	          const card = document.getElementById(`prod-card-${product.id}`);
+	          const content = `
+	            <img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
+	            <div class="card-body">
+	              <h5 class="card-title">${product.name}</h5>
+	              <h6 class="card-subtitle mb-2 text-muted">${product.price} CFA</h6>
+	              <p class="card-text">${product.description}</p>
+	              <a href="${product.url}" class="btn btn-primary float-end">Acheter</a>
+	            </div>
+	          `;
+	          card.classList.remove('skeleton'); // Enlève la classe skeleton pour afficher le vrai contenu
+	          card.innerHTML = content;
+	        });
+	      }, 1000);
+	    });
+	  </script>
 
 {% endblock %}

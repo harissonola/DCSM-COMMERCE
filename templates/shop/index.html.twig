@@ -57,10 +57,6 @@
       margin-bottom: 20px;
     }
 
-    .prod-card:hover {
-      transform: translateY(-10px);
-    }
-
     .btn-skeleton {
       width: 120px;
       height: 35px;
@@ -108,10 +104,32 @@
       // Attendre 1 seconde avant de retirer la classe 'skeleton' et afficher le vrai contenu
       setTimeout(() => {
         prodCards.forEach(card => {
-          card.classList.remove('skeleton'); // Retirer la classe skeleton
+          // Retirer la classe 'skeleton' pour afficher les vrais contenus
+          card.classList.remove('skeleton');
+
+          // Retirer les éléments skeleton pour titre, sous-titre, description et bouton
+          const titleSkeleton = card.querySelector('.skeleton-title');
+          const subtitleSkeleton = card.querySelector('.skeleton-subtitle');
+          const descriptionSkeleton = card.querySelector('.skeleton-description');
+          const btnSkeleton = card.querySelector('.btn-skeleton');
+
+          if (titleSkeleton) titleSkeleton.classList.add('d-none');
+          if (subtitleSkeleton) subtitleSkeleton.classList.add('d-none');
+          if (descriptionSkeleton) descriptionSkeleton.classList.add('d-none');
+          if (btnSkeleton) btnSkeleton.classList.add('d-none');
+          
+          // Ajout du contenu réel
+          const title = card.querySelector('.card-title');
+          const subtitle = card.querySelector('.card-subtitle');
+          const description = card.querySelector('.card-text');
+          const button = card.querySelector('.btn');
+
+          if (title) title.classList.remove('d-none');
+          if (subtitle) subtitle.classList.remove('d-none');
+          if (description) description.classList.remove('d-none');
+          if (button) button.classList.remove('d-none');
         });
       }, 1000); // Délai de 1 seconde
     });
   </script>
-
 {% endblock %}

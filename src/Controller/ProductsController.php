@@ -93,7 +93,7 @@ class ProductsController extends AbstractController
         }
 
         return $this->render('products/dash.html.twig', [
-            'products' => $products,
+            'prod' => $products,
             'chartData' => json_encode($chartData),
         ]);
     }

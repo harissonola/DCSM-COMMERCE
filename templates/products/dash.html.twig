@@ -32,63 +32,78 @@
 
 {% block customScript %}
 	 <script>
-	    document.addEventListener('turbo:load', function () {
-	      const ctx = document.getElementById('tradingChart').getContext('2d');
-	      const chartData = {{ chartData|raw }}; // Conversion depuis JSON
-	
-	      new Chart(ctx, {
-	        type: 'line',
-	        data: {
-	          datasets: [
-	            {
-	              label: '{{ prod.name }}',
-	              data: chartData,
-	              borderColor: 'blue',
-	              borderWidth: 2,
-	              pointRadius: 2,
-	              tension: 0.2
-	            }
-	          ]
-	        },
-	        options: {
-	          responsive: true,
-	          plugins: {
-	            legend: { display: true }
-	          },
-	          scales: {
-	            x: { 
-	              type: 'time', 
-	              time: { unit: 'day' } 
-	            },
-	            y: { 
-	              beginAtZero: false 
-	            }
-	          }
+	    document.addEventListener('DOMContentLoaded', function () {
+	        const ctx = document.getElementById('tradingChart').getContext('2d');
+	        
+	        // Vérification si l'élément Canvas existe
+	        if (!ctx) {
+	            console.error("❌ Élément 'tradingChart' introuvable !");
+	            return;
 	        }
-	      });
-	
-	      // Gérer le clic sur le bouton de minage manuel
-	      document.getElementById('startManualMining').addEventListener('click', function() {
-	        fetch('/products/{{ prod.slug }}/start-manual-mining', { 
-	          method: 'POST', 
-	          headers: {
-	            'Content-Type': 'application/json',
-	            'X-Requested-With': 'XMLHttpRequest',
-	          },
-	          body: JSON.stringify({
-	            productId: {{ prod.id }}
-	          })
-	        }).then(response => {
-	          if (response.ok) {
-	            alert('Minage manuel démarré !');
-	          }
+	        
+	        // Encodage JSON sécurisé
+	        let chartData;
+	        try {
+	            chartData = JSON.parse('{{ chartData|json_encode|raw }}');
+	        } catch (e) {
+	            console.error("❌ Erreur de parsing JSON :", e);
+	            return;
+	        }
+
+	        console.log("✅ Données reçues :", chartData);
+
+	        // Vérifier si les données sont valides
+	        if (!Array.isArray(chartData) || chartData.length === 0) {
+	            console.warn("⚠️ Les données du graphique sont vides ou mal formatées !");
+	            return;
+	        }
+
+	        // Transformation des données pour Chart.js
+	        chartData = chartData.map(item => {
+	            if (!item.x || !item.y) {
+	                console.warn("⚠️ Donnée incorrecte détectée :", item);
+	                return null;
+	            }
+	            return {
+	                x: new Date(item.x),
+	                y: parseFloat(item.y)
+	            };
+	        }).filter(Boolean); // Supprime les entrées invalides
+
+	        // Vérification après transformation
+	        console.log("✅ Données formatées :", chartData);
+
+	        // Création du graphique
+	        new Chart(ctx, {
+	            type: 'line',
+	            data: {
+	                datasets: [{
+	                    label: '{{ prod.name }}',
+	                    data: chartData,
+	                    borderColor: 'blue',
+	                    borderWidth: 2,
+	                    pointRadius: 2,
+	                    tension: 0.2
+	                }]
+	            },
+	            options: {
+	                responsive: true,
+	                plugins: {
+	                    legend: { display: true }
+	                },
+	                scales: {
+	                    x: {
+	                        type: 'time',
+	                        time: { unit: 'day' },
+	                        title: { display: true, text: 'Date' }
+	                    },
+	                    y: {
+	                        beginAtZero: false,
+	                        title: { display: true, text: 'Valeur' }
+	                    }
+	                }
+	            }
 	        });
-	      });
-	
-	      // Gérer le clic sur le bouton d'achat du bot
-	      document.getElementById('buyMiningBot').addEventListener('click', function() {
-	        window.location.href = '/products/buy-mining-bot';  // Rediriger vers la page d'achat du bot
-	      });
 	    });
-	  </script>
+	</script>
 {% endblock %}

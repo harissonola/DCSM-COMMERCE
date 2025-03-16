@@ -106,7 +106,7 @@
 							<tbody>
 								{% for transaction in transactions %}
 									<tr>
-										<td>{{ transaction.date|date('d/m/Y') }}</td>
+										<td>{{ transaction.createdAt|date('d/m/Y') }}</td>
 										<td>{{ transaction.method }}</td>
 										<td>${{ transaction.amount }}</td>
 									</tr>

@@ -156,6 +156,7 @@
               <a href="${product.url}" class="btn btn-primary float-end">Acheter</a>
             </div>
           `;
+          card.classList.remove('skeleton'); // Enlève la classe skeleton pour afficher le vrai contenu
           card.innerHTML = content;
         });
       }, 1000);

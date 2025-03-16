@@ -1,37 +1,34 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}
-	Dashboard |
-	{{ prod.name }}
+	Dashboard | {{ prod.name }}
 {% endblock %}
 
 {% block body %}
 	<!-- Chart.js CDN -->
-	 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@1.0.0"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@1.0.0"></script>
 
-		<div class="container-fluid py-5 mt-3">
-			<canvas id="tradingChart"></canvas>
-		</div>
+	<div class="container-fluid py-5 mt-3">
+		<canvas id="tradingChart" width="400" height="400"></canvas>
+	</div>
 
-		<div>
-			<!-- Afficher le statut du bot de minage -->
-			{% if app.user and app.user.isMiningBotActive %}
-				<p>Votre bot de minage est activé. Le minage se fait automatiquement.</p>
-			{% else %}
-				<!-- Si l'utilisateur n'a pas de bot, il peut miner manuellement -->
-				<div class="alert alert-danger" role="alert">
-					Vous n'avez pas le bot de minage. Vous pouvez miner manuellement, mais vous serez responsable de vos gains/pertes.
-				</div>
-				<button id="startManualMining" class="btn btn-primary">Démarrer le minage manuel</button>
-				<button id="buyMiningBot" class="btn btn-warning">Acheter le bot de minage</button>
-			{% endif %}
-		</div>
+	<div>
+		<!-- Afficher le statut du bot de minage -->
+		{% if app.user and app.user.isMiningBotActive %}
+			<p>Votre bot de minage est activé. Le minage se fait automatiquement.</p>
+		{% else %}
+			<div class="alert alert-danger" role="alert">
+				Vous n'avez pas le bot de minage. Vous pouvez miner manuellement, mais vous serez responsable de vos gains/pertes.
+			</div>
+			<button id="startManualMining" class="btn btn-primary">Démarrer le minage manuel</button>
+			<button id="buyMiningBot" class="btn btn-warning">Acheter le bot de minage</button>
+		{% endif %}
 	</div>
 {% endblock %}
 
 {% block customScript %}
-	 <script>
+	<script>
 	    document.addEventListener('DOMContentLoaded', function () {
 	        const ctx = document.getElementById('tradingChart').getContext('2d');
 	        
@@ -41,10 +38,10 @@
 	            return;
 	        }
 	        
-	        // Encodage JSON sécurisé
+	        // Utiliser le JSON déjà encodé depuis le contrôleur
 	        let chartData;
 	        try {
-	            chartData = JSON.parse('{{ chartData|json_encode|raw }}');
+	            chartData = JSON.parse('{{ chartData|raw }}');
 	        } catch (e) {
 	            console.error("❌ Erreur de parsing JSON :", e);
 	            return;

@@ -55,7 +55,7 @@ class PaymentController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Dépôt réussi !');
-        return $this->redirectToRoute('app_user_profile');
+        return $this->redirectToRoute('app_profile');
     }
 
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]

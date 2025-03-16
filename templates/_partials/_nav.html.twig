@@ -1,6 +1,5 @@
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top navbar-loading" id="navbar">
-	<div
-		class="container">
+	<div class="container">
 		<!-- Skeleton loader pour la marque -->
 		<div class="navbar-skeleton"></div>
 		<a class="navbar-brand text-primary" href="{{ path('app_dashboard') }}" data-aos-duration="2000" data-aos="slide-right" data-aos-delay="200">DCSM COMMERCE</a>
@@ -18,7 +17,7 @@
 					<a data-aos-duration="2000" data-aos="slide-down" data-aos-delay="400" class="nav-link" href="#">Produits</a>
 				</li>
 				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" href="#" id="dropdownId" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Dropdown</a>
+					<a class="nav-link dropdown-toggle" href="#" id="dropdownId" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Ouvrir le menu déroulant">Dropdown</a>
 					<div class="dropdown-menu" aria-labelledby="dropdownId">
 						<a class="dropdown-item" href="#">Action 1</a>
 						<a class="dropdown-item" href="#">Action 2</a>
@@ -30,31 +29,27 @@
 				<!-- Menu utilisateur avec avatar -->
 				<ul class="navbar-nav ms-auto">
 					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						<a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Menu utilisateur">
 							
-							<img src="{{app.user.photo}}" alt="User Avatar" class="rounded-circle" width="30" height="30">
-
-
+							<img src="{{app.user.photo}}" alt="Avatar de {{ app.user.username }}" class="rounded-circle" width="30" height="30">
 							<span class="ms-2">{{ app.user.username }}</span>
-							<!-- Affichage du nom de l'utilisateur -->
 						</a>
 						<div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-							<a class="dropdown-item" href="{{ path('app_profile') }}">Profil</a>
-							<a class="dropdown-item" href="{{ path('app_user_settings') }}">Paramètres</a>
-							<a class="dropdown-item" href="{{ path('app_logout') }}">Déconnexion</a>
+							<a class="dropdown-item" href="{{ path('app_profile') }}" aria-label="Accéder au profil">Profil</a>
+							<a class="dropdown-item" href="{{ path('app_user_settings') }}" aria-label="Accéder aux paramètres">Paramètres</a>
+							<a class="dropdown-item" href="{{ path('app_logout') }}" aria-label="Se déconnecter">Déconnexion</a>
 						</div>
 					</li>
 				</ul>
 			{% endif %}
 
-
 			<!-- Skeleton loader pour le champ de recherche -->
 			<div class="form-control-skeleton"></div>
-			<form class="d-flex my-2 my-lg-0 gap-2" id="search-form" data-turbo-action="replace" data-turbo-frame="search-results">
+			<form class="d-flex my-2 my-lg-0 gap-2" id="search-form" data-turbo-action="replace" data-turbo-frame="search-results" role="search">
 				<div class="form-control-skeleton" id="form-control-skeleton"></div>
-				<input class="form-control me-sm-2" type="text" placeholder="Search" id="search-input"/>
+				<input class="form-control me-sm-2" type="text" placeholder="Search" id="search-input" aria-label="Rechercher des produits" />
 				<div class="btn-skeleton" id="btn-skeleton"></div>
-				<button class="btn btn-outline-warning my-2 my-sm-0" type="submit">Search</button>
+				<button class="btn btn-outline-warning my-2 my-sm-0" type="submit" aria-label="Lancer la recherche">Search</button>
 			</form>
 		</div>
 	</div>

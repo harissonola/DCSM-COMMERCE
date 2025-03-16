@@ -6,30 +6,6 @@
 
 {% block body %}
   <style>
-    .hero {
-      padding: 100px 20px;
-      text-align: center;
-      background: no-repeat center center/cover;
-      position: relative;
-      background: linear-gradient(94.41deg, #193d91 -6.4%, #091f51 105.25%);
-    }
-    
-    .prods {
-      padding: 100px 20px;
-    }
-
-    .prod-card {
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 10px;
-      transition: transform 0.3s;
-      margin-top: 30px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      overflow: hidden;
-    }
-
     /* Skeleton Loader en mode dark */
     .skeleton {
       background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
@@ -48,7 +24,6 @@
       }
     }
 
-    /* Squelette pour l'image */
     .skeleton-box {
       width: 100%;
       height: 200px;
@@ -56,7 +31,6 @@
       margin-bottom: 20px;
     }
 
-    /* Squelette pour les titres et texte */
     .skeleton-text {
       height: 10px;
       width: 80%;
@@ -94,7 +68,6 @@
       border-radius: 5px;
       margin-top: 10px;
     }
-
   </style>
 
   <section style="overflow: hidden;" class="hero align-items-center justify-content-center text-center">
@@ -129,27 +102,15 @@
 
   <script>
     document.addEventListener('turbo:load', function() {
-      // Sélectionner toutes les cartes de produits
+      // Sélectionner toutes les cartes de produits avec la classe 'prod-card'
       const prodCards = document.querySelectorAll('.prod-card');
 
-      prodCards.forEach(card => {
-        // Sélectionner l'image du produit
-        const img = card.querySelector('img');
-
-        // Attendre que l'image soit chargée
-        img.onload = function() {
-          setTimeout(() => {
-            card.classList.remove('skeleton'); // Retirer la classe skeleton après 1 seconde
-          }, 1000); // Délai de 1 seconde avant d'afficher le contenu réel
-        };
-
-        // Si l'image est déjà en cache
-        if (img.complete) {
-          setTimeout(() => {
-            card.classList.remove('skeleton'); // Retirer la classe skeleton après 1 seconde
-          }, 1000); // Délai de 1 seconde avant d'afficher le contenu réel
-        }
-      });
+      // Attendre 1 seconde avant de retirer la classe 'skeleton' et afficher le vrai contenu
+      setTimeout(() => {
+        prodCards.forEach(card => {
+          card.classList.remove('skeleton'); // Retirer la classe skeleton
+        });
+      }, 1000); // Délai de 1 seconde
     });
   </script>
 

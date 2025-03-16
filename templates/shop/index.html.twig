@@ -17,7 +17,7 @@
     .prods {
       padding: 100px 20px;
     }
-    
+
     .prod-card {
       background: rgba(255, 255, 255, 0.1);
       border: none;
@@ -30,63 +30,69 @@
       overflow: hidden;
     }
 
-    /* Style du skeleton loader */
-    .prod-card.skeleton {
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    /* Skeleton Loader en mode dark */
+    .skeleton {
+      background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
       background-size: 200% 100%;
-      animation: loading 1.5s infinite ease-in-out;
+      animation: loading 1.5s infinite linear;
+      border-radius: 10px;
+      position: relative;
     }
 
     @keyframes loading {
       0% {
-        background-position: -200% 0;
-      }
-      100% {
         background-position: 200% 0;
       }
+      100% {
+        background-position: -200% 0;
+      }
     }
 
-    .prod-card img {
-      border-top-left-radius: 10px;
-      border-top-right-radius: 10px;
+    /* Squelette pour l'image */
+    .skeleton-box {
+      width: 100%;
       height: 200px;
-      background-color: #e0e0e0; /* Placeholder pour l'image */
-      object-fit: cover;
-    }
-    
-    .prod-card .card-body {
-      padding: 15px;
+      background-color: #2a2a2a;
+      margin-bottom: 20px;
     }
 
-    .prod-card h5, .prod-card h6, .prod-card p {
-      background-color: #e0e0e0; /* Placeholder pour le texte */
+    /* Squelette pour les titres et texte */
+    .skeleton-text {
+      height: 10px;
+      width: 80%;
+      margin-bottom: 5px;
+      background-color: #2a2a2a;
+      border-radius: 5px;
+    }
+
+    .skeleton-title {
       height: 20px;
+      width: 60%;
+      margin-bottom: 15px;
+    }
+
+    .skeleton-subtitle {
+      height: 15px;
+      width: 40%;
       margin-bottom: 10px;
     }
 
-    .prod-card .card-title {
-      width: 60%;
-      height: 20px;
-    }
-
-    .prod-card .card-subtitle {
-      width: 40%;
+    .skeleton-description {
       height: 15px;
-    }
-
-    .prod-card .card-text {
       width: 80%;
-      height: 15px;
-    }
-
-    .prod-card .btn {
-      background-color: #e0e0e0; /* Placeholder pour le bouton */
-      height: 35px;
-      width: 120px;
+      margin-bottom: 20px;
     }
 
     .prod-card:hover {
       transform: translateY(-10px);
+    }
+
+    .btn-skeleton {
+      width: 120px;
+      height: 35px;
+      background-color: #2a2a2a;
+      border-radius: 5px;
+      margin-top: 10px;
     }
 
   </style>
@@ -103,18 +109,14 @@
       {% if prods %}
         {% for prod in prods %}
           <div class="col-md-4">
-            <div class="card prod-card{% if not prod.image %} skeleton{% endif %}">
-              <img src="{{ prod.image }}" class="card-img-top" alt="{{ prod.name }}-IMG-{{ loop.index }}" style="max-height: 273px; object-fit: cover;" />
-              <div class="card-body">
-                <h5 class="card-title">{{ prod.name }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">{{ prod.price }} CFA</h6>
-                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+            <div class="card prod-card skeleton" id="prod-card-{{ loop.index }}">
+              <div class="skeleton-box"></div> <!-- Skeleton pour l'image -->
 
-                {% if is_granted('ROLE_ADMIN') %}
-                  <a href="{{ path('app_dashboard_product', { slug: prod.slug }) }}" class="btn btn-primary float-end">Visualiser</a>
-                {% else %}
-                  <a href="{{ path('app_buy_product', { slug: prod.slug }) }}" class="btn btn-outline-primary float-end">Acheter</a>
-                {% endif %}
+              <div class="card-body">
+                <div class="skeleton-title skeleton-text"></div> <!-- Skeleton pour le titre -->
+                <div class="skeleton-subtitle skeleton-text"></div> <!-- Skeleton pour le prix -->
+                <div class="skeleton-description skeleton-text"></div> <!-- Skeleton pour la description -->
+                <div class="btn-skeleton"></div> <!-- Skeleton pour le bouton -->
               </div>
             </div>
           </div>
@@ -131,15 +133,21 @@
       const prodCards = document.querySelectorAll('.prod-card');
 
       prodCards.forEach(card => {
-        // Si l'image du produit est déjà chargée
+        // Sélectionner l'image du produit
         const img = card.querySelector('img');
+
+        // Attendre que l'image soit chargée
         img.onload = function() {
-          card.classList.remove('skeleton'); // Retirer la classe skeleton lorsque l'image est chargée
+          setTimeout(() => {
+            card.classList.remove('skeleton'); // Retirer la classe skeleton après 1 seconde
+          }, 1000); // Délai de 1 seconde avant d'afficher le contenu réel
         };
 
-        // Vérifier si l'image est déjà chargée (au cas où elle serait en cache)
+        // Si l'image est déjà en cache
         if (img.complete) {
-          card.classList.remove('skeleton');
+          setTimeout(() => {
+            card.classList.remove('skeleton'); // Retirer la classe skeleton après 1 seconde
+          }, 1000); // Délai de 1 seconde avant d'afficher le contenu réel
         }
       });
     });

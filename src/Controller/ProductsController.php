@@ -42,54 +42,41 @@ class ProductsController extends AbstractController
         UrlGeneratorInterface $urlGenerator
     ): Response {
         $user = $this->getUser();
-        // Vérifier si l'utilisateur est connecté
+
         if (!$user) {
             return $this->redirectToRoute("app_main");
         }
 
-        // Vérifier si l'utilisateur a le rôle d'administrateur
-        if (in_array('ROLE_ADMIN', $user->getRoles())) {
-            // Si l'utilisateur est administrateur, récupérer tous les produits
-            $products = $productRepository->findAll();
-        } else {
-            // Si l'utilisateur n'est pas administrateur, trouver le produit par le slug
-            $prod = $productRepository->findOneBy(['slug' => $slug]);
-            if (!$prod) {
-                throw $this->createNotFoundException('Produit non trouvé');
-            }
+        // Trouver le produit correspondant au slug
+        $prod = $productRepository->findOneBy(['slug' => $slug]);
 
-            // Vérifier si l'utilisateur est bien associé au produit
-            if (!$prod->getUsers()->contains($this->getUser())) {
-                $this->addFlash('danger', 'Vous devez acheter ce produit pour accéder à son tableau de bord. Cliquez ici pour acheter le produit : <a href="' . $urlGenerator->generate('app_buy_product', ['slug' => $slug]) . '" class="alert-link">Acheter ce produit</a>');
-                return $this->redirectToRoute('app_main');
-            }
+        if (!$prod) {
+            throw $this->createNotFoundException('Produit non trouvé');
+        }
 
-            $products = [$prod];
+        // Vérifier si l'utilisateur est autorisé à voir ce produit
+        if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
+            $this->addFlash('danger', 'Vous devez acheter ce produit pour accéder à son tableau de bord. Cliquez ici pour acheter le produit : <a href="' . $urlGenerator->generate('app_buy_product', ['slug' => $slug]) . '" class="alert-link">Acheter ce produit</a>');
+            return $this->redirectToRoute('app_main');
         }
 
         // Vérification du bot de minage (si actif)
         if ($user->isMiningBotActive()) {
-            // Si l'utilisateur a un bot de minage actif, lancer le minage sur chaque produit
-            foreach ($products as $prod) {
-                $this->startProductMining($prod, $entityManager); // Passer $entityManager
-            }
+            $this->startProductMining($prod, $entityManager);
         }
 
-        // Récupérer les prix des produits
-        $chartData = [];
-        foreach ($products as $prod) {
-            $prices = $productPriceRepository->findBy(
-                ['product' => $prod],
-                ['timestamp' => 'ASC']
-            );
+        // Récupérer UNIQUEMENT les prix du produit sélectionné
+        $prices = $productPriceRepository->findBy(
+            ['product' => $prod],
+            ['timestamp' => 'ASC']
+        );
 
-            foreach ($prices as $price) {
-                $chartData[] = [
-                    'product' => $prod->getName(),
-                    'x' => $price->getTimestamp()->format('Y-m-d H:i:s'),
-                    'y' => $price->getPrice()
-                ];
-            }
+        $chartData = [];
+        foreach ($prices as $price) {
+            $chartData[] = [
+                'x' => $price->getTimestamp()->format('Y-m-d H:i:s'),
+                'y' => $price->getPrice()
+            ];
         }
 
         return $this->render('products/dash.html.twig', [
@@ -97,6 +84,7 @@ class ProductsController extends AbstractController
             'chartData' => json_encode($chartData),
         ]);
     }
+
 
 
 

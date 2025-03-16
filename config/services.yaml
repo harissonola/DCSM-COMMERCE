@@ -17,6 +17,11 @@ services:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%' # Ensure you set this in your .env file
+    
+
+    App\Middleware\ForceIndexRobotsTagMiddleware:
+        tags:
+            - { name: 'kernel.event_subscriber' }
 
     # Autres services
     App\:

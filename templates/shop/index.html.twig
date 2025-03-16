@@ -129,26 +129,34 @@
 
   <script>
     document.addEventListener('turbo:load', function() {
-      // Sélectionner toutes les cartes de produits
+      // Sélectionner toutes les cartes de produits avec la classe 'prod-card'
       const prodCards = document.querySelectorAll('.prod-card');
 
       prodCards.forEach(card => {
-        // Sélectionner l'image du produit
-        const img = card.querySelector('img');
+        // Attendre 1 seconde avant de remplacer le contenu par le vrai contenu
+        setTimeout(() => {
+          // Récupérer l'ID du produit (par exemple prod-card-1)
+          const prodId = card.id.replace('prod-card-', '');
 
-        // Attendre que l'image soit chargée
-        img.onload = function() {
-          setTimeout(() => {
-            card.classList.remove('skeleton'); // Retirer la classe skeleton après 1 seconde
-          }, 1000); // Délai de 1 seconde avant d'afficher le contenu réel
-        };
+          // Récupérer l'élément avec l'ID correspondant pour la carte du produit réel
+          const realContent = `
+            <img src="{{ prods[${prodId - 1}].image }}" class="card-img-top" alt="{{ prods[${prodId - 1}].name }}-IMG-{{ prodId }}" style="max-height: 273px; object-fit: cover;" />
+            <div class="card-body">
+              <h5 class="card-title">{{ prods[${prodId - 1}].name }}</h5>
+              <h6 class="card-subtitle mb-2 text-muted">{{ prods[${prodId - 1}].price }} CFA</h6>
+              <p class="card-text">{{ prods[${prodId - 1}].description }}</p>
 
-        // Si l'image est déjà en cache
-        if (img.complete) {
-          setTimeout(() => {
-            card.classList.remove('skeleton'); // Retirer la classe skeleton après 1 seconde
-          }, 1000); // Délai de 1 seconde avant d'afficher le contenu réel
-        }
+              {% if is_granted('ROLE_ADMIN') %}
+                <a href="{{ path('app_dashboard_product', { slug: prods[${prodId - 1}].slug }) }}" class="btn btn-primary float-end">Visualiser</a>
+              {% else %}
+                <a href="{{ path('app_buy_product', { slug: prods[${prodId - 1}].slug }) }}" class="btn btn-outline-primary float-end">Acheter</a>
+              {% endif %}
+            </div>
+          `;
+
+          // Remplacer le contenu du produit avec le vrai contenu
+          card.innerHTML = realContent;
+        }, 1000); // Délai de 1 seconde
       });
     });
   </script>

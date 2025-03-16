@@ -27,99 +27,104 @@
 {% endblock %}
 
 {% block customScript %}
-	 <script>
-		    document.addEventListener('DOMContentLoaded', function () {
-		        const ctx = document.getElementById('tradingChart').getContext('2d');
-		        if (!ctx) {
-		            console.error("❌ Élément 'tradingChart' introuvable !");
-		            return;
-		        }
-		        
-		        // Récupération des données passées depuis le contrôleur
-		        let chartData;
-		        try {
-		            chartData = JSON.parse({{ chartData|json_encode|raw }});
-		        } catch (e) {
-		            console.error("❌ Erreur de parsing JSON :", e);
-		            chartData = [];
-		        }
-		        
-		        console.log("✅ Données reçues :", chartData);
-		        
-		       // Transformation des données pour Chart.js
-				chartData = Array.isArray(chartData) ? chartData.map(item => {
-					if (item.x && item.y) {
-						const parsedDate = Date.parse(item.x); // Convertir en timestamp
-						if (!isNaN(parsedDate)) {
-							return {
-								x: new Date(parsedDate), // S'assurer que c'est un objet Date valide
-								y: parseFloat(item.y)
-							};
-						} else {
-							console.warn("⚠️ Format de date invalide :", item.x);
-							return null;
-						}
-					} else {
-						console.warn("⚠️ Donnée incorrecte détectée :", item);
-						return null;
-					}
-				}).filter(Boolean);
-	
-		        
-		        console.log("✅ Données formatées :", chartData);
-		        
-		        // Plugin pour afficher un message si aucun point n'est présent
-		        const emptyDataPlugin = {
-		            id: 'emptyDataMessage',
-		            beforeDraw: function(chart) {
-		                if (chart.data.datasets.every(dataset => dataset.data.length === 0)) {
-		                    const ctx = chart.ctx;
-		                    const width = chart.width;
-		                    const height = chart.height;
-		                    ctx.save();
-		                    ctx.textAlign = 'center';
-		                    ctx.textBaseline = 'middle';
-		                    ctx.font = "16px sans-serif";
-		                    ctx.fillStyle = "#666";
-		                    ctx.fillText("Aucune donnée disponible", width / 2, height / 2);
-		                    ctx.restore();
-		                }
-		            }
-		        };
-		        
-		        // Création du graphique
-		        new Chart(ctx, {
-		            type: 'line',
-		            data: {
-		                datasets: [{
-		                    label: {{ prod.name|json_encode|raw }},
-		                    data: chartData, // Peut être vide
-		                    borderColor: 'blue',
-		                    borderWidth: 2,
-		                    pointRadius: 2,
-		                    tension: 0.2
-		                }]
-		            },
-		            options: {
-		                responsive: true,
-		                plugins: {
-		                    legend: { display: true }
-		                },
-		                scales: {
-		                    x: {
-		                        type: 'time',
-		                        time: { unit: 'day' },
-		                        title: { display: true, text: 'Date' }
-		                    },
-		                    y: {
-		                        beginAtZero: true,
-		                        title: { display: true, text: 'Valeur' }
-		                    }
-		                }
-		            },
-		            plugins: [emptyDataPlugin]
-		        });
-		    });
-		</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('tradingChart').getContext('2d');
+        if (!ctx) {
+            console.error("❌ Élément 'tradingChart' introuvable !");
+            return;
+        }
+
+        // Récupération des données passées depuis le contrôleur
+        let chartData;
+        try {
+            chartData = JSON.parse({{ chartData|json_encode|raw }});
+            if (!Array.isArray(chartData)) {
+                throw new Error("❌ chartData n'est pas un tableau valide !");
+            }
+        } catch (e) {
+            console.error("❌ Erreur de parsing JSON :", e);
+            chartData = [];
+        }
+
+        console.log("✅ Données reçues :", chartData);
+
+        // Transformation des données pour Chart.js
+        chartData = chartData
+            .map(item => {
+                if (typeof item !== "object" || !item.x || !item.y) {
+                    console.warn("⚠️ Donnée incorrecte détectée :", item);
+                    return null;
+                }
+
+                const parsedDate = Date.parse(item.x); // Convertir en timestamp
+                if (isNaN(parsedDate)) {
+                    console.warn("⚠️ Format de date invalide :", item.x);
+                    return null;
+                }
+
+                return {
+                    x: new Date(parsedDate),
+                    y: parseFloat(item.y)
+                };
+            })
+            .filter(item => item !== null); // Évite les erreurs
+
+        console.log("✅ Données formatées :", chartData);
+
+        // Plugin pour afficher un message si aucun point n'est présent
+        const emptyDataPlugin = {
+            id: 'emptyDataMessage',
+            beforeDraw: function(chart) {
+                if (chart.data.datasets.every(dataset => dataset.data.length === 0)) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = "16px sans-serif";
+                    ctx.fillStyle = "#666";
+                    ctx.fillText("Aucune donnée disponible", width / 2, height / 2);
+                    ctx.restore();
+                }
+            }
+        };
+
+        // Création du graphique
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: {{ prod.name|json_encode|raw }},
+                    data: chartData,
+                    borderColor: 'blue',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    tension: 0.2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day' },
+                        title: { display: true, text: 'Date' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Valeur' }
+                    }
+                }
+            },
+            plugins: [emptyDataPlugin]
+        });
+    });
+</script>
 {% endblock %}
+
 

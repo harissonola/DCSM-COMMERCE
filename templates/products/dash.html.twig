@@ -38,7 +38,7 @@
 		        // Récupération des données passées depuis le contrôleur
 		        let chartData;
 		        try {
-		            chartData = JSON.parse('{{ chartData|raw }}');
+		            chartData = JSON.parse({{ chartData|json_encode|raw }});
 		        } catch (e) {
 		            console.error("❌ Erreur de parsing JSON :", e);
 		            chartData = [];
@@ -92,7 +92,7 @@
 		            type: 'line',
 		            data: {
 		                datasets: [{
-		                    label: '{{ prod.name }}',
+		                    label: {{ prod.name|json_encode|raw }},
 		                    data: chartData, // Peut être vide
 		                    borderColor: 'blue',
 		                    borderWidth: 2,
@@ -122,3 +122,4 @@
 		    });
 		</script>
 {% endblock %}
+

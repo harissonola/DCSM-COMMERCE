@@ -136,40 +136,40 @@
 		</div>
 	</section>
 
-	 <script>
-	    document.addEventListener('turbo:load', function() {
-	      // Tableau JavaScript contenant les informations des produits
-	      const products = [
-	        {% for prod in prods %}
-	          {
-	            id: {{ loop.index }},
-	            name: "{{ prod.name }}",
-	            price: "{{ prod.price }}",
-	            image: "{{ prod.image }}",
-	            description: "Some quick example text to build on the card title and make up the bulk of the card's content.",
-	            url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_dashboard_product', { slug: prod.slug }) }}{% else %}{{ path('app_buy_product', { slug: prod.slug }) }}{% endif %}"
-	          },
-	        {% endfor %}
-	      ];
+	<script>
+		document.addEventListener('turbo:load', function() {
+			// Tableau JavaScript contenant les informations des produits
+			const products = [
+				{% for prod in prods %}
+				{
+					id: {{ loop.index }},
+					name: "{{ prod.name }}",
+					price: "{{ prod.price }}",
+					image: "{{ prod.image }}",
+					description: "Some quick example text to build on the card title and make up the bulk of the card's content.",
+					url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_dashboard_product', { slug: prod.slug }) }}{% else %}{{ path('app_buy_product', { slug: prod.slug }) }}{% endif %}"
+				},
+				{% endfor %}
+			];
 	
-	      // Remplacer le contenu des cartes après 1 seconde
-	      setTimeout(() => {
-	        products.forEach(product => {
-	          const card = document.getElementById(`prod-card-${product.id}`);
-	          const content = `
-	            <img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
-	            <div class="card-body">
-	              <h5 class="card-title">${product.name}</h5>
-	              <h6 class="card-subtitle mb-2 text-muted">${product.price} CFA</h6>
-	              <p class="card-text">${product.description}</p>
-	              <a href="${product.url}" class="btn btn-primary float-end">Acheter</a>
-	            </div>
-	          `;
-	          card.classList.remove('skeleton'); // Enlève la classe skeleton pour afficher le vrai contenu
-	          card.innerHTML = content;
-	        });
-	      }, 1000);
-	    });
-	  </script>
+			// Remplacer le contenu des cartes après 1 seconde
+			setTimeout(() => {
+				products.forEach(product => {
+					const card = document.getElementById(`prod-card-${product.id}`);
+					const content = `
+						<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
+						<div class="card-body">
+							<h5 class="card-title">${product.name}</h5>
+							<h6 class="card-subtitle mb-2 text-muted">${product.price} CFA</h6>
+							<p class="card-text">${product.description}</p>
+							<a href="${product.url}" class="btn btn-primary float-end">Acheter</a>
+						</div>
+					`;
+					card.classList.remove('skeleton'); // Enlève la classe skeleton pour afficher le vrai contenu
+					card.innerHTML = content;
+				});
+			}, 1000);
+		});
+	</script>
 
 {% endblock %}

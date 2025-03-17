@@ -102,8 +102,8 @@ class PaymentController extends AbstractController
     #[Route('/paypal/deposit', name: 'app_paypal_deposit', methods: ['GET'])]
     public function paypalDeposit(Request $request): Response
     {
-        // Récupération du client ID depuis les variables d'environnement (ou un paramètre Symfony)
-        $paypalClientId = $_ENV["PAYPAL_CLIENT_ID"]; // ou $this->getParameter('paypal_client_id') si configuré
+        // Récupération du client ID depuis les variables d'environnement ou paramètres de configuration
+        $paypalClientId = $_ENV["PAYPAL_CLIENT_ID"];
         return $this->render('paypal_deposit.html.twig', [
             'amount' => $request->query->get('amount'),
             'paypal_client_id' => $paypalClientId,
@@ -116,32 +116,31 @@ class PaymentController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $amount = $data['amount'] ?? '100';
 
-        $orderBody = [
-            "body" => OrderRequestBuilder::init("CAPTURE", [
-                PurchaseUnitRequestBuilder::init(
-                    AmountWithBreakdownBuilder::init("USD", (string)$amount)
-                        ->breakdown(
-                            AmountBreakdownBuilder::init()
-                                ->itemTotal(
-                                    MoneyBuilder::init("USD", (string)$amount)->build()
-                                )
-                                ->build()
-                        )
-                        ->build()
+        // Construction de la commande sans imbriquer dans une clé "body"
+        $orderBody = OrderRequestBuilder::init("CAPTURE", [
+            PurchaseUnitRequestBuilder::init(
+                AmountWithBreakdownBuilder::init("USD", (string)$amount)
+                    ->breakdown(
+                        AmountBreakdownBuilder::init()
+                            ->itemTotal(
+                                MoneyBuilder::init("USD", (string)$amount)->build()
+                            )
+                            ->build()
+                    )
+                    ->build()
+            )
+            ->items([
+                ItemBuilder::init(
+                    "Dépôt",
+                    MoneyBuilder::init("USD", (string)$amount)->build(),
+                    "1"
                 )
-                    ->items([
-                        ItemBuilder::init(
-                            "Dépôt",
-                            MoneyBuilder::init("USD", (string)$amount)->build(),
-                            "1"
-                        )
-                            ->description("Dépôt sur le compte")
-                            ->sku("deposit01")
-                            ->build(),
-                    ])
+                    ->description("Dépôt sur le compte")
+                    ->sku("deposit01")
                     ->build(),
-            ])->build(),
-        ];
+            ])
+            ->build(),
+        ])->build();
 
         $client = $this->initPaypalClient();
         $apiResponse = $client->getOrdersController()->ordersCreate($orderBody);

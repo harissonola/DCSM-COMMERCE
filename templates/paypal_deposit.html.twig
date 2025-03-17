@@ -51,8 +51,10 @@
             try {
                 console.log("onApprove appelé, orderID:", data.orderID);
                 // Appel à l'endpoint de capture avec l'orderID
-                const captureUrl = "{{ path('api_paypal_capture_order', {'orderId': 'ORDER_ID_PLACEHOLDER'}) }}".replace("ORDER_ID_PLACEHOLDER", data.orderID);
+                const captureUrl = "{{ path('api_paypal_capture_order', {'orderId': 'ORDER_ID_PLACEHOLDER'}) }}"
+                    .replace("ORDER_ID_PLACEHOLDER", data.orderID);
                 console.log("URL de capture:", captureUrl);
+
                 const response = await fetch(captureUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" }
@@ -69,6 +71,7 @@
                 });
                 const confirmData = await confirmResponse.json();
                 console.log("Réponse confirmation:", confirmData);
+
                 if (confirmData.status === "success") {
                     document.getElementById('result-message').innerHTML = "Transaction réussie !";
                     setTimeout(() => {

@@ -37,7 +37,7 @@ class PaymentController extends AbstractController
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
-        $amount = (float)$request->request->get('amount');
+        $amount = (float) $request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
 
         if ($amount <= 0) {
@@ -61,7 +61,7 @@ class PaymentController extends AbstractController
                 break;
 
             case 'paypal':
-                // Redirige vers la page dédiée avec les options PayPal
+                // Redirige vers la page dédiée pour le paiement PayPal
                 return $this->redirectToRoute('app_paypal_deposit', ['amount' => $amount]);
 
             case 'crypto':
@@ -102,7 +102,7 @@ class PaymentController extends AbstractController
     #[Route('/paypal/deposit', name: 'app_paypal_deposit', methods: ['GET'])]
     public function paypalDeposit(Request $request): Response
     {
-        // Récupération du client ID depuis les variables d'environnement
+        // Récupération du client ID PayPal depuis les variables d'environnement
         $paypalClientId = $_ENV["PAYPAL_CLIENT_ID"];
         return $this->render('paypal_deposit.html.twig', [
             'amount' => $request->query->get('amount'),
@@ -131,7 +131,7 @@ class PaymentController extends AbstractController
             )
             ->items([
                 ItemBuilder::init(
-                    "Dépôt", 
+                    "Dépôt",
                     MoneyBuilder::init("USD", (string)$amount)->build(),
                     "1"
                 )
@@ -146,7 +146,7 @@ class PaymentController extends AbstractController
         $apiResponse = $client->getOrdersController()->ordersCreate($orderBody);
         $jsonResponse = json_decode($apiResponse->getBody(), true);
 
-        // Vérification de l'ID de commande
+        // Vérification de l'ID de commande et renvoi du résultat
         if (!isset($jsonResponse['id'])) {
             return new JsonResponse(['error' => 'Order ID manquant', 'response' => $jsonResponse], 400);
         }

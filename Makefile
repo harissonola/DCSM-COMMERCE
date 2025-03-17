@@ -9,5 +9,5 @@ install: vendor/autoload.php
 	php bin/console cache:clear
 
 vendor/autoload.php: composer.json composer.lock
-	composer install --no-dev --optimize-autoloader
+	composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-sodium
 	touch vendor/autoload.php

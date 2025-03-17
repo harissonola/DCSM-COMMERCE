@@ -265,7 +265,7 @@
 			if (paymentMethod === 'paypal') {
 				e.preventDefault();
 				var amount = document.querySelector('input[name="amount"]').value;
-				// Redirige vers la page de dépôt PayPal avec le montant en paramètre
+				// Redirige vers la page de dépôt PayPal avec le montant en paramètres
 				window.location.href = "{{ path('app_paypal_deposit') }}?amount=" + encodeURIComponent(amount);
 			}
 		});

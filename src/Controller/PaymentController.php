@@ -29,7 +29,7 @@ class PaymentController extends AbstractController
         if (!$this->getUser()) {
             return $this->redirectToRoute('app_login');
         }
-
+        // Code de retrait à compléter...
         dd('withdraw');
     }
 
@@ -61,6 +61,7 @@ class PaymentController extends AbstractController
                 break;
 
             case 'paypal':
+                // Redirige vers la page dédiée avec les options PayPal
                 return $this->redirectToRoute('app_paypal_deposit', ['amount' => $amount]);
 
             case 'crypto':
@@ -83,7 +84,7 @@ class PaymentController extends AbstractController
                 return $this->redirectToRoute('app_profile');
         }
 
-        // Enregistrement de la transaction
+        // Enregistrement de la transaction et mise à jour du solde
         $transaction = new Transactions();
         $transaction->setUser($user);
         $transaction->setAmount($amount);
@@ -91,7 +92,6 @@ class PaymentController extends AbstractController
         $transaction->setCreatedAt(new \DateTimeImmutable());
         $em->persist($transaction);
 
-        // Mise à jour du solde utilisateur
         $user->setBalance($user->getBalance() + $amount);
         $em->flush();
 
@@ -102,7 +102,7 @@ class PaymentController extends AbstractController
     #[Route('/paypal/deposit', name: 'app_paypal_deposit', methods: ['GET'])]
     public function paypalDeposit(Request $request): Response
     {
-        // Récupération du client ID depuis les variables d'environnement ou paramètres de configuration
+        // Récupération du client ID depuis les variables d'environnement
         $paypalClientId = $_ENV["PAYPAL_CLIENT_ID"];
         return $this->render('paypal_deposit.html.twig', [
             'amount' => $request->query->get('amount'),
@@ -116,7 +116,7 @@ class PaymentController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $amount = $data['amount'] ?? '100';
 
-        // Construction de la commande sans imbriquer dans une clé "body"
+        // Construction de la commande
         $orderBody = OrderRequestBuilder::init("CAPTURE", [
             PurchaseUnitRequestBuilder::init(
                 AmountWithBreakdownBuilder::init("USD", (string)$amount)
@@ -131,7 +131,7 @@ class PaymentController extends AbstractController
             )
             ->items([
                 ItemBuilder::init(
-                    "Dépôt",
+                    "Dépôt", 
                     MoneyBuilder::init("USD", (string)$amount)->build(),
                     "1"
                 )
@@ -144,7 +144,14 @@ class PaymentController extends AbstractController
 
         $client = $this->initPaypalClient();
         $apiResponse = $client->getOrdersController()->ordersCreate($orderBody);
-        return new JsonResponse(json_decode($apiResponse->getBody(), true));
+        $jsonResponse = json_decode($apiResponse->getBody(), true);
+
+        // Vérification de l'ID de commande
+        if (!isset($jsonResponse['id'])) {
+            return new JsonResponse(['error' => 'Order ID manquant', 'response' => $jsonResponse], 400);
+        }
+
+        return new JsonResponse(['id' => $jsonResponse['id']]);
     }
 
     #[Route('/api/orders/{orderId}/capture', name: 'api_paypal_capture_order', methods: ['POST'])]
@@ -177,11 +184,13 @@ class PaymentController extends AbstractController
 
     private function processCardPayment(User $user, float $amount): bool
     {
+        // Implémenter l'appel à l'API de paiement par carte (Stripe, etc.)
         return true;
     }
 
     private function processMobileMoney(User $user, float $amount): bool
     {
+        // Implémenter l'appel à l'API Mobile Money (KakiaPay, FadaPay, etc.)
         return true;
     }
 
@@ -192,6 +201,7 @@ class PaymentController extends AbstractController
 
     private function executeCryptoTransfer(string $sourceWallet, string $destinationWallet, float $amountTRX, string $cryptoType)
     {
+        // Implémenter l'appel à l'API CoinPayments pour le transfert de crypto
         return true;
     }
 

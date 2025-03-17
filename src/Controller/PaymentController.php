@@ -85,19 +85,21 @@ class PaymentController extends AbstractController
                 return $this->redirectToRoute('app_profile');
         }
 
-        // Enregistrement de la transaction
-        $transaction = new Transactions();
-        $transaction->setUser($user);
-        $transaction->setAmount($amount);
-        $transaction->setMethod($paymentMethod);
-        $transaction->setCreatedAt(new \DateTimeImmutable());
-        $em->persist($transaction);
+        // // Enregistrement de la transaction
+        // $transaction = new Transactions();
+        // $transaction->setUser($user);
+        // $transaction->setAmount($amount);
+        // $transaction->setMethod($paymentMethod);
+        // $transaction->setCreatedAt(new \DateTimeImmutable());
+        // $em->persist($transaction);
 
-        // Mise à jour du solde
-        $user->setBalance($user->getBalance() + $amount);
-        $em->flush();
+        // // Mise à jour du solde
+        // $user->setBalance($user->getBalance() + $amount);
+        // $em->flush();
 
-        $this->addFlash('success', 'Dépôt réussi !');
+        //$this->addFlash('success', 'Dépôt réussi !');
+
+        $this->addFlash('danger', 'Dépôt non disponible pour le moment !');
         return $this->redirectToRoute('app_profile');
     }
 

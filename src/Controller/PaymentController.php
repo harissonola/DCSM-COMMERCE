@@ -52,18 +52,15 @@ class PaymentController extends AbstractController
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
-
             case 'mobilemoney':
                 if (!$this->processMobileMoney($user, $amount)) {
                     $this->addFlash('danger', 'Erreur avec Mobile Money.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
-
             case 'paypal':
-                // Redirige vers la page dédiée au paiement PayPal
+                // Redirige vers la page dédiée pour le paiement PayPal
                 return $this->redirectToRoute('app_paypal_deposit', ['amount' => $amount]);
-
             case 'crypto':
                 $cryptoType = $request->request->get('cryptoType');
                 $walletAddress = $request->request->get('walletAddress');
@@ -78,7 +75,6 @@ class PaymentController extends AbstractController
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
-
             default:
                 $this->addFlash('danger', 'Méthode de paiement invalide.');
                 return $this->redirectToRoute('app_profile');
@@ -102,7 +98,7 @@ class PaymentController extends AbstractController
     #[Route('/paypal/deposit', name: 'app_paypal_deposit', methods: ['GET'])]
     public function paypalDeposit(Request $request): Response
     {
-        // Passe le client ID PayPal à la vue pour initialiser le SDK JS
+        // Récupération du client ID depuis les variables d'environnement
         $paypalClientId = $_ENV["PAYPAL_CLIENT_ID"];
         return $this->render('paypal_deposit.html.twig', [
             'amount' => $request->query->get('amount'),
@@ -131,7 +127,7 @@ class PaymentController extends AbstractController
             )
             ->items([
                 ItemBuilder::init(
-                    "Dépôt", 
+                    "Dépôt",
                     MoneyBuilder::init("USD", (string)$amount)->build(),
                     "1"
                 )
@@ -142,13 +138,24 @@ class PaymentController extends AbstractController
             ->build(),
         ])->build();
 
-        $client = $this->initPaypalClient();
-        $apiResponse = $client->getOrdersController()->ordersCreate($orderBody);
-        $jsonResponse = json_decode($apiResponse->getBody(), true);
+        try {
+            $client = $this->initPaypalClient();
+            $apiResponse = $client->getOrdersController()->ordersCreate($orderBody);
+            $jsonResponse = json_decode($apiResponse->getBody(), true);
+        } catch (\Exception $e) {
+            // Debug côté serveur : loggez ou renvoyez l'erreur
+            return new JsonResponse([
+                'error' => 'Erreur interne lors de la création de la commande',
+                'message' => $e->getMessage()
+            ], 500);
+        }
 
         // Vérification de l'ID de commande
         if (!isset($jsonResponse['id'])) {
-            return new JsonResponse(['error' => 'Order ID manquant', 'response' => $jsonResponse], 400);
+            return new JsonResponse([
+                'error' => 'Order ID manquant',
+                'response' => $jsonResponse
+            ], 400);
         }
 
         return new JsonResponse(['id' => $jsonResponse['id']]);

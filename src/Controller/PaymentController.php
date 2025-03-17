@@ -266,8 +266,8 @@ class PaymentController extends AbstractController
                 )
             )
             // Pour tester, passer en SANDBOX :
-            // ->environment(Environment::SANDBOX)
-            ->environment(Environment::LIVE)
+            ->environment(Environment::SANDBOX)
+            //->environment(Environment::LIVE)
             ->build();
     }
 }

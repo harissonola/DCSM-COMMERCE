@@ -35,6 +35,7 @@
                 });
                 const orderData = await response.json();
                 console.log("Réponse createOrder:", orderData);
+
                 if (orderData.id) {
                     console.log("Order ID reçu:", orderData.id);
                     return orderData.id;
@@ -50,6 +51,7 @@
         onApprove: async function(data, actions) {
             try {
                 console.log("onApprove appelé, orderID:", data.orderID);
+
                 // Appel à l'endpoint de capture avec l'orderID
                 const captureUrl = "{{ path('api_paypal_capture_order', {'orderId': 'ORDER_ID_PLACEHOLDER'}) }}"
                     .replace("ORDER_ID_PLACEHOLDER", data.orderID);

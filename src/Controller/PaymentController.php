@@ -53,15 +53,18 @@ class PaymentController extends AbstractController
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
+
             case 'mobilemoney':
                 if (!$this->processMobileMoney($user, $amount)) {
                     $this->addFlash('danger', 'Erreur avec Mobile Money.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
+
             case 'paypal':
                 // Redirige vers la page de dépôt PayPal
                 return $this->redirectToRoute('app_paypal_deposit', ['amount' => $amount]);
+
             case 'crypto':
                 $cryptoType = $request->request->get('cryptoType');
                 $walletAddress = $request->request->get('walletAddress');
@@ -76,6 +79,7 @@ class PaymentController extends AbstractController
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
+
             default:
                 $this->addFlash('danger', 'Méthode de paiement invalide.');
                 return $this->redirectToRoute('app_profile');
@@ -165,7 +169,8 @@ class PaymentController extends AbstractController
             return new JsonResponse([
                 'error'   => 'Erreur interne lors de la création de la commande',
                 'message' => $e->getMessage(),
-                // 'trace' => $e->getTraceAsString(), // utile en dev
+                // Activez ceci en dev pour voir la pile d'appels :
+                // 'trace' => $e->getTraceAsString(),
             ], 500);
         }
     }
@@ -185,6 +190,7 @@ class PaymentController extends AbstractController
             return new JsonResponse([
                 'error'   => 'Erreur lors de la capture de la commande',
                 'message' => $e->getMessage(),
+                // 'trace' => $e->getTraceAsString(),
             ], 500);
         }
     }
@@ -218,7 +224,7 @@ class PaymentController extends AbstractController
         return new JsonResponse(['status' => 'success']);
     }
 
-    // Méthodes "fictives" pour gérer les autres moyens de paiement
+    // Méthodes fictives pour gérer les autres moyens de paiement
     private function processCardPayment(User $user, float $amount): bool
     {
         // Implémenter l'appel à l'API de paiement par carte (Stripe, etc.)

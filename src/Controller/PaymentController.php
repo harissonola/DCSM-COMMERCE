@@ -23,6 +23,16 @@ use PaypalServerSdkLib\Environment;
 
 class PaymentController extends AbstractController
 {
+    #[Route('/withdraw', name: 'app_withdraw')]
+    public function withdraw(): Response
+    {
+        if (!$this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        dd('withdraw');
+    }
+
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {

@@ -11,16 +11,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// PayPal Server SDK
-use PaypalServerSdkLib\Models\Builders\OrderRequestBuilder;
-use PaypalServerSdkLib\Models\Builders\PurchaseUnitRequestBuilder;
-use PaypalServerSdkLib\Models\Builders\AmountWithBreakdownBuilder;
-use PaypalServerSdkLib\Models\Builders\AmountBreakdownBuilder;
-use PaypalServerSdkLib\Models\Builders\MoneyBuilder;
-use PaypalServerSdkLib\Models\Builders\ItemBuilder;
-use PaypalServerSdkLib\PaypalServerSdkClientBuilder;
-use PaypalServerSdkLib\Authentication\ClientCredentialsAuthCredentialsBuilder;
-use PaypalServerSdkLib\Environment;
+// PayPal Checkout SDK
+use PayPalCheckoutSdk\Orders\OrderRequest;
+use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
+use PayPalCheckoutSdk\Core\PayPalHttpClient;
+use PayPalCheckoutSdk\Core\SandboxEnvironment; // Pour le mode test
+use PayPalCheckoutSdk\Core\LiveEnvironment;    // Pour le mode live
 
 class PaymentController extends AbstractController
 {
@@ -53,18 +49,15 @@ class PaymentController extends AbstractController
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
-
             case 'mobilemoney':
                 if (!$this->processMobileMoney($user, $amount)) {
                     $this->addFlash('danger', 'Erreur avec Mobile Money.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
-
             case 'paypal':
                 // Redirection vers le flux PayPal complet
                 return $this->redirectToRoute('app_paypal_redirect', ['amount' => $amount]);
-
             case 'crypto':
                 $cryptoType = $request->request->get('cryptoType');
                 $walletAddress = $request->request->get('walletAddress');
@@ -79,7 +72,6 @@ class PaymentController extends AbstractController
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
-
             default:
                 $this->addFlash('danger', 'Méthode de paiement invalide.');
                 return $this->redirectToRoute('app_profile');
@@ -90,9 +82,6 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
-    /**
-     * Crée l’ordre PayPal et redirige l’utilisateur vers l’URL d’approbation.
-     */
     #[Route('/paypal/redirect', name: 'app_paypal_redirect', methods: ['GET'])]
     public function paypalRedirect(Request $request): Response
     {
@@ -101,58 +90,42 @@ class PaymentController extends AbstractController
             $this->addFlash('danger', 'Le montant doit être supérieur à zéro.');
             return $this->redirectToRoute('app_profile');
         }
-
-        // Générer les URL de retour et d'annulation en mode ABSOLU
+        
         $returnUrl = $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL);
         $cancelUrl = $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        // Construction de la payload de l’ordre incluant application_context
-        $orderPayload = [
-            'body' => OrderRequestBuilder::init("CAPTURE", [
-                PurchaseUnitRequestBuilder::init(
-                    AmountWithBreakdownBuilder::init("USD", number_format($amount, 2, '.', ''))
-                        ->breakdown(
-                            AmountBreakdownBuilder::init()
-                                ->itemTotal(MoneyBuilder::init("USD", number_format($amount, 2, '.', ''))->build())
-                                ->build()
-                        )
-                        ->build()
-                )
-                ->items([
-                    ItemBuilder::init(
-                        "Dépôt",
-                        MoneyBuilder::init("USD", number_format($amount, 2, '.', ''))->build(),
-                        "1"
-                    )
-                    ->description("Dépôt sur le compte")
-                    ->sku("deposit01")
-                    ->build(),
-                ])
-                ->build(),
-            ])
-            ->setApplicationContext([
-                'return_url' => $returnUrl,
-                'cancel_url' => $cancelUrl,
-            ])
-            ->build(),
+        // Création de l’ordre PayPal
+        $orderRequest = new OrdersCreateRequest();
+        $orderRequest->prefer('return=representation');
+        $orderRequest->body = [
+            "intent" => "CAPTURE",
+            "purchase_units" => [[
+                "amount" => [
+                    "currency_code" => "USD",
+                    "value" => number_format($amount, 2, '.', '')
+                ]
+            ]],
+            "application_context" => [
+                "return_url" => $returnUrl,
+                "cancel_url" => $cancelUrl
+            ]
         ];
 
         try {
             $client = $this->initPaypalClient();
-            $apiResponse = $client->getOrdersController()->ordersCreate($orderPayload);
-            $jsonResponse = json_decode($apiResponse->getBody(), true);
+            $response = $client->execute($orderRequest);
+            $result = $response->result;
 
-            if (!isset($jsonResponse['id'])) {
+            if (!isset($result->id)) {
                 $this->addFlash('danger', 'Erreur lors de la création de la commande.');
                 return $this->redirectToRoute('app_profile');
             }
 
-            // Recherche du lien d'approbation dans la réponse
             $approvalUrl = null;
-            if (isset($jsonResponse['links']) && is_array($jsonResponse['links'])) {
-                foreach ($jsonResponse['links'] as $link) {
-                    if ($link['rel'] === 'approve') {
-                        $approvalUrl = $link['href'];
+            if (isset($result->links)) {
+                foreach ($result->links as $link) {
+                    if ($link->rel === 'approve') {
+                        $approvalUrl = $link->href;
                         break;
                     }
                 }
@@ -163,37 +136,32 @@ class PaymentController extends AbstractController
                 return $this->redirectToRoute('app_profile');
             }
 
-            // Redirection vers PayPal pour approbation
             return $this->redirect($approvalUrl);
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur lors de la création de la commande: ' . $e->getMessage());
+            $this->addFlash('danger', 'Erreur PayPal : ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
 
-    /**
-     * Point de retour après approbation sur PayPal. Capture l'ordre et met à jour la transaction.
-     */
     #[Route('/paypal/return', name: 'paypal_return', methods: ['GET'])]
     public function paypalReturn(Request $request, EntityManagerInterface $em): Response
     {
-        // PayPal renvoie le token qui correspond à l'orderId
         $orderId = $request->query->get('token');
         if (!$orderId) {
             $this->addFlash('danger', 'Token de commande manquant.');
             return $this->redirectToRoute('app_profile');
         }
-
+        
         try {
             $client = $this->initPaypalClient();
-            $apiResponse = $client->getOrdersController()->ordersCapture(["id" => $orderId]);
-            $captureResponse = json_decode($apiResponse->getBody(), true);
+            $captureRequest = new OrdersCaptureRequest($orderId);
+            $captureRequest->prefer('return=representation');
+            $response = $client->execute($captureRequest);
+            $captureResult = $response->result;
 
-            if (isset($captureResponse['status']) && $captureResponse['status'] === 'COMPLETED') {
-                // Récupération du montant depuis la réponse
-                $amount = (float)$captureResponse['purchase_units'][0]['payments']['captures'][0]['amount']['value'];
+            if (isset($captureResult->status) && $captureResult->status === 'COMPLETED') {
+                $amount = (float)$captureResult->purchase_units[0]->payments->captures[0]->amount->value;
 
-                // Enregistrement de la transaction en BDD
                 $user = $this->getUser();
                 $transaction = new Transactions();
                 $transaction->setUser($user);
@@ -202,7 +170,6 @@ class PaymentController extends AbstractController
                 $transaction->setCreatedAt(new \DateTimeImmutable());
                 $em->persist($transaction);
 
-                // Mise à jour du solde utilisateur
                 $user->setBalance($user->getBalance() + $amount);
                 $em->flush();
 
@@ -213,20 +180,29 @@ class PaymentController extends AbstractController
                 return $this->redirectToRoute('app_profile');
             }
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur lors de la capture de la commande: ' . $e->getMessage());
+            $this->addFlash('danger', 'Erreur PayPal : ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
 
-    /**
-     * Point de redirection en cas d'annulation du paiement sur PayPal.
-     */
     #[Route('/paypal/cancel', name: 'paypal_cancel', methods: ['GET'])]
     public function paypalCancel(): Response
     {
         $this->addFlash('warning', 'Paiement annulé par l\'utilisateur.');
         return $this->redirectToRoute('app_profile');
     }
+
+    private function initPaypalClient()
+    {
+        $clientId = $_ENV["PAYPAL_CLIENT_ID"];
+        $clientSecret = $_ENV["PAYPAL_CLIENT_SECRET"];
+        
+        $environment = new SandboxEnvironment($clientId, $clientSecret);
+        // $environment = new LiveEnvironment($clientId, $clientSecret);
+        
+        return new PayPalHttpClient($environment);
+    }
+
 
     // Méthodes fictives pour les autres paiements
     private function processCardPayment(User $user, float $amount): bool
@@ -237,13 +213,12 @@ class PaymentController extends AbstractController
 
     private function processMobileMoney(User $user, float $amount): bool
     {
-        // Implémenter l'appel à l'API Mobile Money (ex: KakiaPay, FadaPay, etc.)
+        // Implémenter l'appel à l'API Mobile Money
         return true;
     }
 
     private function convertToTRX(float $amount, string $fromCurrency): float
     {
-        // Conversion fictive en TRX
         return $amount * 10;
     }
 
@@ -253,23 +228,6 @@ class PaymentController extends AbstractController
         float $amountTRX,
         string $cryptoType
     ): bool {
-        // Implémenter l'appel à l'API CoinPayments (ou autre) pour le transfert
         return true;
-    }
-
-    /**
-     * Initialise le client PayPal en mode SANDBOX (ou LIVE en production).
-     */
-    private function initPaypalClient()
-    {
-        return PaypalServerSdkClientBuilder::init()
-            ->clientCredentialsAuthCredentials(
-                ClientCredentialsAuthCredentialsBuilder::init(
-                    $_ENV["PAYPAL_CLIENT_ID"],
-                    $_ENV["PAYPAL_CLIENT_SECRET"]
-                )
-            )
-            ->environment(Environment::SANDBOX) // Passez en Environment::LIVE pour la production
-            ->build();
     }
 }

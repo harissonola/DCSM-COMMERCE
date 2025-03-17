@@ -4,15 +4,14 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// PayPal Checkout SDK
-use PayPalCheckoutSdk\Orders\OrdersCreateRequest; // Mis à jour ici
+// Assurez-vous d'avoir installé le SDK avec : composer require paypal/paypal-checkout-sdk
+use PayPalCheckoutSdk\Orders\OrdersCreateRequest;
 use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 use PayPalCheckoutSdk\Core\PayPalHttpClient;
 use PayPalCheckoutSdk\Core\SandboxEnvironment; // Pour le mode test
@@ -77,7 +76,6 @@ class PaymentController extends AbstractController
                 return $this->redirectToRoute('app_profile');
         }
 
-        // Pour les autres moyens, le traitement se fait ici…
         $this->addFlash('danger', 'Dépôt non disponible pour le moment !');
         return $this->redirectToRoute('app_profile');
     }
@@ -198,6 +196,7 @@ class PaymentController extends AbstractController
         $clientSecret = $_ENV["PAYPAL_CLIENT_SECRET"];
         
         $environment = new SandboxEnvironment($clientId, $clientSecret);
+        // Pour passer en mode live, décommentez la ligne suivante et commentez la précédente :
         // $environment = new LiveEnvironment($clientId, $clientSecret);
         
         return new PayPalHttpClient($environment);

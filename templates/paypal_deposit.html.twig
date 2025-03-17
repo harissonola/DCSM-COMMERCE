@@ -9,10 +9,13 @@
     <p id="result-message" class="mt-3"></p>
 </div>
 
-{# Charge le SDK PayPal avec le client ID et la devise USD #}
+{# Charge le SDK PayPal en passant le client-id et la devise USD #}
 <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&components=buttons"></script>
 
 <script>
+    // Debug global
+    console.log("Initialisation du bouton PayPal, montant: {{ amount }} USD");
+
     window.paypal.Buttons({
         style: {
             shape: 'rect',
@@ -21,19 +24,22 @@
             label: 'paypal'
         },
 
-        // Création de la commande en appelant notre endpoint API
+        // Création de la commande via notre endpoint API
         createOrder: async function(data, actions) {
             try {
+                console.log("Appel à l'endpoint createOrder...");
                 const response = await fetch("{{ path('api_paypal_create_order') }}", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ amount: "{{ amount }}" })
                 });
                 const orderData = await response.json();
+                console.log("Réponse createOrder:", orderData);
                 if (orderData.id) {
+                    console.log("Order ID reçu:", orderData.id);
                     return orderData.id;
                 }
-                throw new Error("Erreur lors de la création de la commande");
+                throw new Error("Erreur lors de la création de la commande - Order ID manquant");
             } catch (error) {
                 console.error("Erreur createOrder:", error);
                 document.getElementById('result-message').innerHTML = "Erreur lors de la création de la commande.";
@@ -43,21 +49,26 @@
         // Capture de la commande après approbation
         onApprove: async function(data, actions) {
             try {
+                console.log("onApprove appelé, orderID:", data.orderID);
                 // Appel à l'endpoint de capture avec l'orderID
                 const captureUrl = "{{ path('api_paypal_capture_order', {'orderId': 'ORDER_ID_PLACEHOLDER'}) }}".replace("ORDER_ID_PLACEHOLDER", data.orderID);
+                console.log("URL de capture:", captureUrl);
                 const response = await fetch(captureUrl, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" }
                 });
                 const orderData = await response.json();
+                console.log("Réponse capture:", orderData);
 
-                // Appel à notre endpoint pour confirmer le dépôt dans la base de données
+                // Appel à notre endpoint pour confirmer le dépôt dans la BDD
+                console.log("Appel à confirmPaypalDeposit...");
                 const confirmResponse = await fetch("{{ path('api_paypal_deposit_confirm') }}", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ amount: "{{ amount }}" })
                 });
                 const confirmData = await confirmResponse.json();
+                console.log("Réponse confirmation:", confirmData);
                 if (confirmData.status === "success") {
                     document.getElementById('result-message').innerHTML = "Transaction réussie !";
                     setTimeout(() => {

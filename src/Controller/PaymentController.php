@@ -66,7 +66,7 @@ class PaymentController extends AbstractController
                 // Exécuter le transfert effectif via CoinPayments
                 $transferStatus = $this->executeCryptoTransfer($walletAddress, $commerceWalletAddress, $convertedAmount, $cryptoType);
                 if (!$transferStatus) {
-                    $this->addFlash('danger', 'Erreur lors du transfert vers le portefeuille DCSM-COMMERCE.');
+                    $this->addFlash('danger', 'Une erreur est survenue lors du transfert.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
@@ -206,6 +206,7 @@ class PaymentController extends AbstractController
             // Retourne l'ID de transaction pour suivi ou true en cas de succès
             return $result['result']['txn_id'] ?? true;
         }
+        var_dump($result); die; // Debug ici
         
         return false;
     }

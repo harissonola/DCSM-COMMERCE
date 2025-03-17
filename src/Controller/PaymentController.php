@@ -102,8 +102,11 @@ class PaymentController extends AbstractController
     #[Route('/paypal/deposit', name: 'app_paypal_deposit', methods: ['GET'])]
     public function paypalDeposit(Request $request): Response
     {
+        // Récupération du client ID depuis les variables d'environnement (ou un paramètre Symfony)
+        $paypalClientId = $_ENV["PAYPAL_CLIENT_ID"]; // ou $this->getParameter('paypal_client_id') si configuré
         return $this->render('paypal_deposit.html.twig', [
             'amount' => $request->query->get('amount'),
+            'paypal_client_id' => $paypalClientId,
         ]);
     }
 
@@ -128,7 +131,7 @@ class PaymentController extends AbstractController
                 )
                     ->items([
                         ItemBuilder::init(
-                            "Dépôt", 
+                            "Dépôt",
                             MoneyBuilder::init("USD", (string)$amount)->build(),
                             "1"
                         )

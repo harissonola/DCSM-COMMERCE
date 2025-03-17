@@ -202,11 +202,12 @@ class PaymentController extends AbstractController
         curl_close($ch);
         
         $result = json_decode($response, true);
+        var_dump($result); die; // Debug ici
         if ($result['error'] === 'ok') {
             // Retourne l'ID de transaction pour suivi ou true en cas de succès
             return $result['result']['txn_id'] ?? true;
         }
-        var_dump($result); die; // Debug ici
+        
         
         return false;
     }

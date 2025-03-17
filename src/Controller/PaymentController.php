@@ -20,7 +20,7 @@ class PaymentController extends AbstractController
 
         if ($amount <= 0) {
             $this->addFlash('danger', 'Le montant doit être supérieur à zéro.');
-            return $this->redirectToRoute('app_user_profile');
+            return $this->redirectToRoute('app_profile');
         }
 
         switch ($paymentMethod) {
@@ -29,7 +29,7 @@ class PaymentController extends AbstractController
                 $transferStatus = $this->processCardPayment($user, $amount);
                 if (!$transferStatus) {
                     $this->addFlash('danger', 'Erreur lors du transfert depuis la carte bancaire.');
-                    return $this->redirectToRoute('app_user_profile');
+                    return $this->redirectToRoute('app_profile');
                 }
                 break;
 
@@ -38,7 +38,7 @@ class PaymentController extends AbstractController
                 $transferStatus = $this->processMobileMoney($user, $amount);
                 if (!$transferStatus) {
                     $this->addFlash('danger', 'Erreur lors du transfert depuis Mobile Money.');
-                    return $this->redirectToRoute('app_user_profile');
+                    return $this->redirectToRoute('app_profile');
                 }
                 break;
 
@@ -47,7 +47,7 @@ class PaymentController extends AbstractController
                 $transferStatus = $this->processPayPal($user, $amount);
                 if (!$transferStatus) {
                     $this->addFlash('danger', 'Erreur lors du transfert depuis PayPal.');
-                    return $this->redirectToRoute('app_user_profile');
+                    return $this->redirectToRoute('app_profile');
                 }
                 break;
 
@@ -57,7 +57,7 @@ class PaymentController extends AbstractController
                 $walletAddress = $request->request->get('walletAddress');
                 if (empty($cryptoType) || empty($walletAddress)) {
                     $this->addFlash('danger', 'Veuillez renseigner le type de crypto et l\'adresse du portefeuille.');
-                    return $this->redirectToRoute('app_user_profile');
+                    return $this->redirectToRoute('app_profile');
                 }
                 // Conversion du montant en TRX (car le portefeuille DCSM-COMMERCE fonctionne en TRX)
                 $convertedAmount = $this->convertToTRX($amount, $cryptoType);
@@ -67,13 +67,13 @@ class PaymentController extends AbstractController
                 $transferStatus = $this->executeCryptoTransfer($walletAddress, $commerceWalletAddress, $convertedAmount, $cryptoType);
                 if (!$transferStatus) {
                     $this->addFlash('danger', 'Erreur lors du transfert vers le portefeuille DCSM-COMMERCE.');
-                    return $this->redirectToRoute('app_user_profile');
+                    return $this->redirectToRoute('app_profile');
                 }
                 break;
 
             default:
                 $this->addFlash('danger', 'Méthode de paiement invalide.');
-                return $this->redirectToRoute('app_user_profile');
+                return $this->redirectToRoute('app_profile');
         }
 
         // Enregistrement de la transaction et mise à jour du solde
@@ -101,7 +101,7 @@ class PaymentController extends AbstractController
 
         if ($amount <= 0 || $amount > $user->getBalance()) {
             $this->addFlash('danger', 'Montant invalide ou solde insuffisant.');
-            return $this->redirectToRoute('app_user_profile');
+            return $this->redirectToRoute('app_profile');
         }
 
         // Implémentation de la logique de retrait selon la méthode choisie
@@ -117,7 +117,7 @@ class PaymentController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Retrait effectué avec succès !');
-        return $this->redirectToRoute('app_user_profile');
+        return $this->redirectToRoute('app_profile');
     }
 
     private function processCardPayment(User $user, float $amount): bool

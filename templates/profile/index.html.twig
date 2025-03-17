@@ -1,7 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Profil Utilisateur
-{% endblock %}
+{% block title %}Profil Utilisateur{% endblock %}
 
 {% block body %}
 	<style>
@@ -76,8 +75,7 @@
 						<img src="/uploads/users/{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
 					{% endif %}
 					<div class="float-start">
-						<h2 class="mb-0">{{ app.user.fname }}
-							{{ app.user.lname }}</h2>
+						<h2 class="mb-0">{{ app.user.fname }} {{ app.user.lname }}</h2>
 						<small class="text-muted">{{ app.user.username }}</small>
 						<p>{{ app.user.email }}</p>
 						<h5>Solde:
@@ -134,7 +132,7 @@
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
-					<form action="{{ path('app_deposit') }}" method="post">
+					<form id="depositForm" action="{{ path('app_deposit') }}" method="post">
 						<div class="mb-3">
 							<label for="amount" class="form-label">Montant (USDT)</label>
 							<input type="number" name="amount" required class="form-control">
@@ -213,7 +211,6 @@
 		</div>
 	</div>
 
-
 	<!-- Modal Retrait -->
 	<div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
@@ -239,28 +236,38 @@
 		</div>
 	</div>
 
-	 <script>
-		    // Fonction pour masquer toutes les sections
-		    function hideAllPaymentFields() {
-		        document.getElementById('cryptoFields').style.display = 'none';
-		        document.getElementById('paypalFields').style.display = 'none';
-		        document.getElementById('mobilemoneyFields').style.display = 'none';
-		        document.getElementById('carteFields').style.display = 'none';
-		    }
+	<script>
+		// Fonction pour masquer toutes les sections
+		function hideAllPaymentFields() {
+			document.getElementById('cryptoFields').style.display = 'none';
+			document.getElementById('paypalFields').style.display = 'none';
+			document.getElementById('mobilemoneyFields').style.display = 'none';
+			document.getElementById('carteFields').style.display = 'none';
+		}
 		
-		    document.getElementById('paymentMethod').addEventListener('change', function() {
-		        hideAllPaymentFields();
-		        var selectedMethod = this.value;
-		        if (selectedMethod === 'crypto') {
-		            document.getElementById('cryptoFields').style.display = 'block';
-		        } else if (selectedMethod === 'paypal') {
-		            document.getElementById('paypalFields').style.display = 'block';
-		        } else if (selectedMethod === 'mobilemoney') {
-		            document.getElementById('mobilemoneyFields').style.display = 'block';
-		        } else if (selectedMethod === 'carte') {
-		            document.getElementById('carteFields').style.display = 'block';
-		        }
-		    });
-		</script>
+		document.getElementById('paymentMethod').addEventListener('change', function() {
+			hideAllPaymentFields();
+			var selectedMethod = this.value;
+			if (selectedMethod === 'crypto') {
+				document.getElementById('cryptoFields').style.display = 'block';
+			} else if (selectedMethod === 'paypal') {
+				document.getElementById('paypalFields').style.display = 'block';
+			} else if (selectedMethod === 'mobilemoney') {
+				document.getElementById('mobilemoneyFields').style.display = 'block';
+			} else if (selectedMethod === 'carte') {
+				document.getElementById('carteFields').style.display = 'block';
+			}
+		});
 
+		// Interception de la soumission pour rediriger vers PayPal
+		document.getElementById('depositForm').addEventListener('submit', function(e) {
+			var paymentMethod = document.getElementById('paymentMethod').value;
+			if (paymentMethod === 'paypal') {
+				e.preventDefault();
+				var amount = document.querySelector('input[name="amount"]').value;
+				// Redirige vers la page de dépôt PayPal avec le montant en paramètre
+				window.location.href = "{{ path('app_paypal_deposit') }}?amount=" + encodeURIComponent(amount);
+			}
+		});
+	</script>
 {% endblock %}

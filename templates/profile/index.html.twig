@@ -259,14 +259,14 @@
 			}
 		});
 
-		// Interception de la soumission pour rediriger vers PayPal
+		// Interception de la soumission pour rediriger vers le flux PayPal
 		document.getElementById('depositForm').addEventListener('submit', function(e) {
 			var paymentMethod = document.getElementById('paymentMethod').value;
 			if (paymentMethod === 'paypal') {
 				e.preventDefault();
 				var amount = document.querySelector('input[name="amount"]').value;
-				// Redirige vers la page de dépôt PayPal avec le montant en paramètres
-				window.location.href = "{{ path('app_paypal_deposit') }}?amount=" + encodeURIComponent(amount);
+				// Redirection vers le endpoint de redirection PayPal (mode live)
+				window.location.href = "{{ path('app_paypal_redirect') }}?amount=" + encodeURIComponent(amount);
 			}
 		});
 	</script>

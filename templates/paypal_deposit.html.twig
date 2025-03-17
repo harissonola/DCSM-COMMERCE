@@ -1,0 +1,90 @@
+{# templates/paypal_deposit.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Dépôt via PayPal{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+    <h2>Dépôt de {{ amount }} USD avec PayPal</h2>
+    <div id="paypal-button-container"></div>
+    <p id="result-message" class="mt-3"></p>
+</div>
+
+{# Charger le SDK PayPal en passant le client-id et la devise souhaitée #}
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD&components=buttons"></script>
+
+<script>
+    // Initialisation du bouton PayPal
+    window.paypal.Buttons({
+        style: {
+            shape: 'rect',
+            layout: 'vertical',
+            color: 'gold',
+            label: 'paypal'
+        },
+
+        // Création de la commande via notre endpoint API
+        createOrder: async function(data, actions) {
+            try {
+                const response = await fetch("{{ path('api_paypal_create_order') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ amount: "{{ amount }}" })
+                });
+                const orderData = await response.json();
+                if (orderData.id) {
+                    return orderData.id;
+                }
+                throw new Error("Erreur lors de la création de la commande");
+            } catch (error) {
+                console.error(error);
+                document.getElementById('result-message').innerHTML = "Erreur lors de la création de la commande.";
+            }
+        },
+
+        // Capture de la commande après approbation
+        onApprove: async function(data, actions) {
+            try {
+                // Construit l'URL de capture (en remplaçant ORDER_ID par l'ID retourné)
+                const captureUrl = "/api/orders/" + data.orderID + "/capture";
+                const response = await fetch(captureUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+                const orderData = await response.json();
+
+                // Appel à notre endpoint pour confirmer le dépôt dans la base de données
+                const confirmResponse = await fetch("{{ path('api_paypal_deposit_confirm') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ amount: "{{ amount }}" })
+                });
+                const confirmData = await confirmResponse.json();
+                if (confirmData.status === "success") {
+                    document.getElementById('result-message').innerHTML = "Transaction réussie !";
+                    // Optionnel : redirection vers le profil après quelques secondes
+                    setTimeout(() => {
+                        window.location.href = "{{ path('app_profile') }}";
+                    }, 2000);
+                } else {
+                    throw new Error("Erreur lors de la confirmation de dépôt.");
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('result-message').innerHTML = "Erreur lors de la transaction : " + error.message;
+            }
+        },
+
+        onError: function(err) {
+            console.error("Erreur PayPal : ", err);
+            document.getElementById('result-message').innerHTML = "Une erreur est survenue lors du paiement.";
+        }
+    }).render('#paypal-button-container');
+</script>
+{% endblock %}

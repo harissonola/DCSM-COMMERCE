@@ -1,13 +1,25 @@
 <?php
+// src/Controller/PaymentController.php
+
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
+use PaypalServerSdkLib\Models\Builders\OrderRequestBuilder;
+use PaypalServerSdkLib\Models\Builders\PurchaseUnitRequestBuilder;
+use PaypalServerSdkLib\Models\Builders\AmountWithBreakdownBuilder;
+use PaypalServerSdkLib\Models\Builders\AmountBreakdownBuilder;
+use PaypalServerSdkLib\Models\Builders\MoneyBuilder;
+use PaypalServerSdkLib\Models\Builders\ItemBuilder;
+use PaypalServerSdkLib\PaypalServerSdkClientBuilder;
+use PaypalServerSdkLib\Authentication\ClientCredentialsAuthCredentialsBuilder;
+use PaypalServerSdkLib\Environment;
 
 class PaymentController extends AbstractController
 {
@@ -15,7 +27,7 @@ class PaymentController extends AbstractController
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
-        $amount = (float) $request->request->get('amount');
+        $amount = (float)$request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
 
         if ($amount <= 0) {
@@ -25,48 +37,33 @@ class PaymentController extends AbstractController
 
         switch ($paymentMethod) {
             case 'carte':
-                // Décaisser les fonds via l'API de paiement par carte (ex: Stripe, Paystack, etc.)
-                $transferStatus = $this->processCardPayment($user, $amount);
-                if (!$transferStatus) {
-                    $this->addFlash('danger', 'Erreur lors du transfert depuis la carte bancaire.');
+                if (!$this->processCardPayment($user, $amount)) {
+                    $this->addFlash('danger', 'Erreur de paiement par carte.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
 
             case 'mobilemoney':
-                // Décaisser les fonds via l'API Mobile Money (ex: KakiaPay, FadaPay)
-                $transferStatus = $this->processMobileMoney($user, $amount);
-                if (!$transferStatus) {
-                    $this->addFlash('danger', 'Erreur lors du transfert depuis Mobile Money.');
+                if (!$this->processMobileMoney($user, $amount)) {
+                    $this->addFlash('danger', 'Erreur avec Mobile Money.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
 
             case 'paypal':
-                // Décaisser les fonds via l'API PayPal
-                $transferStatus = $this->processPayPal($user, $amount);
-                if (!$transferStatus) {
-                    $this->addFlash('danger', 'Erreur lors du transfert depuis PayPal.');
-                    return $this->redirectToRoute('app_profile');
-                }
-                break;
+                return $this->redirectToRoute('app_paypal_deposit', ['amount' => $amount]);
 
             case 'crypto':
-                // Récupération des données spécifiques à la crypto depuis le formulaire dynamique
                 $cryptoType = $request->request->get('cryptoType');
                 $walletAddress = $request->request->get('walletAddress');
-                if (empty($cryptoType) || empty($walletAddress)) {
-                    $this->addFlash('danger', 'Veuillez renseigner le type de crypto et l\'adresse du portefeuille.');
+                if (!$cryptoType || !$walletAddress) {
+                    $this->addFlash('danger', 'Informations de crypto manquantes.');
                     return $this->redirectToRoute('app_profile');
                 }
-                // Conversion du montant en TRX (car le portefeuille DCSM-COMMERCE fonctionne en TRX)
                 $convertedAmount = $this->convertToTRX($amount, $cryptoType);
-                // Adresse TRX de DCSM-COMMERCE (remplacez par l'adresse réelle)
                 $commerceWalletAddress = 'TLQMEec1F5zJuHXsgKWfbUqEHXWj9p5KkV';
-                // Exécuter le transfert effectif via CoinPayments
-                $transferStatus = $this->executeCryptoTransfer($walletAddress, $commerceWalletAddress, $convertedAmount, $cryptoType);
-                if (!$transferStatus) {
-                    $this->addFlash('danger', 'Une erreur est survenue lors du transfert.');
+                if (!$this->executeCryptoTransfer($walletAddress, $commerceWalletAddress, $convertedAmount, $cryptoType)) {
+                    $this->addFlash('danger', 'Erreur de transfert crypto.');
                     return $this->redirectToRoute('app_profile');
                 }
                 break;
@@ -76,7 +73,7 @@ class PaymentController extends AbstractController
                 return $this->redirectToRoute('app_profile');
         }
 
-        // Enregistrement de la transaction et mise à jour du solde
+        // Enregistrement de la transaction
         $transaction = new Transactions();
         $transaction->setUser($user);
         $transaction->setAmount($amount);
@@ -84,7 +81,7 @@ class PaymentController extends AbstractController
         $transaction->setCreatedAt(new \DateTimeImmutable());
         $em->persist($transaction);
 
-        // Mise à jour du solde uniquement après confirmation du transfert effectif
+        // Mise à jour du solde utilisateur
         $user->setBalance($user->getBalance() + $amount);
         $em->flush();
 
@@ -92,128 +89,107 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
-    #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
-    public function withdraw(Request $request, EntityManagerInterface $em): Response
+    #[Route('/paypal/deposit', name: 'app_paypal_deposit', methods: ['GET'])]
+    public function paypalDeposit(Request $request): Response
+    {
+        return $this->render('paypal_deposit.html.twig', [
+            'amount' => $request->query->get('amount'),
+        ]);
+    }
+
+    #[Route('/api/orders', name: 'api_paypal_create_order', methods: ['POST'])]
+    public function apiCreateOrder(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $amount = $data['amount'] ?? '100';
+
+        $orderBody = [
+            "body" => OrderRequestBuilder::init("CAPTURE", [
+                PurchaseUnitRequestBuilder::init(
+                    AmountWithBreakdownBuilder::init("USD", (string)$amount)
+                        ->breakdown(
+                            AmountBreakdownBuilder::init()
+                                ->itemTotal(
+                                    MoneyBuilder::init("USD", (string)$amount)->build()
+                                )
+                                ->build()
+                        )
+                        ->build()
+                )
+                    ->items([
+                        ItemBuilder::init(
+                            "Dépôt", 
+                            MoneyBuilder::init("USD", (string)$amount)->build(),
+                            "1"
+                        )
+                            ->description("Dépôt sur le compte")
+                            ->sku("deposit01")
+                            ->build(),
+                    ])
+                    ->build(),
+            ])->build(),
+        ];
+
+        $client = $this->initPaypalClient();
+        $apiResponse = $client->getOrdersController()->ordersCreate($orderBody);
+        return new JsonResponse(json_decode($apiResponse->getBody(), true));
+    }
+
+    #[Route('/api/orders/{orderId}/capture', name: 'api_paypal_capture_order', methods: ['POST'])]
+    public function apiCaptureOrder(string $orderId): JsonResponse
+    {
+        $client = $this->initPaypalClient();
+        $apiResponse = $client->getOrdersController()->ordersCapture(["id" => $orderId]);
+        return new JsonResponse(json_decode($apiResponse->getBody(), true));
+    }
+
+    #[Route('/api/paypal/deposit/confirm', name: 'api_paypal_deposit_confirm', methods: ['POST'])]
+    public function confirmPaypalDeposit(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $user = $this->getUser();
-        $amount = (float) $request->request->get('amount');
-        $recipient = $request->request->get('recipient');
+        $data = json_decode($request->getContent(), true);
+        $amount = (float)($data['amount'] ?? 0);
 
-        if ($amount <= 0 || $amount > $user->getBalance()) {
-            $this->addFlash('danger', 'Montant invalide ou solde insuffisant.');
-            return $this->redirectToRoute('app_profile');
-        }
-
-        // Implémentation de la logique de retrait selon la méthode choisie
-        $this->processWithdrawal($user, $amount, $recipient);
-        
         $transaction = new Transactions();
         $transaction->setUser($user);
-        $transaction->setAmount(-$amount);
-        $transaction->setMethod('withdraw');
+        $transaction->setAmount($amount);
+        $transaction->setMethod('paypal');
         $transaction->setCreatedAt(new \DateTimeImmutable());
         $em->persist($transaction);
-        $user->setBalance($user->getBalance() - $amount);
+
+        $user->setBalance($user->getBalance() + $amount);
         $em->flush();
 
-        $this->addFlash('success', 'Retrait effectué avec succès !');
-        return $this->redirectToRoute('app_profile');
+        return new JsonResponse(['status' => 'success']);
     }
 
     private function processCardPayment(User $user, float $amount): bool
     {
-        // Implémenter l'appel réel à l'API de paiement par carte (ex: Stripe, Paystack)
         return true;
     }
 
     private function processMobileMoney(User $user, float $amount): bool
     {
-        // Implémenter l'appel réel à l'API Mobile Money (ex: KakiaPay, FadaPay)
         return true;
     }
 
-    private function processPayPal(User $user, float $amount): bool
-    {
-        // Implémenter l'appel réel à l'API PayPal
-        return true;
-    }
-
-    /**
-     * Conversion du montant depuis la crypto source en TRX.
-     *
-     * @param float  $amount       Montant en devise source
-     * @param string $fromCurrency Type de crypto source (ex: BTC, USDT, etc.)
-     * @return float Montant converti en TRX
-     */
     private function convertToTRX(float $amount, string $fromCurrency): float
     {
-        // Implémentez ici la logique de conversion, par exemple en appelant une API de taux de change.
-        // Pour cet exemple, nous simulons avec un taux de conversion fixe.
-        $conversionRate = 10; // Exemple : 1 unité de la crypto source équivaut à 10 TRX
-        return $amount * $conversionRate;
+        return $amount * 10;
     }
 
-    /**
-     * Exécute le transfert effectif de crypto depuis le portefeuille de l'utilisateur vers le portefeuille TRX de DCSM-COMMERCE via CoinPayments.
-     *
-     * @param string $sourceWallet       Adresse du portefeuille de l'utilisateur
-     * @param string $destinationWallet  Adresse TRX de DCSM-COMMERCE
-     * @param float  $amountTRX          Montant à transférer en TRX
-     * @param string $cryptoType         Type de crypto source
-     * @return mixed Retourne l'ID de la transaction (ou hash) en cas de succès, false sinon
-     */
     private function executeCryptoTransfer(string $sourceWallet, string $destinationWallet, float $amountTRX, string $cryptoType)
     {
-        // Clés CoinPayments fournies (à stocker en sécurité dans un .env en production)
-        $publicKey = 'bad30fb4f363200ecf18598cc672343896ea47c9ba82d0a7a399fced1c9788fb';
-        $privateKey = '81E53C880c1568bc8BE2c05c8F6fB75b573C6e239654b6E9B60352eBC586bBc2';
-        
-        $url = 'https://www.coinpayments.net/api.php';
-        
-        // Préparer les paramètres pour créer une transaction
-        $params = [
-            'version'      => 1,
-            'cmd'          => 'create_transaction',
-            'key'          => $publicKey,
-            'format'       => 'json',
-            'amount'       => $amountTRX,
-            'currency1'    => $cryptoType,       // Devise source (ex: BTC, USDT, etc.)
-            'currency2'    => 'TRX',             // Devise cible
-            'address'      => $destinationWallet, // Portefeuille TRX de DCSM-COMMERCE
-            'auto_confirm' => 1,                 // Confirmation automatique si possible
-        ];
-        
-        // Transformation des paramètres en chaîne de requête
-        $post_data = http_build_query($params, '', '&');
-        
-        // Générer la signature HMAC
-        $hmac = hash_hmac('sha512', $post_data, $privateKey);
-        
-        // Initialiser cURL pour envoyer la requête
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['HMAC: ' . $hmac]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
-        
-        if ($response === false) {
-            return false;
-        }
-        curl_close($ch);
-        
-        $result = json_decode($response, true);
-        var_dump($result); die; // Debug ici
-        if ($result['error'] === 'ok') {
-            // Retourne l'ID de transaction pour suivi ou true en cas de succès
-            return $result['result']['txn_id'] ?? true;
-        }
-        
-        
-        return false;
+        return true;
     }
 
-    private function processWithdrawal(User $user, float $amount, string $recipient)
+    private function initPaypalClient()
     {
-        // Implémenter ici la logique de retrait selon la méthode choisie (virement bancaire, transfert crypto, etc.)
+        return PaypalServerSdkClientBuilder::init()
+            ->clientCredentialsAuthCredentials(
+                ClientCredentialsAuthCredentialsBuilder::init($_ENV["PAYPAL_CLIENT_ID"], $_ENV["PAYPAL_CLIENT_SECRET"])
+            )
+            ->environment(Environment::LIVE)
+            ->build();
     }
 }

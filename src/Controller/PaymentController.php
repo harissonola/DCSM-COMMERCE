@@ -12,7 +12,7 @@ use App\Entity\Transactions;
 use App\Entity\User;
 
 // PayPal Checkout SDK
-use PayPalCheckoutSdk\Orders\OrderRequest;
+use PayPalCheckoutSdk\Orders\OrdersCreateRequest; // Mis à jour ici
 use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 use PayPalCheckoutSdk\Core\PayPalHttpClient;
 use PayPalCheckoutSdk\Core\SandboxEnvironment; // Pour le mode test
@@ -202,7 +202,6 @@ class PaymentController extends AbstractController
         
         return new PayPalHttpClient($environment);
     }
-
 
     // Méthodes fictives pour les autres paiements
     private function processCardPayment(User $user, float $amount): bool

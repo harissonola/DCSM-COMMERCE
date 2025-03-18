@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// Utilisation du SDK PayPal Server SDK (basé sur le SDK PHP classique)
+// PayPal SDK imports
 use PayPal\Api\Payer;
 use PayPal\Api\Payment;
 use PayPal\Api\PaymentExecution;
@@ -37,6 +37,10 @@ class PaymentController extends AbstractController
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
+        }
+
         $amount = (float)$request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
 
@@ -96,6 +100,9 @@ class PaymentController extends AbstractController
         $returnUrl = $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL);
         $cancelUrl = $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
+        // Configuration de PayPal
+        $apiContext = $this->initPaypalContext();
+
         // Création du payer
         $payer = new Payer();
         $payer->setPaymentMethod("paypal");
@@ -119,60 +126,33 @@ class PaymentController extends AbstractController
         $payment = new Payment();
         $payment->setIntent("sale")
                 ->setPayer($payer)
-                ->setTransactions(array($transaction))
+                ->setTransactions([$transaction])
                 ->setRedirectUrls($redirectUrls);
 
         try {
-            $apiContext = $this->initPaypalContext();
+            // Création du paiement
             $payment->create($apiContext);
-
-            // Recherche directe de l'URL d'approbation sans utiliser sizeof()
+            
+            // Récupération de l'URL d'approbation
             $approvalUrl = null;
-            
-            // Obtention manuelle des liens
-            $links = $payment->getLinks();
-            
-            // Si links est une chaîne, essayons de la convertir en objet JSON
-            if (is_string($links)) {
-                $linksArray = json_decode($links, true);
-                if (is_array($linksArray)) {
-                    foreach ($linksArray as $link) {
-                        if (isset($link['rel']) && $link['rel'] === 'approval_url' && isset($link['href'])) {
-                            $approvalUrl = $link['href'];
-                            break;
-                        }
-                    }
-                }
-            } 
-            // Si links est un tableau ou un objet itérable
-            elseif (is_array($links) || (is_object($links) && method_exists($links, 'getIterator'))) {
-                foreach ($links as $link) {
-                    if (method_exists($link, 'getRel') && $link->getRel() === 'approval_url') {
-                        $approvalUrl = $link->getHref();
-                        break;
-                    }
+            foreach ($payment->getLinks() as $link) {
+                if ($link->getRel() == 'approval_url') {
+                    $approvalUrl = $link->getHref();
+                    break;
                 }
             }
-            // Méthode alternative pour obtenir l'URL d'approbation
-            else {
-                $paymentJson = $payment->toJSON();
-                $paymentData = json_decode($paymentJson, true);
-                
-                if (isset($paymentData['links']) && is_array($paymentData['links'])) {
-                    foreach ($paymentData['links'] as $link) {
-                        if (isset($link['rel']) && $link['rel'] === 'approval_url') {
-                            $approvalUrl = $link['href'];
-                            break;
-                        }
-                    }
-                }
-            }
-
+            
             if (!$approvalUrl) {
-                $this->addFlash('danger', 'Lien d\'approbation non trouvé.');
+                $this->addFlash('danger', 'Lien d\'approbation PayPal non trouvé.');
                 return $this->redirectToRoute('app_profile');
             }
+            
+            // Sauvegarde du paiementId en session (optionnel)
+            $request->getSession()->set('paypal_payment_id', $payment->getId());
+            
+            // Redirection vers PayPal
             return $this->redirect($approvalUrl);
+            
         } catch (\Exception $e) {
             $this->addFlash('danger', 'Erreur PayPal : ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
@@ -183,71 +163,60 @@ class PaymentController extends AbstractController
     public function paypalReturn(Request $request, EntityManagerInterface $em): Response
     {
         $paymentId = $request->query->get('paymentId');
-        $payerId   = $request->query->get('PayerID');
+        $payerId = $request->query->get('PayerID');
 
         if (!$paymentId || !$payerId) {
-            $this->addFlash('danger', 'Informations de paiement manquantes.');
+            $this->addFlash('danger', 'Informations de paiement PayPal manquantes.');
             return $this->redirectToRoute('app_profile');
+        }
+
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
         }
 
         try {
             $apiContext = $this->initPaypalContext();
+            
+            // Récupération du paiement
             $payment = Payment::get($paymentId, $apiContext);
-
+            
+            // Exécution du paiement
             $execution = new PaymentExecution();
             $execution->setPayerId($payerId);
-
             $result = $payment->execute($execution, $apiContext);
-
+            
+            // Vérification que le paiement est approuvé
             if ($result->getState() === 'approved') {
-                // Récupération sécurisée des transactions
+                // Récupération du montant de la transaction
                 $transactions = $result->getTransactions();
-                $amount = 0;
-                
-                // Si transactions est un tableau et non vide
-                if (is_array($transactions) && !empty($transactions)) {
-                    $amount = (float)$transactions[0]->getAmount()->getTotal();
-                } 
-                // Si transactions est une chaîne JSON
-                elseif (is_string($transactions)) {
-                    $transactionsArray = json_decode($transactions, true);
-                    if (is_array($transactionsArray) && !empty($transactionsArray)) {
-                        $amount = (float)$transactionsArray[0]['amount']['total'];
-                    }
-                }
-                // Méthode alternative via JSON complet
-                else {
-                    $resultJson = $result->toJSON();
-                    $resultData = json_decode($resultJson, true);
-                    
-                    if (isset($resultData['transactions'][0]['amount']['total'])) {
-                        $amount = (float)$resultData['transactions'][0]['amount']['total'];
-                    }
+                if (empty($transactions)) {
+                    throw new \Exception('Aucune transaction trouvée');
                 }
                 
-                if ($amount > 0) {
-                    $user = $this->getUser();
-                    $transaction = new Transactions();
-                    $transaction->setUser($user);
-                    $transaction->setAmount($amount);
-                    $transaction->setMethod('paypal');
-                    $transaction->setCreatedAt(new \DateTimeImmutable());
-                    $em->persist($transaction);
-
-                    $user->setBalance($user->getBalance() + $amount);
-                    $em->flush();
-
-                    $this->addFlash('success', 'Transaction réussie !');
-                } else {
-                    $this->addFlash('danger', 'Montant invalide dans la réponse PayPal.');
-                }
+                $amount = (float)$transactions[0]->getAmount()->getTotal();
+                
+                // Enregistrement de la transaction
+                $transaction = new Transactions();
+                $transaction->setUser($user);
+                $transaction->setAmount($amount);
+                $transaction->setMethod('paypal');
+                $transaction->setCreatedAt(new \DateTimeImmutable());
+                $em->persist($transaction);
+                
+                // Mise à jour du solde utilisateur
+                $user->setBalance($user->getBalance() + $amount);
+                $em->persist($user);
+                $em->flush();
+                
+                $this->addFlash('success', "Dépôt de $amount USD réussi via PayPal !");
                 return $this->redirectToRoute('app_profile');
             } else {
-                $this->addFlash('danger', 'La transaction n\'a pas été approuvée.');
+                $this->addFlash('danger', 'Le paiement PayPal n\'a pas été approuvé.');
                 return $this->redirectToRoute('app_profile');
             }
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur PayPal : ' . $e->getMessage());
+            $this->addFlash('danger', 'Erreur lors du traitement du paiement PayPal : ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -255,11 +224,11 @@ class PaymentController extends AbstractController
     #[Route('/paypal/cancel', name: 'paypal_cancel', methods: ['GET'])]
     public function paypalCancel(): Response
     {
-        $this->addFlash('warning', 'Paiement annulé par l\'utilisateur.');
+        $this->addFlash('warning', 'Paiement PayPal annulé.');
         return $this->redirectToRoute('app_profile');
     }
 
-    private function initPaypalContext()
+    private function initPaypalContext(): ApiContext
     {
         $clientId = $_ENV["PAYPAL_CLIENT_ID"];
         $clientSecret = $_ENV["PAYPAL_CLIENT_SECRET"];
@@ -267,16 +236,22 @@ class PaymentController extends AbstractController
         $apiContext = new ApiContext(
             new OAuthTokenCredential($clientId, $clientSecret)
         );
-        // Utilise 'sandbox' pour tester ou 'live' pour la production
-        $apiContext->setConfig(['mode' => 'live']);
+        
+        // Configuration de l'environnement ('sandbox' ou 'live')
+        $apiContext->setConfig([
+            'mode' => 'live',  
+            'log.LogEnabled' => true,
+            'log.FileName' => '../var/log/paypal.log',
+            'log.LogLevel' => 'INFO'
+        ]);
 
         return $apiContext;
     }
 
-    // Méthodes fictives pour les autres paiements
+    // Méthodes pour les autres moyens de paiement
     private function processCardPayment(User $user, float $amount): bool
     {
-        // Implémenter l'appel à l'API de paiement par carte (Stripe, etc.)
+        // Implémenter l'appel à l'API de paiement par carte
         return true;
     }
 
@@ -288,6 +263,7 @@ class PaymentController extends AbstractController
 
     private function convertToTRX(float $amount, string $fromCurrency): float
     {
+        // Logique de conversion de devises
         return $amount * 10;
     }
 

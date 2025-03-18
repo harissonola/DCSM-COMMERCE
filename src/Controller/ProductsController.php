@@ -55,28 +55,40 @@ class ProductsController extends AbstractController
             throw $this->createNotFoundException('Produit non trouvé');
         }
 
-        // Vérifier si l'utilisateur est autorisé à voir ce produit
+        // Vérification des autorisations
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
             $this->addFlash('danger', 'Vous devez acheter ce produit pour accéder à son tableau de bord. Cliquez ici pour acheter le produit : <a href="' . $urlGenerator->generate('app_buy_product', ['slug' => $slug]) . '" class="alert-link">Acheter ce produit</a>');
             return $this->redirectToRoute('app_main');
         }
 
-        // Vérification du bot de minage (si actif)
+        // Activation du bot de minage
         if ($user->isMiningBotActive()) {
             $this->startProductMining($prod, $entityManager);
         }
 
-        // Récupérer UNIQUEMENT les prix du produit sélectionné
+        // Récupération des données historiques
         $prices = $productPriceRepository->findBy(
             ['product' => $prod],
             ['timestamp' => 'ASC']
         );
 
-        $chartData = [];
+        // Préparation des données pour le graphique
+        $chartData = [
+            'price' => [],
+            'market_cap' => []
+        ];
+
         foreach ($prices as $price) {
-            $chartData[] = [
-                'x' => $price->getTimestamp()->format('Y-m-d H:i:s'),
+            $timestamp = $price->getTimestamp()->format('Y-m-d H:i:s');
+
+            $chartData['price'][] = [
+                'x' => $timestamp,
                 'y' => $price->getPrice()
+            ];
+
+            $chartData['market_cap'][] = [
+                'x' => $timestamp,
+                'y' => $price->getMarketCap() // Assurez-vous que cette méthode existe dans ProductPrice
             ];
         }
 
@@ -88,18 +100,15 @@ class ProductsController extends AbstractController
 
 
 
-
-
-
-     /**
+    /**
      * Route pour finaliser l'achat d'un produit.
      * Le prix du produit est stocké en CFA dans la base de données et le solde de l'utilisateur en USD.
      * On suppose ici que 600 CFA = 1 USD.
      */
     #[Route('/sell-product/{slug}', name: 'app_sell_product', methods: ['POST'])]
     public function sellProduct(
-        Request $request, 
-        ProductRepository $productRepository, 
+        Request $request,
+        ProductRepository $productRepository,
         EntityManagerInterface $em,
         string $slug
     ): JsonResponse {
@@ -107,38 +116,38 @@ class ProductsController extends AbstractController
         if (!$request->isXmlHttpRequest()) {
             return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
         }
-        
+
         // Récupérer l'utilisateur courant
         $user = $this->getUser();
         if (!$user) {
             return new JsonResponse(['success' => false, 'message' => 'Utilisateur non authentifié'], 401);
         }
-        
+
         // Récupérer le produit via son slug
         $product = $productRepository->findOneBy(['slug' => $slug]);
         if (!$product) {
             return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
         }
-        
+
         // Taux de conversion : 601.56 CFA = 1 USD
         $conversionRate = 601.56;
         $priceCFA = $product->getPrice(); // Prix en CFA
         $priceUSD = $priceCFA / $conversionRate; // Prix converti en USD
-        
+
         // Vérifier si le solde de l'utilisateur est suffisant
         if ($user->getBalance() < $priceUSD) {
             return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
         }
-        
+
         // Déduire le montant du solde utilisateur
         $user->setBalance($user->getBalance() - $priceUSD);
-        
+
         // Optionnel : Enregistrer une transaction ou associer le produit à l'utilisateur
         $user->addProduct($product);
-        
+
         $em->persist($user);
         $em->flush();
-        
+
         return new JsonResponse(['success' => true, 'message' => 'Achat réussi'], 200);
     }
 

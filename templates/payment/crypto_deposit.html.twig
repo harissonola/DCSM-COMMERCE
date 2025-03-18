@@ -6,7 +6,7 @@
 <div class="container mt-5">
     <h2 class="mb-4">Dépôt Crypto</h2>
     <p>Montant à déposer : <strong>{{ amount }} USDT</strong></p>
-    <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}">
+    <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}" data-turbo="false">
         <div class="mb-3">
             <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
             <select name="cryptoType" id="cryptoType" class="form-control" required>

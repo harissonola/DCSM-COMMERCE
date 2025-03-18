@@ -102,11 +102,11 @@ class PaymentController extends AbstractController
         
         try {
             // Création de la requête d'ordre
-            $request = new OrdersCreateRequest();
-            $request->prefer('return=representation');
+            $paypalRequest = new OrdersCreateRequest();
+            $paypalRequest->prefer('return=representation');
             
             // Structure de l'ordre PayPal avec le nouveau SDK
-            $request->body = [
+            $paypalRequest->body = [
                 'intent' => 'CAPTURE',
                 'purchase_units' => [[
                     'amount' => [
@@ -124,7 +124,7 @@ class PaymentController extends AbstractController
             ];
             
             // Envoi de la requête à PayPal
-            $response = $client->execute($request);
+            $response = $client->execute($paypalRequest);
             
             if ($response->statusCode !== 201) {
                 throw new \Exception('Échec de la création de l\'ordre PayPal: ' . $response->statusCode);
@@ -176,11 +176,11 @@ class PaymentController extends AbstractController
             $client = $this->getPayPalClient();
             
             // Création de la requête de capture
-            $request = new OrdersCaptureRequest($orderId);
-            $request->prefer('return=representation');
+            $captureRequest = new OrdersCaptureRequest($orderId);
+            $captureRequest->prefer('return=representation');
             
             // Exécution de la requête de capture
-            $response = $client->execute($request);
+            $response = $client->execute($captureRequest);
             
             // Vérification du statut de la capture
             if ($response->result->status !== 'COMPLETED') {

@@ -44,20 +44,22 @@ class ProductsController extends AbstractController
     ): Response {
         $user = $this->getUser();
 
+        // Redirection si utilisateur non connecté
         if (!$user) {
             return $this->redirectToRoute("app_main");
         }
 
-        // Trouver le produit correspondant au slug
+        // Récupération du produit
         $prod = $productRepository->findOneBy(['slug' => $slug]);
-
         if (!$prod) {
             throw $this->createNotFoundException('Produit non trouvé');
         }
 
-        // Vérification des autorisations
+        // Vérification des permissions
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
-            $this->addFlash('danger', 'Vous devez acheter ce produit pour accéder à son tableau de bord. Cliquez ici pour acheter le produit : <a href="' . $urlGenerator->generate('app_buy_product', ['slug' => $slug]) . '" class="alert-link">Acheter ce produit</a>');
+            $this->addFlash('danger', 'Accès refusé. <a href="' .
+                $urlGenerator->generate('app_buy_product', ['slug' => $slug]) .
+                '" class="alert-link">Acheter le produit</a>');
             return $this->redirectToRoute('app_main');
         }
 
@@ -79,22 +81,26 @@ class ProductsController extends AbstractController
         ];
 
         foreach ($prices as $price) {
-            $timestamp = $price->getTimestamp()->format('Y-m-d H:i:s');
+            $timestamp = $price->getTimestamp()->format('c'); // Format ISO 8601
 
+            // Données de prix
             $chartData['price'][] = [
                 'x' => $timestamp,
                 'y' => $price->getPrice()
             ];
 
-            $chartData['market_cap'][] = [
-                'x' => $timestamp,
-                'y' => $price->getMarketCap() // Assurez-vous que cette méthode existe dans ProductPrice
-            ];
+            // Données de capitalisation (si disponible)
+            if (method_exists($price, 'getMarketCap') && $price->getMarketCap() !== null) {
+                $chartData['market_cap'][] = [
+                    'x' => $timestamp,
+                    'y' => $price->getMarketCap()
+                ];
+            }
         }
 
         return $this->render('products/dash.html.twig', [
             'prod' => $prod,
-            'chartData' => json_encode($chartData),
+            'chartData' => $chartData
         ]);
     }
 

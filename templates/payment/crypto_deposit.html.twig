@@ -15,7 +15,7 @@
     <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}" data-turbo="false">
         <div class="mb-3">
             <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
-            <select name="cryptoType" id="cryptoType" class="form-control" required>
+            <select name="cryptoType" id="cryptoType" class="form-select" required>
                 <option value="">Sélectionnez une crypto</option>
                 <option value="BTC">Bitcoin (BTC)</option>
                 <option value="ETH">Ethereum (ETH)</option>

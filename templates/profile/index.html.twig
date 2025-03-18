@@ -1,7 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Profil Utilisateur
-{% endblock %}
+{% block title %}Profil Utilisateur{% endblock %}
 
 {% block body %}
 	<style>
@@ -84,27 +83,25 @@
 						<img src="/uploads/users/{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
 					{% endif %}
 					<div class="float-start">
-						<h2 class="mb-0">{{ app.user.fname }}
-							{{ app.user.lname }}</h2>
+						<h2 class="mb-0">{{ app.user.fname }} {{ app.user.lname }}</h2>
 						<small class="text-muted">{{ app.user.username }}</small>
 						<p>{{ app.user.email }}</p>
 						<h5>Solde:
 							<span class="fw-bold">${{ app.user.balance }}</span>
 						</h5>
 					</div>
-					<div
-						class="float-end">
+					<div class="float-end">
 						<!-- QR Code (déjà présent) -->
 						<img src="{{ app.user.qrCodePath }}" alt="QR Code" class="img-fluid" height="100" width="100" crossorigin="anonymous">
 					</div>
 				</div>
 
 				<div class="mb-4">
-					<a href="{{ path('app_user_settings') }}" class="btn-edit me-2 btn btn-success">Modifier le profil</a>
-					<a href="#" class="btn-deposit me-2 btn btn-warning" data-bs-toggle="modal" data-bs-target="#depositModal">Faire un dépôt</a>
-					<a href="#" class="btn-withdraw btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#withdrawModal">Retirer des fonds</a>
+					<a href="{{ path('app_user_settings') }}" class="btn-edit btn btn-success mb-3">Modifier le profil</a>
+					<a href="#" class="btn-deposit btn btn-warning mb-3" data-bs-toggle="modal" data-bs-target="#depositModal">Faire un dépôt</a>
+					<a href="#" class="btn-withdraw btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#withdrawModal">Retirer des fonds</a>
 
-					<!-- Nouveau bouton de partage du lien d'affiliation -->
+					<!-- Bouton de partage du lien d'affiliation -->
 					<button class="btn-share btn" data-bs-toggle="modal" data-bs-target="#shareModal">
 						Partager mon lien d'affiliation
 					</button>
@@ -231,7 +228,19 @@
 		</div>
 	</div>
 
-	 <script>
+	<!-- Conteneur du toast pour la notification de copie -->
+	<div class="position-fixed top-0 end-0 p-3" style="z-index: 2000">
+		<div id="copyToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+			<div class="d-flex">
+				<div class="toast-body">
+					Lien copié dans le presse-papier !
+				</div>
+				<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+			</div>
+		</div>
+	</div>
+
+	<script>
 		// Interception de la soumission pour rediriger vers le flux PayPal
 		document.getElementById('depositForm').addEventListener('submit', function(e) {
 			var paymentMethod = document.getElementById('paymentMethod').value;
@@ -243,11 +252,13 @@
 			}
 		});
 	
-		// Fonction pour copier le lien d'affiliation dans le presse-papier
+		// Fonction pour copier le lien d'affiliation et afficher un toast
 		function copyToClipboard(text) {
 			navigator.clipboard.writeText(text)
 				.then(() => {
-					alert('Lien copié dans le presse-papier !');
+					const toastEl = document.getElementById('copyToast');
+					const toast = new bootstrap.Toast(toastEl);
+					toast.show();
 				})
 				.catch(err => {
 					console.error('Échec de la copie : ', err);

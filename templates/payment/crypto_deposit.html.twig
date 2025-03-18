@@ -1,11 +1,17 @@
 {% extends 'base.html.twig' %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {# Inclusion de Select2 CSS via CDN #}
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+
 {% block title %}Dépôt Crypto{% endblock %}
 
 {% block body %}
 <div class="container mt-5">
     <h2 class="mb-4">Dépôt Crypto</h2>
-    <p>Montant à déposer : <strong>{{ amount }} USDT</strong></p>
+    <p>Montant à déposer : <strong>$ {{ amount }} USD</strong></p>
     <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}" data-turbo="false">
         <div class="mb-3">
             <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
@@ -13,8 +19,20 @@
                 <option value="">Sélectionnez une crypto</option>
                 <option value="BTC">Bitcoin (BTC)</option>
                 <option value="ETH">Ethereum (ETH)</option>
+                <option value="LTC">Litecoin (LTC)</option>
+                <option value="DOGE">Dogecoin (DOGE)</option>
+                <option value="BCH">Bitcoin Cash (BCH)</option>
                 <option value="TRX">TRON (TRX)</option>
-                <!-- Ajoutez d'autres options si nécessaire -->
+                <option value="DASH">Dash (DASH)</option>
+                <option value="XRP">Ripple (XRP)</option>
+                <option value="ETC">Ethereum Classic (ETC)</option>
+                <option value="XMR">Monero (XMR)</option>
+                <option value="ZEC">Zcash (ZEC)</option>
+                <option value="BNB">Binance Coin (BNB)</option>
+                <option value="ADA">Cardano (ADA)</option>
+                <option value="EOS">EOS (EOS)</option>
+                <option value="XLM">Stellar (XLM)</option>
+                <option value="USDT">Tether (USDT)</option>
             </select>
         </div>
         <div class="mb-3">
@@ -24,4 +42,17 @@
         <button type="submit" class="btn btn-primary">Valider</button>
     </form>
 </div>
+{% endblock %}
+
+{% block customScript %}
+    {# Inclusion de jQuery (si non déjà présent) et de Select2 JS via CDN #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#cryptoType').select2({
+                placeholder: "Sélectionnez une crypto",
+                allowClear: true
+            });
+        });
+    </script>
 {% endblock %}

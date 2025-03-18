@@ -98,7 +98,8 @@ class PaymentController extends AbstractController
 
         // Création du payer
         $payer = new Payer();
-        $payer->setPaymentMethod("paypal");
+        // Remplacement de la méthode setPaymentMethod par l'affectation directe de la propriété
+        $payer->payment_method = "paypal";
 
         // Configuration du montant
         $amountObj = new Amount();

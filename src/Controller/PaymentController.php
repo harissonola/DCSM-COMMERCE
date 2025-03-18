@@ -98,8 +98,7 @@ class PaymentController extends AbstractController
 
         // Création du payer
         $payer = new Payer();
-        // Dans ce SDK, on peut directement affecter la propriété
-        $payer->payment_method = "paypal";
+        $payer->setPaymentMethod("paypal");  // Utilisation de setPaymentMethod au lieu d'une affectation directe
 
         // Configuration du montant
         $amountObj = new Amount();
@@ -120,7 +119,7 @@ class PaymentController extends AbstractController
         $payment = new Payment();
         $payment->setIntent("sale")
                 ->setPayer($payer)
-                ->setTransactions([$transaction])
+                ->setTransactions(array($transaction))  // Utilisation de array() au lieu de []
                 ->setRedirectUrls($redirectUrls);
 
         try {
@@ -128,12 +127,27 @@ class PaymentController extends AbstractController
             $payment->create($apiContext);
 
             $approvalUrl = null;
-            foreach ($payment->getLinks() as $link) {
-                if ($link->getRel() === 'approval_url') {
-                    $approvalUrl = $link->getHref();
-                    break;
+            $links = $payment->getLinks();
+            
+            // Vérifier que getLinks() retourne un tableau ou un objet Countable
+            if (is_array($links) || $links instanceof \Countable) {
+                foreach ($links as $link) {
+                    if ($link->getRel() === 'approval_url') {
+                        $approvalUrl = $link->getHref();
+                        break;
+                    }
+                }
+            } else {
+                // Si getLinks() ne retourne pas un tableau, essayer une autre approche
+                $linksArray = is_object($links) ? get_object_vars($links) : [];
+                foreach ($linksArray as $link) {
+                    if (is_object($link) && method_exists($link, 'getRel') && $link->getRel() === 'approval_url') {
+                        $approvalUrl = $link->getHref();
+                        break;
+                    }
                 }
             }
+            
             if (!$approvalUrl) {
                 $this->addFlash('danger', 'Lien d\'approbation non trouvé.');
                 return $this->redirectToRoute('app_profile');
@@ -166,20 +180,27 @@ class PaymentController extends AbstractController
             $result = $payment->execute($execution, $apiContext);
 
             if ($result->getState() === 'approved') {
-                $amount = (float)$result->getTransactions()[0]->getAmount()->getTotal();
+                $transactions = $result->getTransactions();
+                
+                // Vérification que transactions est un tableau et n'est pas vide
+                if (is_array($transactions) && !empty($transactions)) {
+                    $amount = (float)$transactions[0]->getAmount()->getTotal();
+                    
+                    $user = $this->getUser();
+                    $transaction = new Transactions();
+                    $transaction->setUser($user);
+                    $transaction->setAmount($amount);
+                    $transaction->setMethod('paypal');
+                    $transaction->setCreatedAt(new \DateTimeImmutable());
+                    $em->persist($transaction);
 
-                $user = $this->getUser();
-                $transaction = new Transactions();
-                $transaction->setUser($user);
-                $transaction->setAmount($amount);
-                $transaction->setMethod('paypal');
-                $transaction->setCreatedAt(new \DateTimeImmutable());
-                $em->persist($transaction);
+                    $user->setBalance($user->getBalance() + $amount);
+                    $em->flush();
 
-                $user->setBalance($user->getBalance() + $amount);
-                $em->flush();
-
-                $this->addFlash('success', 'Transaction réussie !');
+                    $this->addFlash('success', 'Transaction réussie !');
+                } else {
+                    $this->addFlash('danger', 'Aucune transaction trouvée dans la réponse PayPal.');
+                }
                 return $this->redirectToRoute('app_profile');
             } else {
                 $this->addFlash('danger', 'La transaction n\'a pas été approuvée.');

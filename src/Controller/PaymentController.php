@@ -11,15 +11,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// Utilisation du SDK classique PayPal
-use PayPal\Api\Payment;
-use PayPal\Api\PaymentExecution;
-use PayPal\Api\Payer;
-use PayPal\Api\Transaction;
-use PayPal\Api\Amount;
-use PayPal\Api\RedirectUrls;
-use PayPal\Rest\ApiContext;
-use PayPal\Auth\OAuthTokenCredential;
+// Utilisation du SDK PayPal Server SDK
+use PaypalServerSdkLib\Models\Payer;
+use PaypalServerSdkLib\Models\Payment;
+use PaypalServerSdkLib\Models\PaymentExecution;
+use PaypalServerSdkLib\Models\Transaction as PaypalTransaction;
+use PaypalServerSdkLib\Models\Amount;
+use PaypalServerSdkLib\Models\RedirectUrls;
+use PaypalServerSdkLib\Core\ApiContext;
+use PaypalServerSdkLib\Auth\OAuthTokenCredential;
 
 class PaymentController extends AbstractController
 {
@@ -106,7 +106,7 @@ class PaymentController extends AbstractController
                   ->setTotal(number_format($amount, 2, '.', ''));
 
         // Création de la transaction
-        $transaction = new Transaction();
+        $transaction = new PaypalTransaction();
         $transaction->setAmount($amountObj)
                     ->setDescription("Dépôt sur le site");
 

@@ -206,7 +206,7 @@ class PaymentController extends AbstractController
             new OAuthTokenCredential($clientId, $clientSecret)
         );
         // Utilise 'sandbox' pour tester ou 'live' pour la production
-        $apiContext->setConfig(['mode' => 'sandbox']);
+        $apiContext->setConfig(['mode' => 'live']);
 
         return $apiContext;
     }

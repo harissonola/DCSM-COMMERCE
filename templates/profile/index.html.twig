@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Profil Utilisateur{% endblock %}
+{% block title %}{{ app.user.fname }} {{ app.user.lname }} | Profil{% endblock %}
 
 {% block body %}
 	<style>
@@ -89,10 +89,6 @@
 						<h5>Solde:
 							<span class="fw-bold">${{ app.user.balance }}</span>
 						</h5>
-					</div>
-					<div class="float-end">
-						<!-- QR Code (déjà présent) -->
-						<img src="{{ app.user.qrCodePath }}" alt="QR Code" class="img-fluid" height="100" width="100" crossorigin="anonymous">
 					</div>
 				</div>
 

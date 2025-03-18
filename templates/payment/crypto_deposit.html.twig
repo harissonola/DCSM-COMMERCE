@@ -58,7 +58,7 @@
 
 {% block body %}
 <div class="container">
-    <div class="crypto-card py-4 mt-2">
+    <div class="crypto-card">
         <h2 class="text-center text-white">Dépôt Crypto</h2>
         <p class="text-center text-white">Montant à déposer : <strong>$ {{ amount }} USD</strong></p>
         <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}" data-turbo="false">

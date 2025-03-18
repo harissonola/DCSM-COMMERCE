@@ -98,7 +98,7 @@ class PaymentController extends AbstractController
 
         // Création du payer
         $payer = new Payer();
-        $payer->setPaymentMethod("paypal");  // Utilisation de setPaymentMethod au lieu d'une affectation directe
+        $payer->setPaymentMethod("paypal");
 
         // Configuration du montant
         $amountObj = new Amount();
@@ -119,35 +119,55 @@ class PaymentController extends AbstractController
         $payment = new Payment();
         $payment->setIntent("sale")
                 ->setPayer($payer)
-                ->setTransactions(array($transaction))  // Utilisation de array() au lieu de []
+                ->setTransactions(array($transaction))
                 ->setRedirectUrls($redirectUrls);
 
         try {
             $apiContext = $this->initPaypalContext();
             $payment->create($apiContext);
 
+            // Recherche directe de l'URL d'approbation sans utiliser sizeof()
             $approvalUrl = null;
+            
+            // Obtention manuelle des liens
             $links = $payment->getLinks();
             
-            // Vérifier que getLinks() retourne un tableau ou un objet Countable
-            if (is_array($links) || $links instanceof \Countable) {
-                foreach ($links as $link) {
-                    if ($link->getRel() === 'approval_url') {
-                        $approvalUrl = $link->getHref();
-                        break;
+            // Si links est une chaîne, essayons de la convertir en objet JSON
+            if (is_string($links)) {
+                $linksArray = json_decode($links, true);
+                if (is_array($linksArray)) {
+                    foreach ($linksArray as $link) {
+                        if (isset($link['rel']) && $link['rel'] === 'approval_url' && isset($link['href'])) {
+                            $approvalUrl = $link['href'];
+                            break;
+                        }
                     }
                 }
-            } else {
-                // Si getLinks() ne retourne pas un tableau, essayer une autre approche
-                $linksArray = is_object($links) ? get_object_vars($links) : [];
-                foreach ($linksArray as $link) {
-                    if (is_object($link) && method_exists($link, 'getRel') && $link->getRel() === 'approval_url') {
+            } 
+            // Si links est un tableau ou un objet itérable
+            elseif (is_array($links) || (is_object($links) && method_exists($links, 'getIterator'))) {
+                foreach ($links as $link) {
+                    if (method_exists($link, 'getRel') && $link->getRel() === 'approval_url') {
                         $approvalUrl = $link->getHref();
                         break;
                     }
                 }
             }
-            
+            // Méthode alternative pour obtenir l'URL d'approbation
+            else {
+                $paymentJson = $payment->toJSON();
+                $paymentData = json_decode($paymentJson, true);
+                
+                if (isset($paymentData['links']) && is_array($paymentData['links'])) {
+                    foreach ($paymentData['links'] as $link) {
+                        if (isset($link['rel']) && $link['rel'] === 'approval_url') {
+                            $approvalUrl = $link['href'];
+                            break;
+                        }
+                    }
+                }
+            }
+
             if (!$approvalUrl) {
                 $this->addFlash('danger', 'Lien d\'approbation non trouvé.');
                 return $this->redirectToRoute('app_profile');
@@ -180,12 +200,32 @@ class PaymentController extends AbstractController
             $result = $payment->execute($execution, $apiContext);
 
             if ($result->getState() === 'approved') {
+                // Récupération sécurisée des transactions
                 $transactions = $result->getTransactions();
+                $amount = 0;
                 
-                // Vérification que transactions est un tableau et n'est pas vide
+                // Si transactions est un tableau et non vide
                 if (is_array($transactions) && !empty($transactions)) {
                     $amount = (float)$transactions[0]->getAmount()->getTotal();
+                } 
+                // Si transactions est une chaîne JSON
+                elseif (is_string($transactions)) {
+                    $transactionsArray = json_decode($transactions, true);
+                    if (is_array($transactionsArray) && !empty($transactionsArray)) {
+                        $amount = (float)$transactionsArray[0]['amount']['total'];
+                    }
+                }
+                // Méthode alternative via JSON complet
+                else {
+                    $resultJson = $result->toJSON();
+                    $resultData = json_decode($resultJson, true);
                     
+                    if (isset($resultData['transactions'][0]['amount']['total'])) {
+                        $amount = (float)$resultData['transactions'][0]['amount']['total'];
+                    }
+                }
+                
+                if ($amount > 0) {
                     $user = $this->getUser();
                     $transaction = new Transactions();
                     $transaction->setUser($user);
@@ -199,7 +239,7 @@ class PaymentController extends AbstractController
 
                     $this->addFlash('success', 'Transaction réussie !');
                 } else {
-                    $this->addFlash('danger', 'Aucune transaction trouvée dans la réponse PayPal.');
+                    $this->addFlash('danger', 'Montant invalide dans la réponse PayPal.');
                 }
                 return $this->redirectToRoute('app_profile');
             } else {

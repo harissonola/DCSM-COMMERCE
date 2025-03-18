@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -88,7 +89,7 @@ class PaymentController extends AbstractController
             $this->addFlash('danger', 'Le montant doit être supérieur à zéro.');
             return $this->redirectToRoute('app_profile');
         }
-        
+
         $returnUrl = $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL);
         $cancelUrl = $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
@@ -149,7 +150,7 @@ class PaymentController extends AbstractController
             $this->addFlash('danger', 'Token de commande manquant.');
             return $this->redirectToRoute('app_profile');
         }
-        
+
         try {
             $client = $this->initPaypalClient();
             $captureRequest = new OrdersCaptureRequest($orderId);
@@ -194,11 +195,12 @@ class PaymentController extends AbstractController
     {
         $clientId = $_ENV["PAYPAL_CLIENT_ID"];
         $clientSecret = $_ENV["PAYPAL_CLIENT_SECRET"];
-        
-        $environment = new SandboxEnvironment($clientId, $clientSecret);
+
+        // $environment = new SandboxEnvironment($clientId, $clientSecret);
+        $environment = new LiveEnvironment($clientId, $clientSecret);
         // Pour passer en mode live, décommentez la ligne suivante et commentez la précédente :
         // $environment = new LiveEnvironment($clientId, $clientSecret);
-        
+
         return new PayPalHttpClient($environment);
     }
 

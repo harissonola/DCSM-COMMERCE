@@ -6,7 +6,10 @@
 <div class="container mt-5">
     <h2 class="mb-4">Dépôt Crypto</h2>
     <p>Montant à déposer : <strong>{{ amount }} USDT</strong></p>
-    <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}">
+    <form method="post" 
+         action="{{ path('app_crypto_redirect', {'amount': amount}) }}" 
+         data-turbo="false" {# Désactive Turbo Drive pour ce formulaire #}
+         id="cryptoForm">
         <div class="mb-3">
             <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
             <select name="cryptoType" id="cryptoType" class="form-control" required>
@@ -14,12 +17,15 @@
                 <option value="BTC">Bitcoin (BTC)</option>
                 <option value="ETH">Ethereum (ETH)</option>
                 <option value="TRX">TRON (TRX)</option>
-                <!-- Ajoutez d'autres options si nécessaire -->
             </select>
         </div>
         <div class="mb-3">
             <label for="walletAddress" class="form-label">Adresse du portefeuille</label>
-            <input type="text" name="walletAddress" id="walletAddress" class="form-control" required>
+            <input type="text" name="walletAddress" id="walletAddress" 
+                 class="form-control" 
+                 required
+                 pattern="^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^0x[a-fA-F0-9]{40}$|^T[1-9A-HJ-NP-Za-km-z]{33}$"
+                 title="Adresse crypto valide (BTC, ETH ou TRX)">
         </div>
         <button type="submit" class="btn btn-primary">Valider</button>
     </form>

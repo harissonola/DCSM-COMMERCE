@@ -5,6 +5,7 @@ deploy:
 
 install: vendor/autoload.php
 	php bin/console d:s:u -f
+	php bin/console asset-map:compile
 	composer dump-env prod
 	php bin/console cache:clear
 

@@ -11,12 +11,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// Utilisation du SDK PayPal Server SDK avec les namespaces adaptés
+// Utilisation du SDK PayPal Server SDK
 use PaypalServerSdkLib\Models\Payer;
 use PaypalServerSdkLib\Models\Payment;
 use PaypalServerSdkLib\Models\PaymentExecution;
 use PaypalServerSdkLib\Models\Transaction as PaypalTransaction;
-use PaypalServerSdkLib\Models\Payment\Amount; // Mise à jour ici
+use PaypalServerSdkLib\Models\Amount; // Import mis à jour
 use PaypalServerSdkLib\Models\RedirectUrls;
 use PaypalServerSdkLib\Core\ApiContext;
 use PaypalServerSdkLib\Auth\OAuthTokenCredential;

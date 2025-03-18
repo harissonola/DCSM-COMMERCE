@@ -38,7 +38,7 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_login');
         }
 
-        $amount = (float)$request->request->get('amount');
+        $amount = (float) $request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
 
         if ($amount <= 0) {
@@ -60,48 +60,69 @@ class PaymentController extends AbstractController
                 }
                 break;
             case 'paypal':
-                // Redirection vers le flux PayPal complet
                 return $this->redirectToRoute('app_paypal_redirect', ['amount' => $amount]);
             case 'crypto':
-                // Récupération du type de crypto sélectionné (ex. BTC, ETH, TRX, etc.)
-                $cryptoType = $request->request->get('cryptoType');
-                // Vous pouvez aussi récupérer l'adresse de portefeuille de l'utilisateur s'il est nécessaire de l'enregistrer
-                $walletAddress = $request->request->get('walletAddress');
-
-                if (!$cryptoType) {
-                    $this->addFlash('danger', 'Le type de crypto est requis.');
-                    return $this->redirectToRoute('app_profile');
-                }
-
-                // Création d'une transaction via CoinPayments
-                $params = [
-                    'amount'      => $amount,
-                    'currency1'   => 'USDT', // devise d'origine (adaptable selon votre besoin)
-                    'currency2'   => $cryptoType, // crypto choisie par l'utilisateur
-                    'buyer_email' => $user->getEmail(),
-                    'item_name'   => 'Dépôt sur le site',
-                    'ipn_url'     => $this->generateUrl('coinpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL)
-                ];
-
-                try {
-                    $response = $this->coinPaymentsApiCall('create_transaction', $params);
-                    // Vous pouvez enregistrer l'ID de la transaction (ex. $response['result']['txn_id']) dans la base si besoin
-                    $paymentUrl = $response['result']['checkout_url'];
-
-                    // Redirection vers la page de paiement de CoinPayments
-                    return $this->redirect($paymentUrl);
-                } catch (\Exception $e) {
-                    $this->addFlash('danger', 'Erreur CoinPayments: ' . $e->getMessage());
-                    return $this->redirectToRoute('app_profile');
-                }
+                // Rediriger vers la page de saisie pour le dépôt crypto
+                return $this->redirectToRoute('app_crypto_redirect', ['amount' => $amount]);
             default:
                 $this->addFlash('danger', 'Méthode de paiement invalide.');
                 return $this->redirectToRoute('app_profile');
         }
 
-        // Pour les autres cas, vous pouvez continuer la logique de mise à jour ou renvoyer un message
         $this->addFlash('info', 'Traitement du dépôt en cours.');
         return $this->redirectToRoute('app_profile');
+    }
+
+    #[Route('/crypto/redirect', name: 'app_crypto_redirect', methods: ['GET', 'POST'])]
+    public function cryptoRedirect(Request $request): Response
+    {
+        $amount = (float)$request->query->get('amount');
+        if ($amount <= 0) {
+            $this->addFlash('danger', 'Le montant doit être supérieur à zéro.');
+            return $this->redirectToRoute('app_profile');
+        }
+
+        if ($request->isMethod('POST')) {
+            $cryptoType = $request->request->get('cryptoType');
+            $walletAddress = $request->request->get('walletAddress');
+
+            if (!$cryptoType || !$walletAddress) {
+                $this->addFlash('danger', 'Le type de crypto et l\'adresse du portefeuille sont requis.');
+                return $this->redirectToRoute('app_profile');
+            }
+
+            // Récupérer l'utilisateur connecté
+            $user = $this->getUser();
+            if (!$user) {
+                return $this->redirectToRoute('app_login');
+            }
+
+            // Préparation des paramètres pour l'appel à CoinPayments
+            $params = [
+                'amount'      => $amount,
+                'currency1'   => 'USDT',  // devise d'origine
+                'currency2'   => $cryptoType, // crypto choisie par l'utilisateur
+                'buyer_email' => $user->getEmail(),
+                'item_name'   => 'Dépôt sur le site',
+                'ipn_url'     => $this->generateUrl('coinpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL)
+            ];
+
+            try {
+                $response = $this->coinPaymentsApiCall('create_transaction', $params);
+                $paymentUrl = $response['result']['checkout_url'];
+
+                // Rediriger l'utilisateur vers la page de paiement CoinPayments
+                return $this->redirect($paymentUrl);
+            } catch (\Exception $e) {
+                $this->addFlash('danger', 'Erreur CoinPayments: ' . $e->getMessage());
+                return $this->redirectToRoute('app_profile');
+            }
+        }
+
+        // Si méthode GET, afficher le formulaire de dépôt crypto
+        return $this->render('payment/crypto_deposit.html.twig', [
+            'amount' => $amount,
+        ]);
     }
 
     #[Route('/paypal/redirect', name: 'app_paypal_redirect', methods: ['GET'])]
@@ -116,11 +137,9 @@ class PaymentController extends AbstractController
         $returnUrl = $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL);
         $cancelUrl = $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        // Création du client PayPal
         $client = $this->getPayPalClient();
         
         try {
-            // Création de la requête d'ordre
             $paypalRequest = new OrdersCreateRequest();
             $paypalRequest->prefer('return=representation');
             

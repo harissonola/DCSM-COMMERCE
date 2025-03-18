@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dépôt Crypto{% endblock %}
+
+{% block body %}
+<div class="container mt-5">
+    <h2 class="mb-4">Dépôt Crypto</h2>
+    <p>Montant à déposer : <strong>{{ amount }} USDT</strong></p>
+    <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}">
+        <div class="mb-3">
+            <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
+            <select name="cryptoType" id="cryptoType" class="form-control" required>
+                <option value="">Sélectionnez une crypto</option>
+                <option value="BTC">Bitcoin (BTC)</option>
+                <option value="ETH">Ethereum (ETH)</option>
+                <option value="TRX">TRON (TRX)</option>
+                <!-- Ajoutez d'autres options selon vos besoins -->
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="walletAddress" class="form-label">Adresse du portefeuille</label>
+            <input type="text" name="walletAddress" id="walletAddress" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Valider</button>
+    </form>
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@
 parameters:
     users_img_directory: '%kernel.project_dir%/public/users/img'
     qr_code_directory: '%kernel.project_dir%/public/uploads/user'
+    app.site_name: 'DCSM COMMERCE'
 
 services:
     # Configuration pour les services

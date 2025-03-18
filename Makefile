@@ -10,5 +10,4 @@ install: vendor/autoload.php
 
 vendor/autoload.php: composer.json composer.lock
 	composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-sodium
-	composer require doctrine/doctrine-fixtures-bundle --ignore-platform-req=ext-sodium
 	touch vendor/autoload.php

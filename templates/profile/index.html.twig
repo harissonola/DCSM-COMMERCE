@@ -148,62 +148,6 @@
 							</select>
 						</div>
 
-						<!-- Section Crypto -->
-						<div id="cryptoFields" style="display: none;">
-							<div class="mb-3">
-								<label for="cryptoType" class="form-label">Type de Crypto</label>
-								<select name="cryptoType" class="form-control">
-									<option value="BTC">BTC</option>
-									<option value="TRX">TRX</option>
-									<option value="USDT">USDT</option>
-								</select>
-							</div>
-							<div class="mb-3">
-								<label for="walletAddress" class="form-label">Adresse du portefeuille</label>
-								<input type="text" name="walletAddress" class="form-control">
-							</div>
-						</div>
-
-						<!-- Section PayPal -->
-						<div id="paypalFields" style="display: none;">
-							<div class="mb-3">
-								<label for="paypalEmail" class="form-label">Email PayPal</label>
-								<input type="email" name="paypalEmail" class="form-control" placeholder="votre-email@exemple.com">
-							</div>
-						</div>
-
-						<!-- Section Mobile Money -->
-						<div id="mobilemoneyFields" style="display: none;">
-							<div class="mb-3">
-								<label for="mobilemoneyProvider" class="form-label">Fournisseur Mobile Money</label>
-								<select name="mobilemoneyProvider" class="form-control">
-									<option value="mtn">MTN</option>
-									<option value="orange">Orange</option>
-									<option value="vodafone">Vodafone</option>
-								</select>
-							</div>
-							<div class="mb-3">
-								<label for="mobilemoneyNumber" class="form-label">Numéro de téléphone</label>
-								<input type="text" name="mobilemoneyNumber" class="form-control" placeholder="Ex: 00225XXXXXXXX">
-							</div>
-						</div>
-
-						<!-- Section Carte -->
-						<div id="carteFields" style="display: none;">
-							<div class="mb-3">
-								<label for="cardNumber" class="form-label">Numéro de carte</label>
-								<input type="text" name="cardNumber" class="form-control" placeholder="XXXX-XXXX-XXXX-XXXX">
-							</div>
-							<div class="mb-3">
-								<label for="cardExpiry" class="form-label">Date d'expiration</label>
-								<input type="text" name="cardExpiry" class="form-control" placeholder="MM/YY">
-							</div>
-							<div class="mb-3">
-								<label for="cardCVC" class="form-label">CVC</label>
-								<input type="text" name="cardCVC" class="form-control" placeholder="123">
-							</div>
-						</div>
-
 						<button type="submit" class="btn-deposit">Déposer</button>
 					</form>
 				</div>
@@ -237,28 +181,6 @@
 	</div>
 
 	<script>
-		// Fonction pour masquer toutes les sections
-		function hideAllPaymentFields() {
-			document.getElementById('cryptoFields').style.display = 'none';
-			document.getElementById('paypalFields').style.display = 'none';
-			document.getElementById('mobilemoneyFields').style.display = 'none';
-			document.getElementById('carteFields').style.display = 'none';
-		}
-		
-		document.getElementById('paymentMethod').addEventListener('change', function() {
-			hideAllPaymentFields();
-			var selectedMethod = this.value;
-			if (selectedMethod === 'crypto') {
-				document.getElementById('cryptoFields').style.display = 'block';
-			} else if (selectedMethod === 'paypal') {
-				document.getElementById('paypalFields').style.display = 'block';
-			} else if (selectedMethod === 'mobilemoney') {
-				document.getElementById('mobilemoneyFields').style.display = 'block';
-			} else if (selectedMethod === 'carte') {
-				document.getElementById('carteFields').style.display = 'block';
-			}
-		});
-
 		// Interception de la soumission pour rediriger vers le flux PayPal
 		document.getElementById('depositForm').addEventListener('submit', function(e) {
 			var paymentMethod = document.getElementById('paymentMethod').value;

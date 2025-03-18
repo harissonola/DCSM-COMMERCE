@@ -4,6 +4,12 @@
     {{ parent() }}
     {# Inclusion de Select2 CSS via CDN #}
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+    <style>
+        .select2-dropdown{
+            background-color:rgb(9, 68, 92);
+        }
+    </style>
 {% endblock %}
 
 {% block title %}Dépôt Crypto{% endblock %}

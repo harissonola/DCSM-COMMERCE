@@ -11,15 +11,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// PayPal SDK imports
-use PayPal\Api\Payer;
-use PayPal\Api\Payment;
-use PayPal\Api\PaymentExecution;
-use PayPal\Api\Transaction;
-use PayPal\Api\Amount;
-use PayPal\Api\RedirectUrls;
-use PayPal\Rest\ApiContext;
-use PayPal\Auth\OAuthTokenCredential;
+// PayPal SDK imports using the newer version
+use PayPalCheckoutSdk\Core\PayPalHttpClient;
+use PayPalCheckoutSdk\Core\SandboxEnvironment;
+use PayPalCheckoutSdk\Core\ProductionEnvironment;
+use PayPalCheckoutSdk\Orders\OrdersCreateRequest;
+use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 
 class PaymentController extends AbstractController
 {
@@ -100,61 +97,60 @@ class PaymentController extends AbstractController
         $returnUrl = $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL);
         $cancelUrl = $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        // Configuration de PayPal
-        $apiContext = $this->initPaypalContext();
-
-        // Création du payer
-        $payer = new Payer();
-        $payer->setPaymentMethod("paypal");
-
-        // Configuration du montant
-        $amountObj = new Amount();
-        $amountObj->setCurrency("USD")
-                  ->setTotal(number_format($amount, 2, '.', ''));
-
-        // Création de la transaction
-        $transaction = new Transaction();
-        $transaction->setAmount($amountObj)
-                    ->setDescription("Dépôt sur le site");
-
-        // Configuration des URLs de redirection
-        $redirectUrls = new RedirectUrls();
-        $redirectUrls->setReturnUrl($returnUrl)
-                     ->setCancelUrl($cancelUrl);
-
-        // Création de l'objet Payment
-        $payment = new Payment();
-        $payment->setIntent("sale")
-                ->setPayer($payer)
-                ->setTransactions([$transaction])
-                ->setRedirectUrls($redirectUrls);
-
+        // Création du client PayPal
+        $client = $this->getPayPalClient();
+        
         try {
-            // Création du paiement
-            $payment->create($apiContext);
+            // Création de la requête d'ordre
+            $request = new OrdersCreateRequest();
+            $request->prefer('return=representation');
             
-            // Récupération de l'URL d'approbation
-            $approvalUrl = null;
-            foreach ($payment->getLinks() as $link) {
-                if ($link->getRel() == 'approval_url') {
-                    $approvalUrl = $link->getHref();
+            // Structure de l'ordre PayPal avec le nouveau SDK
+            $request->body = [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [[
+                    'amount' => [
+                        'currency_code' => 'USD',
+                        'value' => number_format($amount, 2, '.', '')
+                    ],
+                    'description' => 'Dépôt sur le site'
+                ]],
+                'application_context' => [
+                    'return_url' => $returnUrl,
+                    'cancel_url' => $cancelUrl,
+                    'brand_name' => $this->getParameter('app.site_name') ?? 'Votre Site',
+                    'user_action' => 'PAY_NOW',
+                ]
+            ];
+            
+            // Envoi de la requête à PayPal
+            $response = $client->execute($request);
+            
+            if ($response->statusCode !== 201) {
+                throw new \Exception('Échec de la création de l\'ordre PayPal: ' . $response->statusCode);
+            }
+            
+            // Sauvegarde de l'ID de l'ordre en session
+            $request->getSession()->set('paypal_order_id', $response->result->id);
+            
+            // Recherche du lien d'approbation
+            $approvalLink = null;
+            foreach ($response->result->links as $link) {
+                if ($link->rel === 'approve') {
+                    $approvalLink = $link->href;
                     break;
                 }
             }
             
-            if (!$approvalUrl) {
-                $this->addFlash('danger', 'Lien d\'approbation PayPal non trouvé.');
-                return $this->redirectToRoute('app_profile');
+            if (!$approvalLink) {
+                throw new \Exception('Lien d\'approbation PayPal non trouvé');
             }
             
-            // Sauvegarde du paiementId en session (optionnel)
-            $request->getSession()->set('paypal_payment_id', $payment->getId());
-            
             // Redirection vers PayPal
-            return $this->redirect($approvalUrl);
+            return $this->redirect($approvalLink);
             
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur PayPal : ' . $e->getMessage());
+            $this->addFlash('danger', 'Erreur PayPal: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -162,11 +158,11 @@ class PaymentController extends AbstractController
     #[Route('/paypal/return', name: 'paypal_return', methods: ['GET'])]
     public function paypalReturn(Request $request, EntityManagerInterface $em): Response
     {
-        $paymentId = $request->query->get('paymentId');
-        $payerId = $request->query->get('PayerID');
-
-        if (!$paymentId || !$payerId) {
-            $this->addFlash('danger', 'Informations de paiement PayPal manquantes.');
+        // Récupération de l'ID de l'ordre depuis la session ou la requête
+        $orderId = $request->query->get('token') ?? $request->getSession()->get('paypal_order_id');
+        
+        if (!$orderId) {
+            $this->addFlash('danger', 'Informations de commande PayPal manquantes.');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -176,47 +172,52 @@ class PaymentController extends AbstractController
         }
 
         try {
-            $apiContext = $this->initPaypalContext();
+            // Création du client PayPal
+            $client = $this->getPayPalClient();
             
-            // Récupération du paiement
-            $payment = Payment::get($paymentId, $apiContext);
+            // Création de la requête de capture
+            $request = new OrdersCaptureRequest($orderId);
+            $request->prefer('return=representation');
             
-            // Exécution du paiement
-            $execution = new PaymentExecution();
-            $execution->setPayerId($payerId);
-            $result = $payment->execute($execution, $apiContext);
+            // Exécution de la requête de capture
+            $response = $client->execute($request);
             
-            // Vérification que le paiement est approuvé
-            if ($result->getState() === 'approved') {
-                // Récupération du montant de la transaction
-                $transactions = $result->getTransactions();
-                if (empty($transactions)) {
-                    throw new \Exception('Aucune transaction trouvée');
-                }
-                
-                $amount = (float)$transactions[0]->getAmount()->getTotal();
-                
-                // Enregistrement de la transaction
-                $transaction = new Transactions();
-                $transaction->setUser($user);
-                $transaction->setAmount($amount);
-                $transaction->setMethod('paypal');
-                $transaction->setCreatedAt(new \DateTimeImmutable());
-                $em->persist($transaction);
-                
-                // Mise à jour du solde utilisateur
-                $user->setBalance($user->getBalance() + $amount);
-                $em->persist($user);
-                $em->flush();
-                
-                $this->addFlash('success', "Dépôt de $amount USD réussi via PayPal !");
-                return $this->redirectToRoute('app_profile');
-            } else {
-                $this->addFlash('danger', 'Le paiement PayPal n\'a pas été approuvé.');
-                return $this->redirectToRoute('app_profile');
+            // Vérification du statut de la capture
+            if ($response->result->status !== 'COMPLETED') {
+                throw new \Exception('La capture de paiement n\'a pas été complétée. Statut: ' . $response->result->status);
             }
+            
+            // Récupération du montant payé
+            $amount = 0;
+            foreach ($response->result->purchase_units as $unit) {
+                if (isset($unit->payments->captures[0]->amount->value)) {
+                    $amount = (float)$unit->payments->captures[0]->amount->value;
+                    break;
+                }
+            }
+            
+            if ($amount <= 0) {
+                throw new \Exception('Montant de paiement invalide');
+            }
+            
+            // Enregistrement de la transaction
+            $transaction = new Transactions();
+            $transaction->setUser($user);
+            $transaction->setAmount($amount);
+            $transaction->setMethod('paypal');
+            $transaction->setCreatedAt(new \DateTimeImmutable());
+            $em->persist($transaction);
+            
+            // Mise à jour du solde de l'utilisateur
+            $user->setBalance($user->getBalance() + $amount);
+            $em->persist($user);
+            $em->flush();
+            
+            $this->addFlash('success', "Dépôt de $amount USD réussi via PayPal !");
+            return $this->redirectToRoute('app_profile');
+            
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur lors du traitement du paiement PayPal : ' . $e->getMessage());
+            $this->addFlash('danger', 'Erreur lors du traitement du paiement PayPal: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -228,24 +229,24 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
-    private function initPaypalContext(): ApiContext
+    /**
+     * Crée le client PayPal en fonction de l'environnement
+     */
+    private function getPayPalClient(): PayPalHttpClient
     {
         $clientId = $_ENV["PAYPAL_CLIENT_ID"];
         $clientSecret = $_ENV["PAYPAL_CLIENT_SECRET"];
-
-        $apiContext = new ApiContext(
-            new OAuthTokenCredential($clientId, $clientSecret)
-        );
         
-        // Configuration de l'environnement ('sandbox' ou 'live')
-        $apiContext->setConfig([
-            'mode' => 'live',  
-            'log.LogEnabled' => true,
-            'log.FileName' => '../var/log/paypal.log',
-            'log.LogLevel' => 'INFO'
-        ]);
-
-        return $apiContext;
+        // Déterminer si nous sommes en environnement de production ou de test
+        $isProduction = $_ENV["APP_ENV"] === 'prod';
+        
+        if ($isProduction) {
+            $environment = new ProductionEnvironment($clientId, $clientSecret);
+        } else {
+            $environment = new SandboxEnvironment($clientId, $clientSecret);
+        }
+        
+        return new PayPalHttpClient($environment);
     }
 
     // Méthodes pour les autres moyens de paiement

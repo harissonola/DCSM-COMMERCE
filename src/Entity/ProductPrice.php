@@ -25,6 +25,9 @@ class ProductPrice
     #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $timestamp = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $marketCap = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -62,6 +65,18 @@ class ProductPrice
     public function setTimestamp(\DateTimeInterface $timestamp): static
     {
         $this->timestamp = $timestamp;
+
+        return $this;
+    }
+
+    public function getMarketCap(): ?float
+    {
+        return $this->marketCap;
+    }
+
+    public function setMarketCap(?float $marketCap): static
+    {
+        $this->marketCap = $marketCap;
 
         return $this;
     }

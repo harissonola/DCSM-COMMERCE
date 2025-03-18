@@ -1,6 +1,7 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Profil Utilisateur{% endblock %}
+{% block title %}Profil Utilisateur
+{% endblock %}
 
 {% block body %}
 	<style>
@@ -54,6 +55,13 @@
 		.btn-edit:hover {
 			background-color: #218838;
 		}
+		.btn-share {
+			background-color: #17a2b8;
+			color: #fff;
+		}
+		.btn-share:hover {
+			background-color: #138496;
+		}
 		.table-custom {
 			background-color: rgba(255, 255, 255, 0.2);
 		}
@@ -65,6 +73,7 @@
 			border-bottom: 2px solid rgba(255, 255, 255, 0.5);
 		}
 	</style>
+
 	<div class="container">
 		<div class="row justify-content-center py-5 mt-3">
 			<div class="col-md-8 profile-card">
@@ -75,21 +84,30 @@
 						<img src="/uploads/users/{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
 					{% endif %}
 					<div class="float-start">
-						<h2 class="mb-0">{{ app.user.fname }} {{ app.user.lname }}</h2>
+						<h2 class="mb-0">{{ app.user.fname }}
+							{{ app.user.lname }}</h2>
 						<small class="text-muted">{{ app.user.username }}</small>
 						<p>{{ app.user.email }}</p>
 						<h5>Solde:
 							<span class="fw-bold">${{ app.user.balance }}</span>
 						</h5>
 					</div>
-					<div class="float-end">
-						<img src="{{ app.user.qrCodePath }}" alt="QR Code" class="img-fluid" height="100px" width="100px" crossorigin="anonymous">
+					<div
+						class="float-end">
+						<!-- QR Code (déjà présent) -->
+						<img src="{{ app.user.qrCodePath }}" alt="QR Code" class="img-fluid" height="100" width="100" crossorigin="anonymous">
 					</div>
 				</div>
+
 				<div class="mb-4">
 					<a href="{{ path('app_user_settings') }}" class="btn-edit me-2 btn btn-success">Modifier le profil</a>
 					<a href="#" class="btn-deposit me-2 btn btn-warning" data-bs-toggle="modal" data-bs-target="#depositModal">Faire un dépôt</a>
-					<a href="#" class="btn-withdraw btn btn-primary" data-bs-toggle="modal" data-bs-target="#withdrawModal">Retirer des fonds</a>
+					<a href="#" class="btn-withdraw btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#withdrawModal">Retirer des fonds</a>
+
+					<!-- Nouveau bouton de partage du lien d'affiliation -->
+					<button class="btn-share btn" data-bs-toggle="modal" data-bs-target="#shareModal">
+						Partager mon lien d'affiliation
+					</button>
 				</div>
 
 				<div>
@@ -126,7 +144,7 @@
 	<!-- Modal Dépôt -->
 	<div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
-			<div class="modal-content">
+			<div class="modal-content" style="color:#000;">
 				<div class="modal-header">
 					<h5 class="modal-title" id="depositModalLabel">Faire un dépôt</h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -147,7 +165,6 @@
 								<option value="carte">Carte</option>
 							</select>
 						</div>
-
 						<button type="submit" class="btn-deposit">Déposer</button>
 					</form>
 				</div>
@@ -158,7 +175,7 @@
 	<!-- Modal Retrait -->
 	<div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
-			<div class="modal-content">
+			<div class="modal-content" style="color:#000;">
 				<div class="modal-header">
 					<h5 class="modal-title" id="withdrawModalLabel">Retirer des fonds</h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -180,16 +197,61 @@
 		</div>
 	</div>
 
-	<script>
+	<!-- Modal de partage du lien d'affiliation -->
+	<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content" style="color:#000;">
+				<div class="modal-header">
+					<h5 class="modal-title" id="shareModalLabel">Partager mon lien d'affiliation</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Votre lien d’affiliation&nbsp;:
+						<strong>{{ referralLink }}</strong>
+					</p>
+					<button class="btn btn-secondary mb-3" onclick="copyToClipboard('{{ referralLink }}')">
+						Copier le lien
+					</button>
+					<hr>
+					<!-- Partage sur WhatsApp -->
+					<a class="btn btn-success mb-2 w-100" href="https://api.whatsapp.com/send?text={{ ('Rejoignez-moi sur cette plateforme: ' ~ referralLink)|url_encode }}" target="_blank">
+						Partager via WhatsApp
+					</a>
+					<!-- Partage sur Facebook -->
+					<a class="btn btn-primary mb-2 w-100" href="https://www.facebook.com/sharer/sharer.php?u={{ referralLink|url_encode }}" target="_blank">
+						Partager sur Facebook
+					</a>
+					<!-- Partage sur Twitter -->
+					<a class="btn btn-info mb-2 w-100" href="https://twitter.com/intent/tweet?text=Rejoignez-moi%20sur%20cette%20plateforme%20{{ referralLink|url_encode }}" target="_blank">
+						Partager sur Twitter
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	 <script>
 		// Interception de la soumission pour rediriger vers le flux PayPal
 		document.getElementById('depositForm').addEventListener('submit', function(e) {
 			var paymentMethod = document.getElementById('paymentMethod').value;
 			if (paymentMethod === 'paypal') {
 				e.preventDefault();
 				var amount = document.querySelector('input[name="amount"]').value;
-				// Redirection vers le endpoint de redirection PayPal (mode live)
+				// Redirection vers le endpoint de redirection PayPal
 				window.location.href = "{{ path('app_paypal_redirect') }}?amount=" + encodeURIComponent(amount);
 			}
 		});
+	
+		// Fonction pour copier le lien d'affiliation dans le presse-papier
+		function copyToClipboard(text) {
+			navigator.clipboard.writeText(text)
+				.then(() => {
+					alert('Lien copié dans le presse-papier !');
+				})
+				.catch(err => {
+					console.error('Échec de la copie : ', err);
+				});
+		}
 	</script>
 {% endblock %}

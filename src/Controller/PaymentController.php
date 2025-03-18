@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
 
-// PayPal SDK imports using the newer version
+// PayPal SDK imports (pour conserver vos autres moyens de paiement)
 use PayPalCheckoutSdk\Core\PayPalHttpClient;
 use PayPalCheckoutSdk\Core\SandboxEnvironment;
 use PayPalCheckoutSdk\Core\ProductionEnvironment;
@@ -38,7 +38,7 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_login');
         }
 
-        $amount = (float) $request->request->get('amount');
+        $amount = (float)$request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
 
         if ($amount <= 0) {
@@ -100,8 +100,8 @@ class PaymentController extends AbstractController
             // Préparation des paramètres pour l'appel à CoinPayments
             $params = [
                 'amount'      => $amount,
-                'currency1'   => 'USDT',  // devise d'origine
-                'currency2'   => $cryptoType, // crypto choisie par l'utilisateur
+                'currency1'   => 'USDT',        // devise d'origine (à adapter selon vos besoins)
+                'currency2'   => $cryptoType,     // crypto choisie par l'utilisateur
                 'buyer_email' => $user->getEmail(),
                 'item_name'   => 'Dépôt sur le site',
                 'ipn_url'     => $this->generateUrl('coinpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL)
@@ -110,7 +110,6 @@ class PaymentController extends AbstractController
             try {
                 $response = $this->coinPaymentsApiCall('create_transaction', $params);
                 $paymentUrl = $response['result']['checkout_url'];
-
                 // Rediriger l'utilisateur vers la page de paiement CoinPayments
                 return $this->redirect($paymentUrl);
             } catch (\Exception $e) {
@@ -123,6 +122,74 @@ class PaymentController extends AbstractController
         return $this->render('payment/crypto_deposit.html.twig', [
             'amount' => $amount,
         ]);
+    }
+
+    #[Route('/coinpayments/ipn', name: 'coinpayments_ipn', methods: ['POST'])]
+    public function coinpaymentsIpn(Request $request, EntityManagerInterface $em): Response
+    {
+        // Récupérer le contenu brut du message
+        $payload = $request->getContent();
+        $hmacHeader = $request->headers->get('HMAC');
+
+        // Recalcul du HMAC avec votre clé privée
+        $expectedHmac = hash_hmac('sha512', $payload, $_ENV['COINPAYMENTS_API_SECRET']);
+        if ($expectedHmac !== $hmacHeader) {
+            // Logguez l'erreur si nécessaire et renvoyez une réponse d'erreur
+            return new Response('Invalid HMAC', 400);
+        }
+
+        // Décodage du payload JSON
+        $data = json_decode($payload, true);
+        if (!$data) {
+            return new Response('Invalid JSON', 400);
+        }
+
+        // Exemple : si le statut indique que la transaction est complète (status 100 dans CoinPayments)
+        if (isset($data['status']) && $data['status'] == 100) {
+            // Pour éviter les doublons, vous pouvez vérifier si une transaction avec ce txn_id existe déjà.
+            // Ici, on part du principe que le champ 'txn_id' existe dans $data.
+            $txnId = $data['txn_id'] ?? null;
+            if (!$txnId) {
+                return new Response('Transaction ID missing', 400);
+            }
+            
+            // Vérifiez si la transaction a déjà été enregistrée (à adapter selon votre modèle)
+            $existingTransaction = $em->getRepository(Transactions::class)->findOneBy(['externalId' => $txnId]);
+            if ($existingTransaction) {
+                // Transaction déjà traitée, on renvoie OK.
+                return new Response('Transaction already processed', 200);
+            }
+            
+            // Récupération de l'utilisateur par email (vous devez vous assurer que l'email correspond à un utilisateur)
+            $buyerEmail = $data['buyer_email'] ?? null;
+            if (!$buyerEmail) {
+                return new Response('Buyer email missing', 400);
+            }
+            $user = $em->getRepository(User::class)->findOneBy(['email' => $buyerEmail]);
+            if (!$user) {
+                return new Response('User not found', 400);
+            }
+            
+            // Créer et enregistrer une nouvelle transaction
+            $transaction = new Transactions();
+            $transaction->setUser($user);
+            $transaction->setAmount((float)$data['amount1']); // montant dans la devise d'origine
+            $transaction->setMethod('crypto');
+            $transaction->setCreatedAt(new \DateTimeImmutable());
+            // Enregistrer l'identifiant externe pour éviter les doublons (ajoutez le champ "externalId" dans votre entité Transactions)
+            $transaction->setExternalId($txnId);
+            $em->persist($transaction);
+
+            // Mise à jour du solde utilisateur
+            $user->setBalance($user->getBalance() + (float)$data['amount1']);
+            $em->persist($user);
+            $em->flush();
+
+            return new Response('OK', 200);
+        }
+        
+        // Pour d'autres statuts, vous pouvez enregistrer le payload ou effectuer d'autres actions.
+        return new Response('IPN received', 200);
     }
 
     #[Route('/paypal/redirect', name: 'app_paypal_redirect', methods: ['GET'])]
@@ -142,7 +209,6 @@ class PaymentController extends AbstractController
         try {
             $paypalRequest = new OrdersCreateRequest();
             $paypalRequest->prefer('return=representation');
-            
             $paypalRequest->body = [
                 'intent' => 'CAPTURE',
                 'purchase_units' => [[
@@ -161,13 +227,11 @@ class PaymentController extends AbstractController
             ];
             
             $response = $client->execute($paypalRequest);
-            
             if ($response->statusCode !== 201) {
                 throw new \Exception('Échec de la création de l\'ordre PayPal: ' . $response->statusCode);
             }
             
             $request->getSession()->set('paypal_order_id', $response->result->id);
-            
             $approvalLink = null;
             foreach ($response->result->links as $link) {
                 if ($link->rel === 'approve') {
@@ -181,7 +245,6 @@ class PaymentController extends AbstractController
             }
             
             return $this->redirect($approvalLink);
-            
         } catch (\Exception $e) {
             $this->addFlash('danger', 'Erreur PayPal: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
@@ -192,7 +255,6 @@ class PaymentController extends AbstractController
     public function paypalReturn(Request $request, EntityManagerInterface $em): Response
     {
         $orderId = $request->query->get('token') ?? $request->getSession()->get('paypal_order_id');
-        
         if (!$orderId) {
             $this->addFlash('danger', 'Informations de commande PayPal manquantes.');
             return $this->redirectToRoute('app_profile');
@@ -207,13 +269,11 @@ class PaymentController extends AbstractController
             $client = $this->getPayPalClient();
             $captureRequest = new OrdersCaptureRequest($orderId);
             $captureRequest->prefer('return=representation');
-            
             $response = $client->execute($captureRequest);
-            
             if ($response->result->status !== 'COMPLETED') {
                 throw new \Exception('La capture de paiement n\'a pas été complétée. Statut: ' . $response->result->status);
             }
-            
+
             $amount = 0;
             foreach ($response->result->purchase_units as $unit) {
                 if (isset($unit->payments->captures[0]->amount->value)) {
@@ -239,7 +299,6 @@ class PaymentController extends AbstractController
             
             $this->addFlash('success', "Dépôt de $amount USD réussi via PayPal !");
             return $this->redirectToRoute('app_profile');
-            
         } catch (\Exception $e) {
             $this->addFlash('danger', 'Erreur lors du traitement du paiement PayPal: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
@@ -254,40 +313,39 @@ class PaymentController extends AbstractController
     }
 
     /**
-     * Crée le client PayPal en fonction de l'environnement
+     * Création du client PayPal en fonction de l'environnement.
      */
     private function getPayPalClient(): PayPalHttpClient
     {
         $clientId = $_ENV["PAYPAL_CLIENT_ID"];
         $clientSecret = $_ENV["PAYPAL_CLIENT_SECRET"];
-        
         $isProduction = $_ENV["APP_ENV"] === 'prod';
-        
+
         if ($isProduction) {
             $environment = new ProductionEnvironment($clientId, $clientSecret);
         } else {
             $environment = new SandboxEnvironment($clientId, $clientSecret);
         }
-        
         return new PayPalHttpClient($environment);
     }
 
-    // Méthodes pour les autres moyens de paiement
+    // Méthodes fictives pour les autres moyens de paiement
+
     private function processCardPayment(User $user, float $amount): bool
     {
-        // Implémenter l'appel à l'API de paiement par carte
+        // Implémentez ici votre logique de paiement par carte
         return true;
     }
 
     private function processMobileMoney(User $user, float $amount): bool
     {
-        // Implémenter l'appel à l'API Mobile Money
+        // Implémentez ici votre logique de paiement Mobile Money
         return true;
     }
 
     private function convertToTRX(float $amount, string $fromCurrency): float
     {
-        // Logique de conversion de devises (si nécessaire)
+        // Exemple simple de conversion (à adapter)
         return $amount * 10;
     }
 
@@ -297,12 +355,12 @@ class PaymentController extends AbstractController
         float $amountTRX,
         string $cryptoType
     ): bool {
-        // Implémenter le transfert crypto si vous souhaitez opérer une conversion interne
+        // Implémentez ici votre logique de transfert interne en crypto si besoin
         return true;
     }
 
     /**
-     * Appel à l'API CoinPayments
+     * Appel à l'API CoinPayments.
      */
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
@@ -325,7 +383,6 @@ class PaymentController extends AbstractController
         curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
 
         $data = curl_exec($ch);
-
         if ($data === false) {
             throw new \Exception('Erreur cURL : ' . curl_error($ch));
         }

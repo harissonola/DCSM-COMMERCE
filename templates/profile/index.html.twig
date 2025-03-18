@@ -1,33 +1,195 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Dépôt Crypto{% endblock %}
+{% block title %}Profil Utilisateur{% endblock %}
 
 {% block body %}
-<div class="container mt-5">
-    <h2 class="mb-4">Dépôt Crypto</h2>
-    <p>Montant à déposer : <strong>{{ amount }} USDT</strong></p>
-    <form method="post" 
-         action="{{ path('app_crypto_redirect', {'amount': amount}) }}" 
-         data-turbo="false" {# Désactive Turbo Drive pour ce formulaire #}
-         id="cryptoForm">
-        <div class="mb-3">
-            <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
-            <select name="cryptoType" id="cryptoType" class="form-control" required>
-                <option value="">Sélectionnez une crypto</option>
-                <option value="BTC">Bitcoin (BTC)</option>
-                <option value="ETH">Ethereum (ETH)</option>
-                <option value="TRX">TRON (TRX)</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label for="walletAddress" class="form-label">Adresse du portefeuille</label>
-            <input type="text" name="walletAddress" id="walletAddress" 
-                 class="form-control" 
-                 required
-                 pattern="^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^0x[a-fA-F0-9]{40}$|^T[1-9A-HJ-NP-Za-km-z]{33}$"
-                 title="Adresse crypto valide (BTC, ETH ou TRX)">
-        </div>
-        <button type="submit" class="btn btn-primary">Valider</button>
-    </form>
-</div>
+	<style>
+		body {
+			background: linear-gradient(135deg, #FFA500, #1E90FF);
+			min-height: 100vh;
+			color: #fff;
+			font-family: 'Arial', sans-serif;
+		}
+		.profile-card {
+			background-color: rgba(255, 255, 255, 0.15);
+			backdrop-filter: blur(10px);
+			border-radius: 15px;
+			padding: 30px;
+			margin-top: 50px;
+			box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+		}
+		.profile-img {
+			width: 100px;
+			height: 100px;
+			object-fit: cover;
+			border: 5px solid #fff;
+			border-radius: 50%;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+		}
+		.btn-deposit,
+		.btn-withdraw,
+		.btn-edit {
+			border: none;
+			color: #fff;
+			padding: 10px 20px;
+			border-radius: 5px;
+			transition: background-color 0.3s;
+			text-decoration: none;
+		}
+		.btn-deposit {
+			background-color: #FFA500;
+		}
+		.btn-deposit:hover {
+			background-color: #e69500;
+		}
+		.btn-withdraw {
+			background-color: #1E90FF;
+		}
+		.btn-withdraw:hover {
+			background-color: #187bcd;
+		}
+		.btn-edit {
+			background-color: #28a745;
+		}
+		.btn-edit:hover {
+			background-color: #218838;
+		}
+		.table-custom {
+			background-color: rgba(255, 255, 255, 0.2);
+		}
+		.table-custom th,
+		.table-custom td {
+			color: #fff;
+		}
+		.table-custom thead th {
+			border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+		}
+	</style>
+	<div class="container">
+		<div class="row justify-content-center py-5 mt-3">
+			<div class="col-md-8 profile-card">
+				<div class="d-flex align-items-center mb-4">
+					{% if app.user.googleId and app.user.photo starts with 'http' %}
+						<img src="{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
+					{% else %}
+						<img src="/uploads/users/{{ app.user.photo }}" alt="Photo de profil" class="profile-img me-3 img-fluid">
+					{% endif %}
+					<div class="float-start">
+						<h2 class="mb-0">{{ app.user.fname }} {{ app.user.lname }}</h2>
+						<small class="text-muted">{{ app.user.username }}</small>
+						<p>{{ app.user.email }}</p>
+						<h5>Solde:
+							<span class="fw-bold">${{ app.user.balance }}</span>
+						</h5>
+					</div>
+					<div class="float-end">
+						<img src="{{ app.user.qrCodePath }}" alt="QR Code" class="img-fluid" height="100px" width="100px" crossorigin="anonymous">
+					</div>
+				</div>
+				<div class="mb-4">
+					<a href="{{ path('app_user_settings') }}" class="btn-edit me-2 btn btn-success">Modifier le profil</a>
+					<a href="#" class="btn-deposit me-2 btn btn-warning" data-bs-toggle="modal" data-bs-target="#depositModal">Faire un dépôt</a>
+					<a href="#" class="btn-withdraw btn btn-primary" data-bs-toggle="modal" data-bs-target="#withdrawModal">Retirer des fonds</a>
+				</div>
+
+				<div>
+					<h4>Historique des transactions</h4>
+					<div class="table-responsive">
+						<table class="table table-custom table-striped">
+							<thead>
+								<tr>
+									<th>Date</th>
+									<th>Méthode</th>
+									<th>Montant</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for transaction in transactions %}
+									<tr>
+										<td>{{ transaction.createdAt|date('d/m/Y') }}</td>
+										<td>{{ transaction.method }}</td>
+										<td>${{ transaction.amount }}</td>
+									</tr>
+								{% else %}
+									<tr>
+										<td colspan="3">Aucune transaction trouvée.</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Dépôt -->
+	<div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="depositModalLabel">Faire un dépôt</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form id="depositForm" action="{{ path('app_deposit') }}" method="post">
+						<div class="mb-3">
+							<label for="amount" class="form-label">Montant (USDT)</label>
+							<input type="number" name="amount" required class="form-control">
+						</div>
+						<div class="mb-3">
+							<label for="paymentMethod" class="form-label">Méthode de paiement</label>
+							<select name="paymentMethod" id="paymentMethod" required class="form-control">
+								<option value="">-- Choisissez --</option>
+								<option value="crypto">Crypto</option>
+								<option value="paypal">PayPal</option>
+								<option value="mobilemoney">Mobile Money</option>
+								<option value="carte">Carte</option>
+							</select>
+						</div>
+
+						<button type="submit" class="btn-deposit">Déposer</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Retrait -->
+	<div class="modal fade" id="withdrawModal" tabindex="-1" aria-labelledby="withdrawModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="withdrawModalLabel">Retirer des fonds</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form action="{{ path('app_withdraw') }}" method="post">
+						<div class="mb-3">
+							<label for="amount" class="form-label">Montant (USDT)</label>
+							<input type="number" name="amount" required class="form-control">
+						</div>
+						<div class="mb-3">
+							<label for="recipient" class="form-label">Adresse de réception</label>
+							<input type="text" name="recipient" required class="form-control">
+						</div>
+						<button type="submit" class="btn-withdraw">Retirer</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// Interception de la soumission pour rediriger vers le flux PayPal
+		document.getElementById('depositForm').addEventListener('submit', function(e) {
+			var paymentMethod = document.getElementById('paymentMethod').value;
+			if (paymentMethod === 'paypal') {
+				e.preventDefault();
+				var amount = document.querySelector('input[name="amount"]').value;
+				// Redirection vers le endpoint de redirection PayPal (mode live)
+				window.location.href = "{{ path('app_paypal_redirect') }}?amount=" + encodeURIComponent(amount);
+			}
+		});
+	</script>
 {% endblock %}

@@ -80,21 +80,24 @@ class ProductsController extends AbstractController
             'market_cap' => []
         ];
 
-        foreach ($prices as $price) {
-            $timestamp = $price->getTimestamp()->format('c'); // Format ISO 8601
+        // Taux de conversion CFA -> USD
+        $exchangeRate = 601.5; // ✅ Taux défini ici
 
-            // Données de prix
+        foreach ($prices as $price) {
+            $timestamp = $price->getTimestamp()->format('c');
+
+            // Conversion du prix CFA → USD avec arrondi
             $chartData['price'][] = [
                 'x' => $timestamp,
-                'y' => $price->getPrice()
+                'y' => round($price->getPrice() / $exchangeRate, 2) // ✅ Conversion appliquée
             ];
 
-            // Données de capitalisation (si disponible)
+            // MarketCap non converti (reste en CFA)
             if (method_exists($price, 'getMarketCap') && $price->getMarketCap() !== null) {
                 $chartData['market_cap'][] = [
                     'x' => $timestamp,
-                    'y' => $price->getMarketCap()
-                ];
+                    'y' => round($price->getMarketCap() / $exchangeRate, 2) // ✅ Conversion additionnelle
+                ];                
             }
         }
 

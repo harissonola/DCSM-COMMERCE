@@ -30,8 +30,8 @@
 
 <style>
     .navbar.fixed-bottom {
-        height: 64px;
-        padding: 0.5rem 0;
+        height: auto; /* Hauteur automatique selon le contenu */
+        padding: 0.5rem 1rem; /* Padding horizontal ajouté */
         backdrop-filter: blur(8px);
     }
     
@@ -39,53 +39,45 @@
         color: #888 !important;
         opacity: 0.7;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        padding: 8px 12px;
+        padding: 10px 14px 14px 14px; /* Padding augmenté en bas */
         border-radius: 8px;
         background-color: transparent;
         will-change: transform, background-color;
+        margin: 0 2px; /* Espacement entre les liens */
     }
 
     .nav-link.active {
         color: #1e90ff !important;
         opacity: 1;
-        transform: translateY(-2px);
+        transform: translateY(-4px); /* Effet de levée augmenté */
         background-color: rgba(30, 144, 255, 0.1);
         box-shadow: 0 2px 12px rgba(30, 144, 255, 0.1);
+        padding-bottom: 16px; /* Compensation du déplacement */
     }
 
-    .nav-link.active i {
-        text-shadow: 0 2px 8px rgba(30, 144, 255, 0.4);
-        animation: iconBounce 0.4s ease;
-    }
-
-    .nav-text {
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-        transition: color 0.2s ease;
-    }
-
-    @keyframes iconBounce {
-        0% { transform: translateY(0); }
-        50% { transform: translateY(-3px); }
-        100% { transform: translateY(0); }
+    /* Ajout d'un conteneur d'icône */
+    .nav-link i {
+        padding: 4px; /* Espace autour de l'icône */
+        display: inline-block;
     }
 
     @media (max-width: 576px) {
         .nav-link {
-            padding: 6px 8px;
+            padding: 8px 10px 12px 10px; /* Ajustement mobile */
+            margin: 0 1px;
         }
         
-        .nav-text {
-            font-size: 0.65rem;
+        .nav-link.active {
+            padding-bottom: 14px;
         }
         
-        .navbar.fixed-bottom {
-            height: 62px;
+        body {
+            padding-bottom: 82px; /* Augmentation pour mobile */
         }
     }
 
     body {
-        padding-bottom: 76px;
+        padding-bottom: 88px; /* Augmentation générale */
         transition: padding-bottom 0.3s ease;
     }
 </style>

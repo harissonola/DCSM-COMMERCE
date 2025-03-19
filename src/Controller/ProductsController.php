@@ -34,77 +34,51 @@ class ProductsController extends AbstractController
 
 
 
-    #[Route('/{slug}/dashboard', name: 'app_dashboard_product')]
-    public function dash(
+    #[Route('/{slug}/dashboard/data', name: 'app_dashboard_product_data')]
+    public function getChartData(
         $slug,
         ProductRepository $productRepository,
         ProductPriceRepository $productPriceRepository,
-        EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator
-    ): Response {
+    ): JsonResponse {
         $user = $this->getUser();
-
-        // Redirection si utilisateur non connecté
         if (!$user) {
-            return $this->redirectToRoute("app_main");
+            return new JsonResponse(['error' => 'Unauthorized'], 403);
         }
-
-        // Récupération du produit
+    
         $prod = $productRepository->findOneBy(['slug' => $slug]);
         if (!$prod) {
-            throw $this->createNotFoundException('Produit non trouvé');
+            return new JsonResponse(['error' => 'Product not found'], 404);
         }
-
-        // Vérification des permissions
+    
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
-            $this->addFlash('danger', 'Accès refusé. <a href="' .
-                $urlGenerator->generate('app_buy_product', ['slug' => $slug]) .
-                '" class="alert-link">Acheter le produit</a>');
-            return $this->redirectToRoute('app_main');
+            return new JsonResponse([
+                'error' => 'Access denied',
+                'redirect' => $urlGenerator->generate('app_main')
+            ], 403);
         }
-
-        // Activation du bot de minage
-        if ($user->isMiningBotActive()) {
-            $this->startProductMining($prod, $entityManager);
-        }
-
-        // Récupération des données historiques
-        $prices = $productPriceRepository->findBy(
-            ['product' => $prod],
-            ['timestamp' => 'ASC']
-        );
-
-        // Préparation des données pour le graphique
-        $chartData = [
-            'price' => [],
-            'market_cap' => []
-        ];
-
-        // Taux de conversion CFA -> USD
-        $exchangeRate = 601.5; // ✅ Taux défini ici
-
+    
+        // Récupération et traitement des données identique à dash()
+        $exchangeRate = 601.5;
+        $prices = $productPriceRepository->findBy(['product' => $prod], ['timestamp' => 'ASC']);
+        
+        $chartData = ['price' => [], 'market_cap' => []];
         foreach ($prices as $price) {
             $timestamp = $price->getTimestamp()->format('c');
-
-            // Conversion du prix CFA → USD avec arrondi
             $chartData['price'][] = [
                 'x' => $timestamp,
-                'y' => round($price->getPrice() / $exchangeRate, 2) // ✅ Conversion appliquée
+                'y' => round($price->getPrice() / $exchangeRate, 2)
             ];
-
-            // MarketCap non converti (reste en CFA)
+            
             if (method_exists($price, 'getMarketCap') && $price->getMarketCap() !== null) {
                 $chartData['market_cap'][] = [
                     'x' => $timestamp,
-                    'y' => round($price->getMarketCap() / $exchangeRate, 2) // ✅ Conversion additionnelle
-                ];                
+                    'y' => round($price->getMarketCap() / $exchangeRate, 2)
+                ];
             }
         }
-
-        return $this->render('products/dash.html.twig', [
-            'prod' => $prod,
-            'chartData' => $chartData
-        ]);
+    
+        return new JsonResponse($chartData);
     }
 
 

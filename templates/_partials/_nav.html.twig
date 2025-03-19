@@ -1,43 +1,69 @@
-<nav class="navbar fixed-bottom navbar-dark" style="background-color: #000; border-top: 1px solid #333;">
-    <div class="container">
-        <div class="d-flex justify-content-between w-100">
-            <a class="nav-link text-light" href="#">
-                page de garde
-            </a>
-            <a class="nav-link text-light" href="#">
-                investir
-            </a>
-            <a class="nav-link text-light" href="#">
-                service Clients
-            </a>
-            <a class="nav-link text-light" href="#">
-                exploiter
-            </a>
-        </div>
-    </div>
+<nav class="navbar fixed-bottom navbar-dark" style="background-color: #1a1a1a; border-top: 1px solid #2d2d2d;">
+	<div class="container">
+		<div class="d-flex justify-content-around w-100 py-2">
+			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_main' or app.current_route == 'app_dashboard'  ? 'active' }}" href="{{ path('app_main') }}">
+				<i class="bx bxs-home fs-5 mb-1"></i>
+				<span class="nav-text">Accueil</span>
+			</a>
+
+			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_dashboard' ? 'active' }}" href="{{ path('app_dashboard') }}">
+				<i class="bx bxs-wallet fs-5 mb-1"></i>
+				<span class="nav-text">Boutiques</span>
+			</a>
+
+			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == '#' ? 'active' }}" href="#">
+				<i class="bx bxs-headset fs-5 mb-1"></i>
+				<span class="nav-text">Support</span>
+			</a>
+
+			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_profile' ? 'active' }}" href="{{ path('app_profile') }}">
+				<i class="bx bxs-cog fs-5 mb-1"></i>
+				<span class="nav-text">Mon Profil</span>
+			</a>
+		</div>
+	</div>
 </nav>
 
 <style>
-    /* Style spécifique pour la nav du bas */
-    .navbar.fixed-bottom {
-        height: 56px; /* Hauteur standard pour mobile */
-        padding: 0.5rem 0;
-    }
-    
-    .nav-link {
-        font-size: 0.9rem;
-        opacity: 0.8;
-        transition: opacity 0.3s;
-        white-space: nowrap;
-    }
+	.navbar.fixed-bottom {
+		height: 64px;
+		padding: 0.5rem 0;
+	}
 
-    .nav-link:hover {
-        opacity: 1;
-    }
+	.nav-link {
+		color: #888 !important;
+		opacity: 0.7;
+		transition: all 0.3s ease;
+		padding: 8px 12px;
+		border-radius: 8px;
+	}
 
-    @media (max-width: 576px) {
-        .nav-link {
-            font-size: 0.8rem;
-        }
-    }
+	.nav-link.active {
+		color: #1e90ff !important;
+		opacity: 1;
+		transform: translateY(-2px);
+	}
+
+	.nav-link.active i {
+		text-shadow: 0 2px 8px rgba(30, 144, 255, 0.4);
+	}
+
+	.nav-text {
+		font-size: 0.75rem;
+		letter-spacing: 0.5px;
+	}
+
+	@media(max-width: 576px) {
+		.nav-link {
+			padding: 6px 8px;
+		}
+
+		.nav-text {
+			font-size: 0.65rem;
+		}
+	}
+
+	body {
+		padding-bottom: 76px; /* Ajuster selon la hauteur de la navbar */
+	}
 </style>

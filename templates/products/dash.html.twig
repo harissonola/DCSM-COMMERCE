@@ -59,8 +59,8 @@
 				Vous n'avez pas le bot de minage. Vous pouvez miner manuellement, mais vous serez responsable de vos gains/pertes.
 			</div>
 			<div class="btn-group">
-				<button id="startManualMining" class="btn btn-primary">Démarrer le minage manuel</button>
-				<button id="buyMiningBot" class="btn btn-warning">Acheter le bot de minage</button>
+				<a href="{{ path("start_manual_mining") }}" id="startManualMining" class="btn btn-primary">Démarrer le minage manuel</a>
+				<a href="{{ path("buy_mining_bot") }}" id="buyMiningBot" class="btn btn-warning">Acheter le bot de minage</a>
 			</div>
 		{% endif %}
 	</div>
@@ -149,7 +149,7 @@ document.addEventListener('turbo:load', function () {
                         time: {
                             unit: 'hour',
                             stepSize: 2,
-                            displayFormats: { hour: 'HH:mm' }
+                            displayFormats: { hour: 'HH:mm:ss' }
                         },
                         grid: { color: '#2A2E35' },
                         ticks: { color: '#666' }

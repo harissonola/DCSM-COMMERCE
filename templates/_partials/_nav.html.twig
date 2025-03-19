@@ -1,69 +1,91 @@
 <nav class="navbar fixed-bottom navbar-dark" style="background-color: #1a1a1a; border-top: 1px solid #2d2d2d;">
-	<div class="container">
-		<div class="d-flex justify-content-around w-100 py-2">
-			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_main' or app.current_route == 'app_dashboard'  ? 'active' }}" href="{{ path('app_main') }}">
-				<i class="bx bxs-home fs-5 mb-1"></i>
-				<span class="nav-text">Accueil</span>
-			</a>
+    <div class="container">
+        <div class="d-flex justify-content-around w-100 py-2">
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route in ['app_main', 'app_dashboard'] ? 'active' }}" 
+               href="{{ path('app_main') }}">
+                <i class="bx bxs-home fs-5 mb-1"></i>
+                <span class="nav-text">Accueil</span>
+            </a>
 
-			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_dashboard' ? 'active' }}" href="{{ path('app_dashboard') }}">
-				<i class="bx bxs-wallet fs-5 mb-1"></i>
-				<span class="nav-text">Boutiques</span>
-			</a>
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_dashboard' ? 'active' }}" 
+               href="{{ path('app_dashboard') }}">
+                <i class="bx bxs-wallet fs-5 mb-1"></i>
+                <span class="nav-text">Boutiques</span>
+            </a>
 
-			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == '#' ? 'active' }}" href="#">
-				<i class="bx bxs-headset fs-5 mb-1"></i>
-				<span class="nav-text">Support</span>
-			</a>
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_support' ? 'active' }}" 
+               href="{{ path('app_support') }}">
+                <i class="bx bxs-headset fs-5 mb-1"></i>
+                <span class="nav-text">Support</span>
+            </a>
 
-			<a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_profile' ? 'active' }}" href="{{ path('app_profile') }}">
-				<i class="bx bxs-cog fs-5 mb-1"></i>
-				<span class="nav-text">Mon Profil</span>
-			</a>
-		</div>
-	</div>
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_profile' ? 'active' }}" 
+               href="{{ path('app_profile') }}">
+                <i class="bx bxs-cog fs-5 mb-1"></i>
+                <span class="nav-text">Mon Profil</span>
+            </a>
+        </div>
+    </div>
 </nav>
 
 <style>
-	.navbar.fixed-bottom {
-		height: 64px;
-		padding: 0.5rem 0;
-	}
+    .navbar.fixed-bottom {
+        height: 64px;
+        padding: 0.5rem 0;
+        backdrop-filter: blur(8px);
+    }
+    
+    .nav-link {
+        color: #888 !important;
+        opacity: 0.7;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 8px 12px;
+        border-radius: 8px;
+        background-color: transparent;
+        will-change: transform, background-color;
+    }
 
-	.nav-link {
-		color: #888 !important;
-		opacity: 0.7;
-		transition: all 0.3s ease;
-		padding: 8px 12px;
-		border-radius: 8px;
-	}
+    .nav-link.active {
+        color: #1e90ff !important;
+        opacity: 1;
+        transform: translateY(-2px);
+        background-color: rgba(30, 144, 255, 0.1);
+        box-shadow: 0 2px 12px rgba(30, 144, 255, 0.1);
+    }
 
-	.nav-link.active {
-		color: #1e90ff !important;
-		opacity: 1;
-		transform: translateY(-2px);
-	}
+    .nav-link.active i {
+        text-shadow: 0 2px 8px rgba(30, 144, 255, 0.4);
+        animation: iconBounce 0.4s ease;
+    }
 
-	.nav-link.active i {
-		text-shadow: 0 2px 8px rgba(30, 144, 255, 0.4);
-	}
+    .nav-text {
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        transition: color 0.2s ease;
+    }
 
-	.nav-text {
-		font-size: 0.75rem;
-		letter-spacing: 0.5px;
-	}
+    @keyframes iconBounce {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+        100% { transform: translateY(0); }
+    }
 
-	@media(max-width: 576px) {
-		.nav-link {
-			padding: 6px 8px;
-		}
+    @media (max-width: 576px) {
+        .nav-link {
+            padding: 6px 8px;
+        }
+        
+        .nav-text {
+            font-size: 0.65rem;
+        }
+        
+        .navbar.fixed-bottom {
+            height: 62px;
+        }
+    }
 
-		.nav-text {
-			font-size: 0.65rem;
-		}
-	}
-
-	body {
-		padding-bottom: 76px; /* Ajuster selon la hauteur de la navbar */
-	}
+    body {
+        padding-bottom: 76px;
+        transition: padding-bottom 0.3s ease;
+    }
 </style>

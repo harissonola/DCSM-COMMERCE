@@ -34,9 +34,82 @@ class ProductsController extends AbstractController
 
 
 
-    #[Route('/{slug}/dashboard/data', name: 'app_dashboard_product_data')]
-    public function getChartData(
+    #[Route('/{slug}/dashboard', name: 'app_dashboard_product')]
+    public function dash(
         $slug,
+        ProductRepository $productRepository,
+        ProductPriceRepository $productPriceRepository,
+        EntityManagerInterface $entityManager,
+        UrlGeneratorInterface $urlGenerator
+    ): Response {
+        $user = $this->getUser();
+
+        // Redirection si utilisateur non connecté
+        if (!$user) {
+            return $this->redirectToRoute("app_main");
+        }
+
+        // Récupération du produit
+        $prod = $productRepository->findOneBy(['slug' => $slug]);
+        if (!$prod) {
+            throw $this->createNotFoundException('Produit non trouvé');
+        }
+
+        // Vérification des permissions
+        if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
+            $this->addFlash('danger', 'Accès refusé. <a href="' .
+                $urlGenerator->generate('app_buy_product', ['slug' => $slug]) .
+                '" class="alert-link">Acheter le produit</a>');
+            return $this->redirectToRoute('app_main');
+        }
+
+        // Activation du bot de minage
+        if ($user->isMiningBotActive()) {
+            $this->startProductMining($prod, $entityManager);
+        }
+
+        // Récupération des données historiques
+        $prices = $productPriceRepository->findBy(
+            ['product' => $prod],
+            ['timestamp' => 'ASC']
+        );
+
+        // Préparation des données pour le graphique
+        $chartData = [
+            'price' => [],
+            'market_cap' => []
+        ];
+
+        // Taux de conversion CFA -> USD
+        $exchangeRate = 601.5; // ✅ Taux défini ici
+
+        foreach ($prices as $price) {
+            $timestamp = $price->getTimestamp()->format('c');
+
+            // Conversion du prix CFA → USD avec arrondi
+            $chartData['price'][] = [
+                'x' => $timestamp,
+                'y' => round($price->getPrice() / $exchangeRate, 2) // ✅ Conversion appliquée
+            ];
+
+            // MarketCap non converti (reste en CFA)
+            if (method_exists($price, 'getMarketCap') && $price->getMarketCap() !== null) {
+                $chartData['market_cap'][] = [
+                    'x' => $timestamp,
+                    'y' => round($price->getMarketCap() / $exchangeRate, 2) // ✅ Conversion additionnelle
+                ];                
+            }
+        }
+
+        return $this->render('products/dash.html.twig', [
+            'prod' => $prod,
+            'chartData' => $chartData
+        ]);
+    }
+
+    #[Route('/{slug}/dashboard/data', name: 'dashboard_product_data')]
+    public function getChartData(
+        string $slug,
         ProductRepository $productRepository,
         ProductPriceRepository $productPriceRepository,
         UrlGeneratorInterface $urlGenerator
@@ -45,19 +118,19 @@ class ProductsController extends AbstractController
         if (!$user) {
             return new JsonResponse(['error' => 'Unauthorized'], 403);
         }
-    
+
         $prod = $productRepository->findOneBy(['slug' => $slug]);
         if (!$prod) {
             return new JsonResponse(['error' => 'Product not found'], 404);
         }
-    
+
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
             return new JsonResponse([
                 'error' => 'Access denied',
                 'redirect' => $urlGenerator->generate('app_main')
             ], 403);
         }
-    
+
         // Récupération et traitement des données identique à dash()
         $exchangeRate = 601.5;
         $prices = $productPriceRepository->findBy(['product' => $prod], ['timestamp' => 'ASC']);
@@ -77,7 +150,7 @@ class ProductsController extends AbstractController
                 ];
             }
         }
-    
+
         return new JsonResponse($chartData);
     }
 

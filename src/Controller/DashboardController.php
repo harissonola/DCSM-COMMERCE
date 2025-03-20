@@ -54,7 +54,7 @@ class DashboardController extends AbstractController
     }
 
     #[Route('/shop/{slug}', name: 'app_shop')]
-    public function shop(
+    public function shopProd(
         $slug,
         ShopRepository $shopRepository,
         ProductRepository $productRepository,

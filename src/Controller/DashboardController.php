@@ -32,7 +32,7 @@ class DashboardController extends AbstractController
         ]);
     }
 
-    #[Route('/shop', name: 'app_shop')]
+    #[Route('/shop', name: 'app_shop_index')]
     public function shop(ShopRepository $shopRepository): Response
     {
         $user = $this->getUser();

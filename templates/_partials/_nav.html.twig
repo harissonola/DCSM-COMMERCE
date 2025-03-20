@@ -2,8 +2,8 @@
     <div class="container">
         <div class="d-flex justify-content-around w-100 py-1">
             <!-- Accueil -->
-            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route in ['app_main', 'app_dashboard'] ? 'active' }}" 
-               href="{{ path('app_main') }}">
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_dashboard' ? 'active' }}" 
+               href="{{ path('app_dashboard') }}">
                 <div class="nav-icon-wrapper">
                     <i class="bx bxs-home fs-5"></i>
                 </div>
@@ -11,8 +11,8 @@
             </a>
 
             <!-- Boutiques -->
-            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_dashboard' ? 'active' }}" 
-               href="{{ path('app_dashboard') }}">
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_shop' ? 'active' }}" 
+               href="{{ path('app_shop') }}">
                 <div class="nav-icon-wrapper">
                     <i class="bx bxs-store fs-5"></i>
                 </div>

@@ -32,6 +32,27 @@ class DashboardController extends AbstractController
         ]);
     }
 
+    #[Route('/shop', name: 'app_shop')]
+    public function shop(ShopRepository $shopRepository): Response
+    {
+        $user = $this->getUser();
+
+        if ($user) {
+            // if ($user->getRoles()[0] == "ROLE_ADMIN") {
+            //     return $this->redirectToRoute("app_dashboard"); //je dois changer ceci en la route admin
+            // }
+        } else {
+            return $this->redirectToRoute("app_main");
+        }
+
+        $shops = $shopRepository->findAll();
+
+        return $this->render('dashboard/index.html.twig', [
+            'controller_name' => 'DashboardController',
+            'shops' => $shops,
+        ]);
+    }
+
     #[Route('/shop/{slug}', name: 'app_shop')]
     public function shop(
         $slug,

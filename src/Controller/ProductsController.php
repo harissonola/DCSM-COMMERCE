@@ -58,6 +58,31 @@ class ProductsController extends AbstractController
         ]);
     }
 
+    #[Route('/buy-mining-bot', name: 'buy_mining_bot')]
+    public function buyMiningBot(EntityManagerInterface $em): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $botPrice = 50.00; // Prix en USD
+
+        if (!$user) {
+            return $this->redirectToRoute("app_main");
+        }
+
+        if ($user->getBalance() >= $botPrice) {
+            // Déduire le prix et activer le bot
+            $user->setBalance($user->getBalance() - $botPrice);
+            $user->setIsMiningBotActive(true);
+            $em->flush();
+
+            $this->addFlash('success', 'Bot de minage activé avec succès !');
+        } else {
+            $this->addFlash('error', 'Solde insuffisant pour acheter le bot');
+        }
+
+        return $this->redirectToRoute('app_main');
+    }
+
     private function handleAutomaticMining(Product $product, EntityManagerInterface $em, User $user): void
     {
         $lastPrice = $em->getRepository(ProductPrice::class)

@@ -341,6 +341,7 @@
                     <div class="avatar-card">
                         <turbo-frame id="avatar-frame">
                             <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
                                 <div class="avatar-preview">
                                     <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
                                     <label class="avatar-edit">
@@ -358,6 +359,7 @@
                         <h4>Informations personnelles</h4>
                         <turbo-frame id="personal-info-frame">
                             <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
                                 <div class="form-group">
                                     <label for="username">Nom d'utilisateur</label>
                                     <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
@@ -379,6 +381,7 @@
                 <div class="form-card">
                     <turbo-frame id="security-frame">
                         <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
                             <div class="form-group">
                                 <label for="currentPassword">Mot de passe actuel</label>
                                 <input type="password" id="currentPassword" name="currentPassword" required>
@@ -403,6 +406,7 @@
                 <div class="form-card">
                     <turbo-frame id="notifications-frame">
                         <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
                             <div class="form-group toggle-group">
                                 <label>Notifications par email</label>
                                 <label class="switch">

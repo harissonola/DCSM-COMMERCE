@@ -21,13 +21,6 @@
         <meta property="og:site_name" content="DCSM-COMMERCE">
         <meta property="fb:app_id" content="61554875637061">
 
-        {# <!-- Twitter Card -->
-        <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:site" content="@votrecomptetwitter">
-        <meta name="twitter:title" content="DCSM-COMMERCE">
-        <meta name="twitter:description" content="DCSM-COMMERCE révolutionne l'investissement en ligne : interface intuitive, analyses de marché exclusives et sécurité bancaire. Atteignez vos objectifs financiers simplement !">
-        <meta name="twitter:image" content="https://dcsm-commerce.alwaysdata.net/img/banner-twitter.jpg"> #}
-
         <title>
             {% block title %}{% endblock %}
             | DCSM-COMMERCE
@@ -100,10 +93,9 @@
             import { setProgressBarDelay } from '@hotwired/turbo';
 
             // On met un délai très élevé pour la barre de progression Turbo
-            // => Elle n'apparaîtra jamais
             setProgressBarDelay(999999);
 
-            // Événement : début de navigation => on affiche le spinner
+            // Affichage du spinner lors du début de la navigation
             document.addEventListener('turbo:visit', () => {
                 const spinner = document.getElementById('custom-spinner');
                 if (spinner) {
@@ -111,8 +103,8 @@
                 }
             });
 
-            // Événement : la nouvelle page est rendue => on masque le spinner
-            document.addEventListener('turbo:render', () => {
+            // Masquage du spinner lorsque la page est entièrement chargée
+            document.addEventListener('turbo:load', () => {
                 const spinner = document.getElementById('custom-spinner');
                 if (spinner) {
                     spinner.classList.add('hidden');

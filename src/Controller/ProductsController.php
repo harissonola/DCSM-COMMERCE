@@ -51,7 +51,7 @@ class ProductsController extends AbstractController
             $this->handleAutomaticMining($product, $em, $user);
         }
 
-        return $this->render('products/dashboard.html.twig', [
+        return $this->render('products/dash.html.twig', [
             'product' => $product,
             'chartData' => $this->generateChartData($product, $priceRepository),
             'reward' => $user->getReward()

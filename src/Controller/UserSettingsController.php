@@ -55,7 +55,7 @@ final class UserSettingsController extends AbstractController
             $user->setEmail($request->request->get('email'));
         }
 
-        // Vérifier si le dossier existe, sinon le créer
+        // Vérifier si le dossier de stockage existe, sinon le créer
         if (!is_dir($this->uploadDirectory)) {
             mkdir($this->uploadDirectory, 0775, true);
         }
@@ -63,23 +63,23 @@ final class UserSettingsController extends AbstractController
         // Mise à jour de la photo de profil
         $avatarFile = $request->files->get('avatarUpload');
         if ($avatarFile) {
-            // Génération d'un nom unique pour la nouvelle image
             $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
 
-            // Déplacer le fichier dans le dossier défini par le paramètre
             try {
                 $avatarFile->move($this->uploadDirectory, $newFilename);
+                $user->setPhoto($newFilename);
             } catch (FileException $e) {
                 $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image.');
                 return $this->redirectToRoute('app_user_settings');
             }
-
-            // Mettre à jour le nom de la photo dans l'utilisateur
-            $user->setPhoto($newFilename);
         }
 
         // Mise à jour du mot de passe
-        if ($request->request->has('currentPassword') && $request->request->has('newPassword') && $request->request->has('confirmPassword')) {
+        if (
+            $request->request->has('currentPassword') && 
+            $request->request->has('newPassword') && 
+            $request->request->has('confirmPassword')
+        ) {
             $currentPassword = $request->request->get('currentPassword');
             $newPassword = $request->request->get('newPassword');
             $confirmPassword = $request->request->get('confirmPassword');

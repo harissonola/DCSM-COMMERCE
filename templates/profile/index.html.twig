@@ -115,7 +115,7 @@
 				<h1 class="h3 mb-1">{{ app.user.fname }} {{ app.user.lname }}</h1>
 				<div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
 					<span class="badge bg-primary rounded-pill">@{{ app.user.username }}</span>
-					<span class="badge bg-success rounded-pill">{{ app.user.country }}</span>
+					<span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
 				</div>
 			</div>
 			

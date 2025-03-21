@@ -77,17 +77,46 @@ final class UserSettingsController extends AbstractController
                 }
             }
 
-            // Gestion de l'avatar (sans vérifications)
+            // Gestion de l'avatar avec vérifications
             $avatarFile = $request->files->get('avatar');
             if ($avatarFile) {
-                if (!is_dir($this->uploadDirectory)) {
-                    mkdir($this->uploadDirectory, 0775, true);
+                $allowedMimeTypes = [
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp',
+                    'image/svg+xml',
+                    'image/tiff',
+                    'image/bmp'
+                ];
+
+                $mimeType = $avatarFile->getMimeType();
+                $fileInfo = getimagesize($avatarFile->getPathname());
+
+                // Vérification du type MIME
+                if (!$fileInfo || !in_array($mimeType, $allowedMimeTypes)) {
+                    $errors['avatar'] = 'Format d\'image non supporté. Formats acceptés : ' . 
+                        'JPEG, PNG, GIF, WebP, BMP, TIFF, SVG';
                 }
 
-                $newFilename = $slugger->slug($user->getUsername()).'-'.uniqid().'.'.$avatarFile->guessExtension();
-                $avatarFile->move($this->uploadDirectory, $newFilename);
-                $user->setPhoto($newFilename);
-                $updatedFields[] = 'avatar';
+                // Vérification supplémentaire pour les SVG
+                if ($mimeType === 'image/svg+xml') {
+                    $svgContent = file_get_contents($avatarFile->getPathname());
+                    if (preg_match('/<script/i', $svgContent)) {
+                        $errors['avatar'] = 'Les SVG contenant des scripts ne sont pas autorisés';
+                    }
+                }
+
+                if (!isset($errors['avatar'])) {
+                    if (!is_dir($this->uploadDirectory)) {
+                        mkdir($this->uploadDirectory, 0775, true);
+                    }
+
+                    $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
+                    $avatarFile->move($this->uploadDirectory, $newFilename);
+                    $user->setPhoto($newFilename);
+                    $updatedFields[] = 'avatar';
+                }
             }
 
             // Mise à jour du mot de passe

@@ -6,8 +6,8 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
@@ -29,82 +29,77 @@ final class UserSettingsController extends AbstractController
             return $this->redirectToRoute('app_login');
         }
 
-        return $this->render('user_settings/index.html.twig', [
-            'controller_name' => 'UserSettingsController',
-        ]);
+        return $this->render('user_settings/index.html.twig');
     }
 
     #[Route('/user/settings/update', name: 'app_user_settings_update', methods: ['POST'])]
     public function update(
         Request $request, 
-        EntityManagerInterface $entityManager, 
-        UserPasswordHasherInterface $passwordHasher, 
+        EntityManagerInterface $entityManager,
+        UserPasswordHasherInterface $passwordHasher,
         SluggerInterface $slugger
-    ): Response {
-        /** @var User $user */
-        $user = $this->getUser();
+    ): JsonResponse {
+        try {
+            /** @var User $user */
+            $user = $this->getUser();
+            
+            if (!$user) {
+                throw new \Exception('Utilisateur non authentifié.', 401);
+            }
 
-        if (!$user) {
-            $this->addFlash('danger', 'Utilisateur non authentifié.');
-            return $this->redirectToRoute('app_login');
-        }
+            // Mise à jour des informations de profil
+            if ($request->request->has('username') && $request->request->has('email')) {
+                $user->setUsername($request->request->get('username'));
+                $user->setEmail($request->request->get('email'));
+            }
 
-        // Mise à jour des informations de profil
-        if ($request->request->has('username') && $request->request->has('email')) {
-            $user->setUsername($request->request->get('username'));
-            $user->setEmail($request->request->get('email'));
-        }
+            // Gestion de l'avatar
+            $avatarFile = $request->files->get('avatarUpload');
+            if ($avatarFile) {
+                if (!is_dir($this->uploadDirectory)) {
+                    mkdir($this->uploadDirectory, 0775, true);
+                }
 
-        // Vérifier si le dossier de stockage existe, sinon le créer
-        if (!is_dir($this->uploadDirectory)) {
-            mkdir($this->uploadDirectory, 0775, true);
-        }
-
-        // Mise à jour de la photo de profil
-        $avatarFile = $request->files->get('avatarUpload');
-        if ($avatarFile) {
-            $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
-
-            try {
+                $newFilename = $slugger->slug($user->getUsername()).'-'.uniqid().'.'.$avatarFile->guessExtension();
                 $avatarFile->move($this->uploadDirectory, $newFilename);
                 $user->setPhoto($newFilename);
-            } catch (FileException $e) {
-                $this->addFlash('danger', 'Erreur lors de l\'upload de l\'image.');
-                return $this->redirectToRoute('app_user_settings');
             }
-        }
 
-        // Mise à jour du mot de passe
-        if (
-            $request->request->has('currentPassword') && 
-            $request->request->has('newPassword') && 
-            $request->request->has('confirmPassword')
-        ) {
-            $currentPassword = $request->request->get('currentPassword');
-            $newPassword = $request->request->get('newPassword');
-            $confirmPassword = $request->request->get('confirmPassword');
+            // Mise à jour du mot de passe
+            if ($request->request->has('currentPassword')) {
+                $currentPassword = $request->request->get('currentPassword');
+                $newPassword = $request->request->get('newPassword');
+                $confirmPassword = $request->request->get('confirmPassword');
 
-            if ($passwordHasher->isPasswordValid($user, $currentPassword)) {
-                if ($newPassword === $confirmPassword) {
-                    $hashedPassword = $passwordHasher->hashPassword($user, $newPassword);
-                    $user->setPassword($hashedPassword);
-                } else {
-                    $this->addFlash('danger', 'Les nouveaux mots de passe ne correspondent pas.');
+                if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
+                    throw new \Exception('Le mot de passe actuel est incorrect.');
                 }
-            } else {
-                $this->addFlash('danger', 'Le mot de passe actuel est incorrect.');
+
+                if ($newPassword !== $confirmPassword) {
+                    throw new \Exception('Les nouveaux mots de passe ne correspondent pas.');
+                }
+
+                $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
             }
+
+            // Notifications
+            $user->setEmailNotifications(
+                $request->request->has('emailNotifications')
+            );
+
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'status' => 'success',
+                'message' => 'Mises à jour effectuées avec succès',
+                'photo' => $user->getPhoto()
+            ]);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 400);
         }
-
-        // Mise à jour des préférences de notifications par e-mail
-        $emailNotifications = $request->request->has('emailNotifications');
-        $user->setEmailNotifications($emailNotifications);
-
-        // Enregistrer les modifications
-        $entityManager->persist($user);
-        $entityManager->flush();
-
-        $this->addFlash('success', 'Vos informations ont été mises à jour avec succès.');
-        return $this->redirectToRoute('app_user_settings');
     }
 }

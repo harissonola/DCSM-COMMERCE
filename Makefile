@@ -10,5 +10,5 @@ install: vendor/autoload.php
 	php bin/console cache:clear
 
 vendor/autoload.php: composer.json composer.lock
-	composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-sodium
+	composer install --no-dev --optimize-autoloader
 	touch vendor/autoload.php

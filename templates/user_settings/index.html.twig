@@ -5,7 +5,7 @@
 {% endblock %}
 
 {% block body %}
-    <div class="settings-wrapper">
+    <div class="settings-wrapper" data-theme="dark">
         <!-- Sidebar Navigation -->
         <aside class="settings-sidebar">
             <div class="sidebar-header">
@@ -39,14 +39,16 @@
                 <div class="profile-grid">
                     <!-- Avatar Upload -->
                     <div class="avatar-card">
-                        <div class="avatar-preview">
-                            <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
-                            <label for="avatarUpload" class="avatar-edit">
-                                <i class="bi bi-camera"></i>
-                                <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" onchange="previewImage(event)">
-                            </label>
-                        </div>
-                        <button type="submit" class="btn-save">Mettre à jour</button>
+                        <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data">
+                            <div class="avatar-preview">
+                                <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
+                                <label class="avatar-edit">
+                                    <i class="bi bi-camera"></i>
+                                    <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" class="hidden-input">
+                                </label>
+                            </div>
+                            <button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
+                        </form>
                     </div>
 
                     <!-- Personal Info Form -->
@@ -118,14 +120,15 @@
     <style>
         :root {
             --primary-color: #6366f1;
-            --primary-hover: #4f46e5;
-            --background-light: #f9fafb;
-            --border-color: #e5e7eb;
-            --text-color: #374151;
+            --primary-hover: #818cf8;
+            --background-dark: #0f172a;
+            --background-light: #1e293b;
+            --border-color: #334155;
+            --text-color: #f8fafc;
         }
 
         body {
-            background-color: var(--background-light);
+            background-color: var(--background-dark);
             color: var(--text-color);
             font-family: 'Inter', sans-serif;
         }
@@ -137,15 +140,16 @@
 
         .settings-sidebar {
             width: 280px;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            background: var(--background-light);
             padding: 2rem;
+            border-right: 1px solid var(--border-color);
         }
 
         .sidebar-header h3 {
             font-size: 1.5rem;
             font-weight: 600;
             margin-bottom: 2rem;
+            color: var(--text-color);
         }
 
         .sidebar-nav {
@@ -166,7 +170,7 @@
         }
 
         .nav-item:hover {
-            background: var(--background-light);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .nav-item.active {
@@ -190,7 +194,7 @@
         }
 
         .profile-header p {
-            color: #6b7280;
+            color: #94a3b8;
         }
 
         .profile-grid {
@@ -201,10 +205,10 @@
         }
 
         .avatar-card {
-            background: white;
+            background: var(--background-light);
             padding: 1.5rem;
             border-radius: 1rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
             text-align: center;
         }
 
@@ -215,6 +219,11 @@
             margin: 0 auto 1rem;
             border-radius: 50%;
             overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .avatar-preview:hover {
+            transform: scale(1.05);
         }
 
         .avatar-preview img {
@@ -227,40 +236,24 @@
             position: absolute;
             bottom: 10px;
             right: 10px;
-            background: white;
+            background: var(--background-dark);
             width: 36px;
             height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
             cursor: pointer;
         }
 
-        .form-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        .avatar-preview:hover .avatar-edit {
+            opacity: 1;
         }
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            font-size: 1rem;
+        .hidden-input {
+            display: none;
         }
 
         .btn-save {
@@ -271,10 +264,43 @@
             border-radius: 0.5rem;
             cursor: pointer;
             transition: background 0.2s ease;
+            width: 100%;
         }
 
         .btn-save:hover {
             background: var(--primary-hover);
+        }
+
+        .btn-save.hidden {
+            display: none;
+        }
+
+        .form-card {
+            background: var(--background-light);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--background-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-color);
+            font-size: 1rem;
         }
 
         .toggle-group {
@@ -303,7 +329,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: #e5e7eb;
+            background: #475569;
             border-radius: 24px;
             transition: 0.3s;
         }
@@ -335,7 +361,7 @@
 
             .settings-sidebar {
                 width: 100%;
-                box-shadow: none;
+                border-right: none;
                 padding: 1rem;
             }
 
@@ -346,12 +372,20 @@
     </style>
 
     <script>
-        function previewImage(event) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('profileImage').src = e.target.result;
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const avatarInput = document.getElementById('avatarUpload');
+            const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
+            
+            avatarInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('profileImage').src = e.target.result;
+                        avatarUpdateBtn.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        });
     </script>
 {% endblock %}

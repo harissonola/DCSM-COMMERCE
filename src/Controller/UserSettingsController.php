@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,7 +42,7 @@ final class UserSettingsController extends AbstractController
         try {
             /** @var User $user */
             $user = $this->getUser();
-
+            
             if (!$user) {
                 throw new \Exception('Utilisateur non authentifié.', 401);
             }
@@ -78,23 +77,17 @@ final class UserSettingsController extends AbstractController
                 }
             }
 
-            // Gestion de l'avatar
+            // Gestion de l'avatar (sans vérifications)
             $avatarFile = $request->files->get('avatar');
             if ($avatarFile) {
-                if (!in_array($avatarFile->getMimeType(), ['image/jpeg', 'image/png', 'image/gif'])) {
-                    $errors['avatar'] = 'Format d\'image non supporté (JPEG, PNG, GIF uniquement)';
-                } elseif ($avatarFile->getSize() > 2 * 1024 * 1024) {
-                    $errors['avatar'] = 'La taille de l\'image ne doit pas dépasser 2Mo';
-                } else {
-                    if (!is_dir($this->uploadDirectory)) {
-                        mkdir($this->uploadDirectory, 0775, true);
-                    }
-
-                    $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
-                    $avatarFile->move($this->uploadDirectory, $newFilename);
-                    $user->setPhoto($newFilename);
-                    $updatedFields[] = 'avatar';
+                if (!is_dir($this->uploadDirectory)) {
+                    mkdir($this->uploadDirectory, 0775, true);
                 }
+
+                $newFilename = $slugger->slug($user->getUsername()).'-'.uniqid().'.'.$avatarFile->guessExtension();
+                $avatarFile->move($this->uploadDirectory, $newFilename);
+                $user->setPhoto($newFilename);
+                $updatedFields[] = 'avatar';
             }
 
             // Mise à jour du mot de passe
@@ -139,6 +132,7 @@ final class UserSettingsController extends AbstractController
                 'photo' => $user->getPhoto(),
                 'updatedFields' => $updatedFields
             ]);
+
         } catch (\Exception $e) {
             return new JsonResponse([
                 'status' => 'error',

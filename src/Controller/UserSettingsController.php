@@ -79,6 +79,7 @@ final class UserSettingsController extends AbstractController
 
             // Gestion de l'avatar (sans vérifications)
             $avatarFile = $request->files->get('avatar');
+            dd($avatarFile);
             if ($avatarFile) {
                 if (!is_dir($this->uploadDirectory)) {
                     mkdir($this->uploadDirectory, 0775, true);

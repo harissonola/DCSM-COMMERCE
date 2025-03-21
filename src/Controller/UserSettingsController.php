@@ -75,7 +75,7 @@ final class UserSettingsController extends AbstractController
             }
 
             // Mettre à jour le nom de la photo dans l'utilisateur
-            $user->setPhoto("https://dcsm-commerce.alwaysdata.net/users/img/" . $newFilename);
+            $user->setPhoto($newFilename);
         }
 
         // Mise à jour du mot de passe

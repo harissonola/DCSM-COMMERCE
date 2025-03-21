@@ -57,7 +57,7 @@
                     <div class="form-card">
                         <h4>Informations personnelles</h4>
                         <turbo-frame id="personal-info-frame">
-                            <form action="{{ path('app_user_personal_info_update') }}" method="POST" data-turbo-method="post">
+                            <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
                                 <div class="form-group">
                                     <label for="username">Nom d'utilisateur</label>
                                     <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
@@ -78,7 +78,7 @@
                 <h4>Sécurité du compte</h4>
                 <div class="form-card">
                     <turbo-frame id="security-frame">
-                        <form action="{{ path('app_user_password_update') }}" method="POST" data-turbo-method="post">
+                        <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
                             <div class="form-group">
                                 <label for="currentPassword">Mot de passe actuel</label>
                                 <input type="password" id="currentPassword" name="currentPassword" required>
@@ -102,7 +102,7 @@
                 <h4>Préférences de notifications</h4>
                 <div class="form-card">
                     <turbo-frame id="notifications-frame">
-                        <form action="{{ path('app_user_notifications_update') }}" method="POST" data-turbo-method="post">
+                        <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
                             <div class="form-group toggle-group">
                                 <label>Notifications par email</label>
                                 <label class="switch">

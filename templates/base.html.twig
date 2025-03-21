@@ -96,20 +96,20 @@
             setProgressBarDelay(999999);
 
             // Affichage du spinner lors du début de la navigation
-            document.addEventListener('turbo:load', () => {
+            document.addEventListener('turbo:visit', () => {
                 const spinner = document.getElementById('custom-spinner');
                 if (spinner) {
                     spinner.classList.remove('hidden');
                 }
             });
 
-            {# // Masquage du spinner lorsque la page est entièrement chargée
+            // Masquage du spinner lorsque la page est entièrement chargée
             document.addEventListener('turbo:load', () => {
                 const spinner = document.getElementById('custom-spinner');
                 if (spinner) {
                     spinner.classList.add('hidden');
                 }
-            }); #}
+            });
         </script>
 
         <style>

@@ -246,33 +246,6 @@
             transform: translateX(24px);
         }
 
-        .turbo-progress-bar {
-            height: 3px;
-            background-color: var(--primary-color);
-        }
-
-        .form-success-flash {
-            background-color: #10b981;
-            color: white;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .form-error-flash {
-            background-color: #ef4444;
-            color: white;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
         .invalid-feedback {
             color: #ef4444;
             font-size: 0.875rem;
@@ -303,7 +276,6 @@
 
 {% block body %}
     <div class="settings-wrapper" data-theme="dark">
-        <!-- Sidebar Navigation -->
         <aside class="settings-sidebar">
             <div class="sidebar-header">
                 <h3>Paramètres</h3>
@@ -324,12 +296,9 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="settings-content">
-            <!-- Flash Messages -->
             <div id="flash-messages"></div>
 
-            <!-- Profile Section -->
             <section class="profile-section" id="profile-section">
                 <div class="profile-header">
                     <h2>Profil</h2>
@@ -337,7 +306,6 @@
                 </div>
 
                 <div class="profile-grid">
-                    <!-- Avatar Upload -->
                     <div class="avatar-card">
                         <turbo-frame id="avatar-frame">
                             <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
@@ -354,7 +322,6 @@
                         </turbo-frame>
                     </div>
 
-                    <!-- Personal Info Form -->
                     <div class="form-card">
                         <h4>Informations personnelles</h4>
                         <turbo-frame id="personal-info-frame">
@@ -375,7 +342,6 @@
                 </div>
             </section>
 
-            <!-- Security Section -->
             <section class="security-section" id="security-section">
                 <h4>Sécurité du compte</h4>
                 <div class="form-card">
@@ -400,7 +366,6 @@
                 </div>
             </section>
 
-            <!-- Notifications Section -->
             <section class="notifications-section" id="notifications-section">
                 <h4>Préférences de notifications</h4>
                 <div class="form-card">
@@ -434,99 +399,107 @@
             const avatarInput = document.getElementById('avatarUpload');
             const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
             const avatarForm = document.getElementById('avatarForm');
-            
-            avatarInput.addEventListener('change', function(e) {
-                if (this.files && this.files[0]) {
+
+            // Gestion du changement d'avatar
+            avatarInput?.addEventListener('change', function(e) {
+                if (this.files?.[0]) {
                     const reader = new FileReader();
-                    reader.onload = function(e) {
+                    reader.onload = (e) => {
                         document.getElementById('profileImage').src = e.target.result;
-                        avatarUpdateBtn.classList.remove('hidden');
+                        avatarUpdateBtn?.classList.remove('hidden');
                     };
                     reader.readAsDataURL(this.files[0]);
                 }
             });
 
-            // Gestion de l'indicateur de chargement Turbo
+            // Indicateur de chargement
             document.addEventListener('turbo:submit-start', () => {
                 const loadingIndicator = document.createElement('div');
                 loadingIndicator.id = 'loading-indicator';
-                loadingIndicator.innerText = 'Chargement...';
-                loadingIndicator.style.position = 'fixed';
-                loadingIndicator.style.top = '1rem';
-                loadingIndicator.style.right = '1rem';
-                loadingIndicator.style.background = 'var(--primary-color)';
-                loadingIndicator.style.color = 'white';
-                loadingIndicator.style.padding = '0.5rem 1rem';
-                loadingIndicator.style.borderRadius = '0.5rem';
+                loadingIndicator.textContent = 'Chargement...';
+                Object.assign(loadingIndicator.style, {
+                    position: 'fixed',
+                    top: '1rem',
+                    right: '1rem',
+                    background: 'var(--primary-color)',
+                    color: 'white',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem'
+                });
                 document.body.appendChild(loadingIndicator);
             });
 
-            document.addEventListener('turbo:submit-end', (event) => {
-                const loadingIndicator = document.getElementById('loading-indicator');
-                if (loadingIndicator) {
-                    loadingIndicator.remove();
-                }
+            // Gestion de la réponse
+            document.addEventListener('turbo:submit-end', async (event) => {
+                // Nettoyage UI
+                document.getElementById('loading-indicator')?.remove();
+                document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
 
-                const response = event.detail.fetchResponse;
-                if (response.succeeded) {
-                    response.json().then(data => {
+                // Traitement réponse
+                const fetchResponse = event.detail.fetchResponse;
+                if (!fetchResponse?.response) return;
+
+                try {
+                    const response = fetchResponse.response;
+                    const contentType = response.headers.get('content-type');
+                    
+                    if (contentType?.includes('application/json')) {
+                        const data = await response.json();
+                        
                         if (data.status === 'success') {
                             toastr.success(data.message);
                             if (data.photo) {
                                 document.getElementById('profileImage').src = data.photo;
+                                avatarUpdateBtn?.classList.add('hidden');
                             }
                         } else if (data.status === 'error') {
                             toastr.error(data.message);
                             if (data.errors) {
-                                for (const [field, message] of Object.entries(data.errors)) {
+                                Object.entries(data.errors).forEach(([field, message]) => {
                                     const input = document.getElementById(field);
                                     if (input) {
                                         input.classList.add('is-invalid');
                                         const errorDiv = document.createElement('div');
                                         errorDiv.className = 'invalid-feedback';
-                                        errorDiv.innerText = message;
+                                        errorDiv.textContent = message;
                                         input.parentNode.appendChild(errorDiv);
                                     }
-                                }
+                                });
                             }
                         }
-                    });
+                    }
+                } catch (error) {
+                    console.error('Erreur de traitement:', error);
+                    toastr.error('Une erreur inattendue est survenue');
                 }
             });
 
-            // Empêcher la soumission du formulaire d'avatar si aucun fichier n'est sélectionné
-            if (avatarForm) {
-                avatarForm.addEventListener('submit', function(e) {
-                    if (avatarInput.files.length === 0) {
-                        e.preventDefault();
-                        return;
-                    }
-                });
-            }
+            // Validation avatar
+            avatarForm?.addEventListener('submit', (e) => {
+                if (!avatarInput?.files?.length) {
+                    e.preventDefault();
+                    toastr.error('Veuillez sélectionner une image');
+                }
+            });
         });
     </script>
 {% endblock %}
 
 {% block customScript %}
-    <!-- Toastr JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script>
-        document.addEventListener('turbo:load', function() {
+        document.addEventListener('turbo:load', () => {
             toastr.options = {
-                "closeButton": true,
-                "progressBar": true,
-                "positionClass": "toast-top-right"
+                closeButton: true,
+                progressBar: true,
+                positionClass: 'toast-top-right'
             };
 
+            // Gestion des flash messages Symfony
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
-                    {% if type == 'success' %}
-                        toastr.success("{{ message|e('js') }}");
-                    {% elseif type == 'danger' %}
-                        toastr.error("{{ message|e('js') }}");
-                    {% else %}
-                        toastr.info("{{ message|e('js') }}");
-                    {% endif %}
+                    toastr.{{ type }}("{{ message|e('js') }}");
                 {% endfor %}
             {% endfor %}
         });

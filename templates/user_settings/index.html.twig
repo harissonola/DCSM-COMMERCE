@@ -8,129 +8,6 @@
     {{ parent() }}
     <!-- Toastr CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
-{% endblock %}
-
-{% block body %}
-    <div class="settings-wrapper" data-theme="dark">
-        <!-- Sidebar Navigation -->
-        <aside class="settings-sidebar">
-            <div class="sidebar-header">
-                <h3>Paramètres</h3>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="{{ path('app_dashboard') }}" class="nav-item">
-                    <i class="bi bi-speedometer2"></i>
-                    <span>Tableau de bord</span>
-                </a>
-                <a href="{{ path('app_user_settings') }}" class="nav-item active">
-                    <i class="bi bi-gear"></i>
-                    <span>Paramètres</span>
-                </a>
-                <a href="#" class="nav-item">
-                    <i class="bi bi-headset"></i>
-                    <span>Support</span>
-                </a>
-            </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="settings-content">
-            <!-- Profile Section -->
-            <section class="profile-section" id="profile-section">
-                <div class="profile-header">
-                    <h2>Profil</h2>
-                    <p>Gérez vos informations personnelles et vos préférences.</p>
-                </div>
-
-                <div class="profile-grid">
-                    <!-- Avatar Upload -->
-                    <div class="avatar-card">
-                        <turbo-frame id="avatar-frame">
-                            <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
-                                <div class="avatar-preview">
-                                    <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
-                                    <label class="avatar-edit">
-                                        <i class="bi bi-camera"></i>
-                                        <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" class="hidden-input">
-                                    </label>
-                                </div>
-                                <button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
-                            </form>
-                        </turbo-frame>
-                    </div>
-
-                    <!-- Personal Info Form -->
-                    <div class="form-card">
-                        <h4>Informations personnelles</h4>
-                        <turbo-frame id="personal-info-frame">
-                            <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
-                                <div class="form-group">
-                                    <label for="username">Nom d'utilisateur</label>
-                                    <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="email">Email</label>
-                                    <input type="email" id="email" name="email" value="{{ app.user.email }}" required>
-                                </div>
-                                <button type="submit" class="btn-save">Sauvegarder</button>
-                            </form>
-                        </turbo-frame>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Security Section -->
-            <section class="security-section" id="security-section">
-                <h4>Sécurité du compte</h4>
-                <div class="form-card">
-                    <turbo-frame id="security-frame">
-                        <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
-                            <div class="form-group">
-                                <label for="currentPassword">Mot de passe actuel</label>
-                                <input type="password" id="currentPassword" name="currentPassword" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="newPassword">Nouveau mot de passe</label>
-                                <input type="password" id="newPassword" name="newPassword" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="confirmPassword">Confirmer le mot de passe</label>
-                                <input type="password" id="confirmPassword" name="confirmPassword" required>
-                            </div>
-                            <button type="submit" class="btn-save">Changer le mot de passe</button>
-                        </form>
-                    </turbo-frame>
-                </div>
-            </section>
-
-            <!-- Notifications Section -->
-            <section class="notifications-section" id="notifications-section">
-                <h4>Préférences de notifications</h4>
-                <div class="form-card">
-                    <turbo-frame id="notifications-frame">
-                        <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
-                            <div class="form-group toggle-group">
-                                <label>Notifications par email</label>
-                                <label class="switch">
-                                    <input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %}checked{% endif %}>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="form-group toggle-group">
-                                <label>Notifications push</label>
-                                <label class="switch">
-                                    <input type="checkbox" name="pushNotifications">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <button type="submit" class="btn-save">Enregistrer</button>
-                        </form>
-                    </turbo-frame>
-                </div>
-            </section>
-        </main>
-    </div>
-
     <style>
         :root {
             --primary-color: #6366f1;
@@ -396,6 +273,16 @@
             justify-content: space-between;
         }
 
+        .invalid-feedback {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .is-invalid {
+            border-color: #ef4444 !important;
+        }
+
         @media (max-width: 768px) {
             .settings-wrapper {
                 flex-direction: column;
@@ -412,6 +299,131 @@
             }
         }
     </style>
+{% endblock %}
+
+{% block body %}
+    <div class="settings-wrapper" data-theme="dark">
+        <!-- Sidebar Navigation -->
+        <aside class="settings-sidebar">
+            <div class="sidebar-header">
+                <h3>Paramètres</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ path('app_dashboard') }}" class="nav-item">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Tableau de bord</span>
+                </a>
+                <a href="{{ path('app_user_settings') }}" class="nav-item active">
+                    <i class="bi bi-gear"></i>
+                    <span>Paramètres</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-headset"></i>
+                    <span>Support</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="settings-content">
+            <!-- Flash Messages -->
+            <div id="flash-messages"></div>
+
+            <!-- Profile Section -->
+            <section class="profile-section" id="profile-section">
+                <div class="profile-header">
+                    <h2>Profil</h2>
+                    <p>Gérez vos informations personnelles et vos préférences.</p>
+                </div>
+
+                <div class="profile-grid">
+                    <!-- Avatar Upload -->
+                    <div class="avatar-card">
+                        <turbo-frame id="avatar-frame">
+                            <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
+                                <div class="avatar-preview">
+                                    <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
+                                    <label class="avatar-edit">
+                                        <i class="bi bi-camera"></i>
+                                        <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" class="hidden-input">
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
+                            </form>
+                        </turbo-frame>
+                    </div>
+
+                    <!-- Personal Info Form -->
+                    <div class="form-card">
+                        <h4>Informations personnelles</h4>
+                        <turbo-frame id="personal-info-frame">
+                            <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+                                <div class="form-group">
+                                    <label for="username">Nom d'utilisateur</label>
+                                    <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email" value="{{ app.user.email }}" required>
+                                </div>
+                                <button type="submit" class="btn-save">Sauvegarder</button>
+                            </form>
+                        </turbo-frame>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Security Section -->
+            <section class="security-section" id="security-section">
+                <h4>Sécurité du compte</h4>
+                <div class="form-card">
+                    <turbo-frame id="security-frame">
+                        <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+                            <div class="form-group">
+                                <label for="currentPassword">Mot de passe actuel</label>
+                                <input type="password" id="currentPassword" name="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">Nouveau mot de passe</label>
+                                <input type="password" id="newPassword" name="newPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirmer le mot de passe</label>
+                                <input type="password" id="confirmPassword" name="confirmPassword" required>
+                            </div>
+                            <button type="submit" class="btn-save">Changer le mot de passe</button>
+                        </form>
+                    </turbo-frame>
+                </div>
+            </section>
+
+            <!-- Notifications Section -->
+            <section class="notifications-section" id="notifications-section">
+                <h4>Préférences de notifications</h4>
+                <div class="form-card">
+                    <turbo-frame id="notifications-frame">
+                        <form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+                            <div class="form-group toggle-group">
+                                <label>Notifications par email</label>
+                                <label class="switch">
+                                    <input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="form-group toggle-group">
+                                <label>Notifications push</label>
+                                <label class="switch">
+                                    <input type="checkbox" name="pushNotifications">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <button type="submit" class="btn-save">Enregistrer</button>
+                        </form>
+                    </turbo-frame>
+                </div>
+            </section>
+        </main>
+    </div>
 
     <script>
         document.addEventListener('turbo:load', () => {
@@ -445,10 +457,36 @@
                 document.body.appendChild(loadingIndicator);
             });
 
-            document.addEventListener('turbo:submit-end', () => {
+            document.addEventListener('turbo:submit-end', (event) => {
                 const loadingIndicator = document.getElementById('loading-indicator');
                 if (loadingIndicator) {
                     loadingIndicator.remove();
+                }
+
+                const response = event.detail.fetchResponse;
+                if (response.succeeded) {
+                    response.json().then(data => {
+                        if (data.status === 'success') {
+                            toastr.success(data.message);
+                            if (data.photo) {
+                                document.getElementById('profileImage').src = data.photo;
+                            }
+                        } else if (data.status === 'error') {
+                            toastr.error(data.message);
+                            if (data.errors) {
+                                for (const [field, message] of Object.entries(data.errors)) {
+                                    const input = document.getElementById(field);
+                                    if (input) {
+                                        input.classList.add('is-invalid');
+                                        const errorDiv = document.createElement('div');
+                                        errorDiv.className = 'invalid-feedback';
+                                        errorDiv.innerText = message;
+                                        input.parentNode.appendChild(errorDiv);
+                                    }
+                                }
+                            }
+                        }
+                    });
                 }
             });
 
@@ -460,22 +498,6 @@
                         return;
                     }
                 });
-            }
-        });
-
-        // Réinitialise les formulaires après soumission réussie (exemple Turbo)
-        document.addEventListener('turbo:frame-render', (event) => {
-            const frame = event.target;
-            if (frame.querySelector('.form-success-flash')) {
-                setTimeout(() => {
-                    const successFlash = frame.querySelector('.form-success-flash');
-                    if (successFlash) {
-                        successFlash.style.opacity = '0';
-                        setTimeout(() => {
-                            successFlash.remove();
-                        }, 300);
-                    }
-                }, 3000);
             }
         });
     </script>

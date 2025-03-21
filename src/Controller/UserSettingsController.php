@@ -35,7 +35,7 @@ final class UserSettingsController extends AbstractController
 
     #[Route('/user/settings/update', name: 'app_user_settings_update', methods: ['POST'])]
     public function update(
-        Request $request, 
+        Request $request,
         EntityManagerInterface $entityManager,
         UserPasswordHasherInterface $passwordHasher,
         SluggerInterface $slugger
@@ -43,7 +43,7 @@ final class UserSettingsController extends AbstractController
         try {
             /** @var User $user */
             $user = $this->getUser();
-            
+
             if (!$user) {
                 throw new \Exception('Utilisateur non authentifié.', 401);
             }
@@ -90,7 +90,7 @@ final class UserSettingsController extends AbstractController
                         mkdir($this->uploadDirectory, 0775, true);
                     }
 
-                    $newFilename = $slugger->slug($user->getUsername()).'-'.uniqid().'.'.$avatarFile->guessExtension();
+                    $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
                     $avatarFile->move($this->uploadDirectory, $newFilename);
                     $user->setPhoto($newFilename);
                     $updatedFields[] = 'avatar';
@@ -124,7 +124,11 @@ final class UserSettingsController extends AbstractController
             $updatedFields[] = 'notifications';
 
             if (!empty($errors)) {
-                throw new \Exception('Validation failed');
+                return new JsonResponse([
+                    'status' => 'error',
+                    'message' => 'Des erreurs de validation sont survenues',
+                    'errors' => $errors
+                ], 400);
             }
 
             $entityManager->flush();
@@ -135,7 +139,6 @@ final class UserSettingsController extends AbstractController
                 'photo' => $user->getPhoto(),
                 'updatedFields' => $updatedFields
             ]);
-
         } catch (\Exception $e) {
             return new JsonResponse([
                 'status' => 'error',

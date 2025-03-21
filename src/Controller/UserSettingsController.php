@@ -8,6 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
@@ -47,22 +48,53 @@ final class UserSettingsController extends AbstractController
                 throw new \Exception('Utilisateur non authentifié.', 401);
             }
 
+            // Vérification du token CSRF
+            $submittedToken = $request->request->get('_csrf_token');
+            if (!$this->isCsrfTokenValid('update_settings', $submittedToken)) {
+                throw new \Exception('Token CSRF invalide.');
+            }
+
+            $errors = [];
+            $updatedFields = [];
+
             // Mise à jour des informations de profil
-            if ($request->request->has('username') && $request->request->has('email')) {
-                $user->setUsername($request->request->get('username'));
-                $user->setEmail($request->request->get('email'));
+            if ($request->request->has('username')) {
+                $username = $request->request->get('username');
+                if (empty($username)) {
+                    $errors['username'] = 'Le nom d\'utilisateur ne peut pas être vide';
+                } else {
+                    $user->setUsername($username);
+                    $updatedFields[] = 'username';
+                }
+            }
+
+            if ($request->request->has('email')) {
+                $email = $request->request->get('email');
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $errors['email'] = 'Adresse email invalide';
+                } else {
+                    $user->setEmail($email);
+                    $updatedFields[] = 'email';
+                }
             }
 
             // Gestion de l'avatar
-            $avatarFile = $request->files->get('avatarUpload');
+            $avatarFile = $request->files->get('avatar');
             if ($avatarFile) {
-                if (!is_dir($this->uploadDirectory)) {
-                    mkdir($this->uploadDirectory, 0775, true);
-                }
+                if (!in_array($avatarFile->getMimeType(), ['image/jpeg', 'image/png', 'image/gif'])) {
+                    $errors['avatar'] = 'Format d\'image non supporté (JPEG, PNG, GIF uniquement)';
+                } elseif ($avatarFile->getSize() > 2 * 1024 * 1024) {
+                    $errors['avatar'] = 'La taille de l\'image ne doit pas dépasser 2Mo';
+                } else {
+                    if (!is_dir($this->uploadDirectory)) {
+                        mkdir($this->uploadDirectory, 0775, true);
+                    }
 
-                $newFilename = $slugger->slug($user->getUsername()).'-'.uniqid().'.'.$avatarFile->guessExtension();
-                $avatarFile->move($this->uploadDirectory, $newFilename);
-                $user->setPhoto($newFilename);
+                    $newFilename = $slugger->slug($user->getUsername()).'-'.uniqid().'.'.$avatarFile->guessExtension();
+                    $avatarFile->move($this->uploadDirectory, $newFilename);
+                    $user->setPhoto($newFilename);
+                    $updatedFields[] = 'avatar';
+                }
             }
 
             // Mise à jour du mot de passe
@@ -72,33 +104,43 @@ final class UserSettingsController extends AbstractController
                 $confirmPassword = $request->request->get('confirmPassword');
 
                 if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
-                    throw new \Exception('Le mot de passe actuel est incorrect.');
+                    $errors['currentPassword'] = 'Mot de passe actuel incorrect';
                 }
 
                 if ($newPassword !== $confirmPassword) {
-                    throw new \Exception('Les nouveaux mots de passe ne correspondent pas.');
+                    $errors['confirmPassword'] = 'Les mots de passe ne correspondent pas';
                 }
 
-                $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
+                if (empty($errors)) {
+                    $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
+                    $updatedFields[] = 'password';
+                }
             }
 
             // Notifications
             $user->setEmailNotifications(
-                $request->request->has('emailNotifications')
+                $request->request->getBoolean('emailNotifications', false)
             );
+            $updatedFields[] = 'notifications';
+
+            if (!empty($errors)) {
+                throw new \Exception('Validation failed');
+            }
 
             $entityManager->flush();
 
             return new JsonResponse([
                 'status' => 'success',
                 'message' => 'Mises à jour effectuées avec succès',
-                'photo' => $user->getPhoto()
+                'photo' => $user->getPhoto(),
+                'updatedFields' => $updatedFields
             ]);
 
         } catch (\Exception $e) {
             return new JsonResponse([
                 'status' => 'error',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'errors' => $errors ?? []
             ], 400);
         }
     }

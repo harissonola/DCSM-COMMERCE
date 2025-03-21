@@ -123,7 +123,7 @@
 					priceUSD: "{{ (prod.price / 601.51)|number_format(2, '.', '') }}", // prix converti en USD
 					slug: "{{ prod.slug }}",
 					image: "{{ prod.image }}",
-					description: "Some quick example text to build on the card title and make up the bulk of the card's content.",
+					description: "{{ prod.description }}",
 					// Pour les admins, on garde l'URL de visualisation, sinon l'URL de vente.
 					url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_dashboard_product', { slug: prod.slug }) }}{% else %}{{ path('app_sell_product', { slug: prod.slug }) }}{% endif %}"
 				},
@@ -147,7 +147,7 @@
 							<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
 							<div class="card-body">
 								<h5 class="card-title">${product.name}</h5>
-								<h6 class="card-subtitle mb-2 text-muted">$${product.priceUSD} USD</h6>
+								<h6 class="card-subtitle mb-2 text-muted">$${product.priceUSD}</h6>
 								<p class="card-text">${product.description}</p>
 								${buttonHtml}
 							</div>

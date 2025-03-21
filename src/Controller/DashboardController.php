@@ -24,7 +24,9 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("app_main");
         }
 
-        $shops = $shopRepository->findAll();
+        $shops = $shopRepository->findAll(
+            ['name' => 'ASC']
+        );
 
         return $this->render('dashboard/index.html.twig', [
             'controller_name' => 'DashboardController',
@@ -45,7 +47,9 @@ class DashboardController extends AbstractController
             return $this->redirectToRoute("app_main");
         }
 
-        $shops = $shopRepository->findAll();
+        $shops = $shopRepository->findAll(
+            ['name' => 'ASC']
+        );
 
         return $this->render('dashboard/index.html.twig', [
             'controller_name' => 'DashboardController',

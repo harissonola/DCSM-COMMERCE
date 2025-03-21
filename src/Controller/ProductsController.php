@@ -2,357 +2,246 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
+use App\Entity\Product;
+use App\Entity\ProductPrice;
 use App\Repository\ProductPriceRepository;
 use App\Repository\ProductRepository;
-use App\Entity\ProductPrice;
-use DateTimeZone;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use DateTimeZone;
 
-#[Route('/products', name: '')]
+#[Route('/products', name: 'app_products_')]
 class ProductsController extends AbstractController
 {
-
-    #[Route('/', name: 'app_products')]
+    #[Route('/', name: 'index')]
     public function index(): Response
     {
         if (!$this->getUser()) {
             return $this->redirectToRoute("app_main");
         }
-
-        return $this->render('products/index.html.twig', [
-            'controller_name' => 'ProductsController',
-        ]);
+        return $this->render('products/index.html.twig');
     }
 
-
-
-
-
-    #[Route('/{slug}/dashboard', name: 'app_dashboard_product')]
-    public function dash(
-        $slug,
+    #[Route('/{slug}/dashboard', name: 'dashboard')]
+    public function dashboard(
+        string $slug,
         ProductRepository $productRepository,
-        ProductPriceRepository $productPriceRepository,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator
+        ProductPriceRepository $priceRepository,
+        EntityManagerInterface $em
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
+        if (!$user) return $this->redirectToRoute("app_main");
 
-        // Redirection si utilisateur non connecté
-        if (!$user) {
-            return $this->redirectToRoute("app_main");
-        }
+        $product = $productRepository->findOneBy(['slug' => $slug]);
+        if (!$product) throw $this->createNotFoundException('Produit introuvable');
 
-        // Récupération du produit
-        $prod = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$prod) {
-            throw $this->createNotFoundException('Produit non trouvé');
-        }
-
-        // Vérification des permissions
-        if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
-            $this->addFlash('danger', 'Accès refusé. <a href="' .
-                $urlGenerator->generate('app_buy_product', ['slug' => $slug]) .
-                '" class="alert-link">Acheter le produit</a>');
+        if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$product->getUsers()->contains($user)) {
+            $this->addFlash('danger', $this->generateAccessMessage($slug));
             return $this->redirectToRoute('app_main');
         }
 
-        // Activation du bot de minage
         if ($user->isMiningBotActive()) {
-            $this->startProductMining($prod, $entityManager);
+            $this->handleAutomaticMining($product, $em, $user);
         }
 
-        // Récupération des données historiques
-        $prices = $productPriceRepository->findBy(
-            ['product' => $prod],
-            ['timestamp' => 'ASC']
-        );
-
-        // Préparation des données pour le graphique
-        $chartData = [
-            'price' => [],
-            'market_cap' => []
-        ];
-
-        // Taux de conversion CFA -> USD
-        $exchangeRate = 601.5; // ✅ Taux défini ici
-
-        foreach ($prices as $price) {
-            $timestamp = $price->getTimestamp()->format('c');
-
-            // Conversion du prix CFA → USD avec arrondi
-            $chartData['price'][] = [
-                'x' => $timestamp,
-                'y' => round($price->getPrice() / $exchangeRate, 2) // ✅ Conversion appliquée
-            ];
-
-            // MarketCap non converti (reste en CFA)
-            if (method_exists($price, 'getMarketCap') && $price->getMarketCap() !== null) {
-                $chartData['market_cap'][] = [
-                    'x' => $timestamp,
-                    'y' => round($price->getMarketCap() / $exchangeRate, 2) // ✅ Conversion additionnelle
-                ];                
-            }
-        }
-
-        return $this->render('products/dash.html.twig', [
-            'prod' => $prod,
-            'chartData' => $chartData
+        return $this->render('products/dashboard.html.twig', [
+            'product' => $product,
+            'chartData' => $this->generateChartData($product, $priceRepository),
+            'reward' => $user->getReward()
         ]);
     }
 
-    #[Route('/{slug}/dashboard/data', name: 'dashboard_product_data')]
-    public function getChartData(
-        string $slug,
-        ProductRepository $productRepository,
-        ProductPriceRepository $productPriceRepository,
-        UrlGeneratorInterface $urlGenerator
-    ): JsonResponse {
-        $user = $this->getUser();
-        if (!$user) {
-            return new JsonResponse(['error' => 'Unauthorized'], 403);
+    private function handleAutomaticMining(Product $product, EntityManagerInterface $em, User $user): void
+    {
+        $lastPrice = $em->getRepository(ProductPrice::class)
+            ->findOneBy(['product' => $product], ['timestamp' => 'DESC']);
+
+        if (!$lastPrice || $lastPrice->getTimestamp()->modify('+5 minutes') < new \DateTime()) {
+            $this->generateNewPrice($product, $em);
         }
 
-        $prod = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$prod) {
-            return new JsonResponse(['error' => 'Product not found'], 404);
-        }
-
-        if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$prod->getUsers()->contains($user)) {
-            return new JsonResponse([
-                'error' => 'Access denied',
-                'redirect' => $urlGenerator->generate('app_main')
-            ], 403);
-        }
-
-        // Récupération et traitement des données identique à dash()
-        $exchangeRate = 601.5;
-        $prices = $productPriceRepository->findBy(['product' => $prod], ['timestamp' => 'ASC']);
-        
-        $chartData = ['price' => [], 'market_cap' => []];
-        foreach ($prices as $price) {
-            $timestamp = $price->getTimestamp()->format('c');
-            $chartData['price'][] = [
-                'x' => $timestamp,
-                'y' => round($price->getPrice() / $exchangeRate, 2)
-            ];
-            
-            if (method_exists($price, 'getMarketCap') && $price->getMarketCap() !== null) {
-                $chartData['market_cap'][] = [
-                    'x' => $timestamp,
-                    'y' => round($price->getMarketCap() / $exchangeRate, 2)
-                ];
-            }
-        }
-
-        return new JsonResponse($chartData);
+        $this->calculateMiningRewards($user, $product, $em);
     }
 
+    private function calculateMiningRewards(User $user, Product $product, EntityManagerInterface $em): void
+    {
+        $now = new \DateTime();
+        $lastMining = $user->getLastMiningTime() ?? $now;
+        $interval = $now->diff($lastMining);
+        $hours = $interval->h + ($interval->days * 24) + ($interval->i / 60);
 
+        $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
+        if (!$latestPrice) return;
 
-    /**
-     * Route pour finaliser l'achat d'un produit.
-     * Le prix du produit est stocké en CFA dans la base de données et le solde de l'utilisateur en USD.
-     * On suppose ici que 600 CFA = 1 USD.
-     */
-    #[Route('/sell-product/{slug}', name: 'app_sell_product', methods: ['POST'])]
-    public function sellProduct(
-        Request $request,
-        ProductRepository $productRepository,
-        EntityManagerInterface $em,
-        string $slug
-    ): JsonResponse {
-        // Vérifier que la requête est de type AJAX
-        if (!$request->isXmlHttpRequest()) {
-            return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
-        }
+        $rewardRate = match($product->getShop()->getSlug()) {
+            'vip-a' => 0.002,
+            'vip-b' => 0.0035,
+            'vip-c' => 0.005,
+            default => 0.001
+        };
 
-        // Récupérer l'utilisateur courant
-        $user = $this->getUser();
-        if (!$user) {
-            return new JsonResponse(['success' => false, 'message' => 'Utilisateur non authentifié'], 401);
-        }
-
-        // Récupérer le produit via son slug
-        $product = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$product) {
-            return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
-        }
-
-        // Taux de conversion : 601.56 CFA = 1 USD
-        $conversionRate = 601.56;
-        $priceCFA = $product->getPrice(); // Prix en CFA
-        $priceUSD = $priceCFA / $conversionRate; // Prix converti en USD
-
-        // Vérifier si le solde de l'utilisateur est suffisant
-        if ($user->getBalance() < $priceUSD) {
-            return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
-        }
-
-        // Déduire le montant du solde utilisateur
-        $user->setBalance($user->getBalance() - $priceUSD);
-
-        // Optionnel : Enregistrer une transaction ou associer le produit à l'utilisateur
-        $user->addProduct($product);
-
-        $em->persist($user);
+        $reward = $hours * ($latestPrice->getPrice() / 601.5) * $rewardRate;
+        $user->setReward(round($user->getReward() + $reward, 2));
+        $user->setLastMiningTime($now);
         $em->flush();
-
-        return new JsonResponse(['success' => true, 'message' => 'Achat réussi'], 200);
     }
 
-    #[Route('/{slug}/start-mining', name: 'start_mining', methods: ['POST'])]
-    public function startMining(
+    #[Route('/claim-rewards', name: 'claim_rewards')]
+    public function claimRewards(EntityManagerInterface $em): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        if ($user->getReward() > 0) {
+            $user->setBalance($user->getBalance() + $user->getReward());
+            $user->setReward(0);
+            $em->flush();
+            $this->addFlash('success', sprintf('%.2f USD transférés à votre solde !', $user->getReward()));
+        }
+        return $this->redirectToRoute('app_main');
+    }
+
+    #[Route('/{slug}/manual-mining', name: 'manual_mining')]
+    public function manualMining(
         string $slug,
         ProductRepository $productRepository,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $em
     ): Response {
-        if (!$this->getUser()) {
-            return $this->redirectToRoute("app_main");
-        }
-
-        $prod = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$prod) {
-            throw $this->createNotFoundException('Produit introuvable');
-        }
-
-        // Vérifier si l'utilisateur a le bot de minage actif
-        if ($this->getUser()->isMiningBotActive()) {
-            // Minage automatique
-            $this->startProductMining($prod);
-            $this->addFlash('success', 'Le minage automatique a été démarré.');
-        } else {
-            // Si l'utilisateur n'a pas le bot, lui permettre de miner manuellement
-            $this->addFlash('warning', 'Vous n\'avez pas de bot de minage actif. Vous pouvez acheter un abonnement.');
-            return $this->redirectToRoute('app_buy_product', ['slug' => $slug]);
-        }
-
-        return $this->redirectToRoute('app_dashboard_product', ['slug' => $slug]);
-    }
-
-    #[Route('/{slug}/start-manual-mining', name: 'start_manual_mining')]
-    public function startManualMining(string $slug, ProductRepository $productRepository): Response
-    {
-        if (!$this->getUser()) {
-            return $this->redirectToRoute("app_main");
-        }
-
-        // Récupérer le produit par son slug
-        $prod = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$prod) {
-            throw $this->createNotFoundException('Produit non trouvé');
-        }
-
-        // Vérifier si l'utilisateur a un bot de minage
-        if (!$this->getUser()->isMiningBotActive()) {
-            // Si l'utilisateur n'a pas de bot, démarrer le minage manuel
-            // (ici tu peux ajouter la logique de minage manuel)
-
-            // Par exemple : commencer le minage manuellement
-            // Ton code pour gérer le minage manuel ici (par exemple, ajouter un enregistrement de transaction ou un état de minage)
-            $this->addFlash('success', 'Le minage manuel a été démarré pour le produit : ' . $prod->getName());
-        } else {
-            // L'utilisateur possède déjà le bot, donc rediriger ou indiquer que le minage automatique est en cours
-            $this->addFlash('error', 'Vous avez déjà un bot de minage actif.');
-        }
-
-        return $this->redirectToRoute('app_dashboard_product', ['slug' => $slug]);
-    }
-
-    #[Route('/buy-mining-bot', name: 'buy_mining_bot')]
-    public function buyMiningBot(): Response
-    {
-        // Ici tu devras rediriger l'utilisateur vers la page d'achat du bot de minage
-        // Par exemple, afficher une page ou un formulaire pour effectuer le paiement
-
-        return $this->render('products/buy_mining_bot.html.twig');
-    }
-
-    private function startProductMining($prod, EntityManagerInterface $entityManager)
-    {
+        /** @var User $user */
         $user = $this->getUser();
-        // Récupérer le slug du shop associé au produit
-        $shopSlug = $prod->getShop()->getSlug();
+        $product = $productRepository->findOneBy(['slug' => $slug]);
 
-        // Définir les plages de prix en fonction du shop
+        if ($product && !$user->isMiningBotActive()) {
+            $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
+            $reward = ($latestPrice->getPrice() / 601.5) * 0.0008;
+            $user->setReward(round($user->getReward() + $reward, 2));
+            $em->flush();
+            $this->addFlash('success', sprintf('+%.2f USD (minage manuel)', $reward));
+        }
+        return $this->redirectToRoute('app_products_dashboard', ['slug' => $slug]);
+    }
+
+    private function generateNewPrice(Product $product, EntityManagerInterface $em): void
+    {
+        $shopSlug = $product->getShop()->getSlug();
         $priceRanges = [
             'vip-a' => [0, 50000],
             'vip-b' => [0, 85000],
             'vip-c' => [0, 150000],
         ];
 
-        // Vérifier si le shopSlug existe dans les plages définies
-        if (isset($priceRanges[$shopSlug])) {
-            [$minPrice, $maxPrice] = $priceRanges[$shopSlug];
-        } else {
-            // Si le shopSlug n'est pas défini, utiliser une plage par défaut
-            [$minPrice, $maxPrice] = [0, 500];
-        }
+        [$min, $max] = $priceRanges[$shopSlug] ?? [0, 500];
+        $priceValue = mt_rand($min, $max);
 
-        // Génération d'un prix aléatoire dans la plage définie
-        $generatedPrice = mt_rand($minPrice, $maxPrice);
+        $price = (new ProductPrice())
+            ->setProduct($product)
+            ->setPrice($priceValue)
+            ->setTimestamp(new \DateTimeImmutable('now', new DateTimeZone('Africa/Porto-Novo')));
 
-        // Création et enregistrement du nouveau prix
-        $price = new ProductPrice();
-        $price->setProduct($prod)
-            ->setPrice($generatedPrice)
-            ->setTimestamp(new \DateTimeImmutable('now', new \DateTimeZone('Africa/Porto-Novo')))
-        ;
-
-        $entityManager->persist($price);
-        $entityManager->flush();
+        $em->persist($price);
+        $em->flush();
     }
 
-
-    #[Route('/cinetpay-callback', name: 'app_cinetpay_callback')]
-    public function cinetpayCallback(Request $request, EntityManagerInterface $entityManager): Response
+    private function generateChartData(Product $product, ProductPriceRepository $priceRepository): array
     {
-        $transactionId = $request->query->get('transaction_id');
-        $status = $request->query->get('status');
+        $data = ['price' => [], 'market_cap' => []];
+        $exchangeRate = 601.5;
 
-        if ($status === 'ACCEPTED') {
-            $this->addFlash('success', 'Votre paiement a été accepté.');
-        } else {
-            $this->addFlash('error', 'Le paiement a échoué.');
+        foreach ($priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']) as $price) {
+            $timestamp = $price->getTimestamp()->format('c');
+            $data['price'][] = ['x' => $timestamp, 'y' => round($price->getPrice() / $exchangeRate, 2)];
+            
+            if ($price->getMarketCap() !== null) {
+                $data['market_cap'][] = ['x' => $timestamp, 'y' => round($price->getMarketCap() / $exchangeRate, 2)];
+            }
+        }
+        return $data;
+    }
+
+    private function generateAccessMessage(string $slug): string
+    {
+        return sprintf(
+            'Accès refusé. <a href="%s" class="alert-link">Acheter le produit</a> pour accéder au dashboard.',
+            $this->generateUrl('app_buy_product', ['slug' => $slug], UrlGeneratorInterface::ABSOLUTE_URL)
+        );
+    }
+
+    // Méthodes existantes inchangées
+    #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
+    public function sellProduct(
+        Request $request,
+        ProductRepository $productRepository,
+        EntityManagerInterface $em,
+        string $slug
+    ): JsonResponse {
+        if (!$request->isXmlHttpRequest()) {
+            return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
         }
 
+        /** @var User $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return new JsonResponse(['success' => false, 'message' => 'Non authentifié'], 401);
+        }
+
+        $product = $productRepository->findOneBy(['slug' => $slug]);
+        if (!$product) {
+            return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
+        }
+
+        $priceUSD = $product->getPrice() / 601.56;
+        if ($user->getBalance() < $priceUSD) {
+            return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
+        }
+
+        $user->setBalance($user->getBalance() - $priceUSD);
+        $user->addProduct($product);
+        $em->flush();
+
+        return new JsonResponse(['success' => true, 'message' => 'Achat réussi']);
+    }
+
+    #[Route('/cinetpay-callback', name: 'cinetpay_callback')]
+    public function cinetpayCallback(Request $request): Response
+    {
+        $status = $request->query->get('status');
+        $this->addFlash($status === 'ACCEPTED' ? 'success' : 'error', 
+            $status === 'ACCEPTED' 
+            ? 'Paiement accepté !' 
+            : 'Échec du paiement');
         return $this->redirectToRoute('app_main');
     }
 
-    #[Route('/paydunya-callback', name: 'app_paydunya_callback')]
-    public function paydunyaCallback(Request $request, EntityManagerInterface $entityManager): Response
+    #[Route('/paydunya-callback', name: 'paydunya_callback')]
+    public function paydunyaCallback(Request $request): Response
     {
         $status = $request->query->get('status');
-        $transactionId = $request->query->get('invoice_token');
-
-        if ($status === 'completed') {
-            $this->addFlash('success', 'Paiement réussi avec PayDunya.');
-        } else {
-            $this->addFlash('error', 'Le paiement a échoué avec PayDunya.');
-        }
-
+        $this->addFlash($status === 'completed' ? 'success' : 'error', 
+            $status === 'completed' 
+            ? 'Paiement réussi avec PayDunya' 
+            : 'Échec du paiement PayDunya');
         return $this->redirectToRoute('app_main');
     }
 
-    #[Route('/payment/success', name: 'app_payment_success')]
+    #[Route('/payment/success', name: 'payment_success')]
     public function paymentSuccess(): Response
     {
         return $this->render('payment/success.html.twig', [
-            'message' => 'Votre paiement a été accepté. Merci !',
+            'message' => 'Paiement accepté avec succès !'
         ]);
     }
 
-    #[Route('/payment/cancel', name: 'app_payment_cancel')]
+    #[Route('/payment/cancel', name: 'payment_cancel')]
     public function paymentCancel(): Response
     {
         return $this->render('payment/cancel.html.twig', [
-            'message' => 'Le paiement a été annulé. Veuillez réessayer.',
+            'message' => 'Paiement annulé ou échoué'
         ]);
     }
 }

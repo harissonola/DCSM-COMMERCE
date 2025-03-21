@@ -5,253 +5,342 @@
 {% endblock %}
 
 {% block body %}
-    <div class="container settings-container py-5">
-        <nav class="nav nav-pills settings-nav mb-5">
-            <a class="nav-link" href="{{ path('app_dashboard') }}">
-                <i class="bi bi-speedometer2 me-2"></i>Tableau de bord
-            </a>
-            <a class="nav-link active" href="{{ path('app_user_settings') }}">
-                <i class="bi bi-gear-fill me-2"></i>Paramètres
-            </a>
-            <a class="nav-link" href="#">
-                <i class="bi bi-headset me-2"></i>Support
-            </a>
-        </nav>
+    <div class="settings-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="settings-sidebar">
+            <div class="sidebar-header">
+                <h3>Paramètres</h3>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ path('app_dashboard') }}" class="nav-item">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Tableau de bord</span>
+                </a>
+                <a href="{{ path('app_user_settings') }}" class="nav-item active">
+                    <i class="bi bi-gear"></i>
+                    <span>Paramètres</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="bi bi-headset"></i>
+                    <span>Support</span>
+                </a>
+            </nav>
+        </aside>
 
-        <div class="row g-4">
-            <!-- Colonne de gauche - Avatar -->
-            <div class="col-lg-4">
-                <div class="card profile-card shadow-lg">
-                    <div class="card-body text-center">
-                        <div class="avatar-upload">
-                            <div class="avatar-preview">
-                                <img id="profileImage" src="{{ app.user.photo }}" 
-                                     class="rounded-circle hover-zoom" 
-                                     alt="Avatar"
-                                     data-bs-toggle="tooltip" 
-                                     title="Cliquez pour changer">
-                                <label class="avatar-edit">
-                                    <input type="file" name="avatarUpload" 
-                                           id="avatarUpload" 
-                                           accept="image/*" 
-                                           class="d-none"
-                                           onchange="previewImage(event)">
-                                    <i class="bi bi-camera-fill"></i>
-                                </label>
-                            </div>
+        <!-- Main Content -->
+        <main class="settings-content">
+            <!-- Profile Section -->
+            <section class="profile-section">
+                <div class="profile-header">
+                    <h2>Profil</h2>
+                    <p>Gérez vos informations personnelles et vos préférences.</p>
+                </div>
+
+                <div class="profile-grid">
+                    <!-- Avatar Upload -->
+                    <div class="avatar-card">
+                        <div class="avatar-preview">
+                            <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
+                            <label for="avatarUpload" class="avatar-edit">
+                                <i class="bi bi-camera"></i>
+                                <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" onchange="previewImage(event)">
+                            </label>
                         </div>
-                        <h3 class="mt-4 mb-0 fw-bold">{{ app.user.fname }}</h3>
-                        <p class="text-muted">{{ app.user.email }}</p>
-                        <small class="text-success">
-                            <i class="bi bi-patch-check-fill"></i> Compte vérifié
-                        </small>
+                        <button type="submit" class="btn-save">Mettre à jour</button>
                     </div>
-                </div>
-            </div>
 
-            <!-- Colonne de droite - Formulaires -->
-            <div class="col-lg-8">
-                <!-- Carte Informations personnelles -->
-                <div class="card settings-card mb-4 shadow-lg">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Informations personnelles</h5>
-                    </div>
-                    <div class="card-body">
-                        <form class="needs-validation" novalidate>
-                            <div class="form-floating mb-3">
-                                <input type="text" class="form-control" 
-                                       id="username" name="username"
-                                       value="{{ app.user.username }}" required>
-                                <label for="username">Nom d'utilisateur</label>
-                                <div class="invalid-feedback">
-                                    Veuillez saisir un nom d'utilisateur valide
-                                </div>
-                            </div>
-                            <div class="form-floating mb-3">
-                                <input type="email" class="form-control" 
-                                       id="email" name="email"
-                                       value="{{ app.user.email }}" required>
-                                <label for="email">Adresse email</label>
-                                <div class="invalid-feedback">
-                                    Veuillez saisir une adresse email valide
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100 py-2">
-                                <i class="bi bi-save-fill me-2"></i>Sauvegarder
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Carte Sécurité -->
-                <div class="card settings-card mb-4 shadow-lg">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Sécurité du compte</h5>
-                    </div>
-                    <div class="card-body">
-                        <form class="needs-validation" novalidate>
-                            <div class="form-floating mb-3">
-                                <input type="password" class="form-control" 
-                                       id="currentPassword" required>
-                                <label for="currentPassword">Mot de passe actuel</label>
-                            </div>
-                            <div class="form-floating mb-3">
-                                <input type="password" class="form-control" 
-                                       id="newPassword" required>
-                                <label for="newPassword">Nouveau mot de passe</label>
-                            </div>
-                            <div class="form-floating mb-3">
-                                <input type="password" class="form-control" 
-                                       id="confirmPassword" required>
-                                <label for="confirmPassword">Confirmation</label>
-                            </div>
-                            <button type="submit" class="btn btn-warning w-100 py-2">
-                                <i class="bi bi-key-fill me-2"></i>Changer le mot de passe
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Carte Notifications -->
-                <div class="card settings-card shadow-lg">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-bell-fill me-2"></i>Préférences de notifications</h5>
-                    </div>
-                    <div class="card-body">
+                    <!-- Personal Info Form -->
+                    <div class="form-card">
+                        <h4>Informations personnelles</h4>
                         <form>
-                            <div class="form-check form-switch mb-3">
-                                <input class="form-check-input" type="checkbox" 
-                                       id="emailNotifications" 
-                                       {% if app.user.emailNotifications %}checked{% endif %}>
-                                <label class="form-check-label" for="emailNotifications">
-                                    Notifications par email
-                                </label>
+                            <div class="form-group">
+                                <label for="username">Nom d'utilisateur</label>
+                                <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
                             </div>
-                            <div class="form-check form-switch mb-3">
-                                <input class="form-check-input" type="checkbox" id="pushNotifications">
-                                <label class="form-check-label" for="pushNotifications">
-                                    Notifications push
-                                </label>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" name="email" value="{{ app.user.email }}" required>
                             </div>
-                            <button type="submit" class="btn btn-info text-white w-100 py-2">
-                                <i class="bi bi-check-circle-fill me-2"></i>Enregistrer
-                            </button>
+                            <button type="submit" class="btn-save">Sauvegarder</button>
                         </form>
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
+
+            <!-- Security Section -->
+            <section class="security-section">
+                <h4>Sécurité du compte</h4>
+                <div class="form-card">
+                    <form>
+                        <div class="form-group">
+                            <label for="currentPassword">Mot de passe actuel</label>
+                            <input type="password" id="currentPassword" name="currentPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">Nouveau mot de passe</label>
+                            <input type="password" id="newPassword" name="newPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirmer le mot de passe</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+                        <button type="submit" class="btn-save">Changer le mot de passe</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Notifications Section -->
+            <section class="notifications-section">
+                <h4>Préférences de notifications</h4>
+                <div class="form-card">
+                    <form>
+                        <div class="form-group toggle-group">
+                            <label>Notifications par email</label>
+                            <label class="switch">
+                                <input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="form-group toggle-group">
+                            <label>Notifications push</label>
+                            <label class="switch">
+                                <input type="checkbox" name="pushNotifications">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-save">Enregistrer</button>
+                    </form>
+                </div>
+            </section>
+        </main>
     </div>
 
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --hover-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            --primary-color: #6366f1;
+            --primary-hover: #4f46e5;
+            --background-light: #f9fafb;
+            --border-color: #e5e7eb;
+            --text-color: #374151;
         }
 
         body {
-            background: #f8f9fa;
-            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-light);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
         }
 
-        .settings-container {
-            max-width: 1400px;
-            animation: fadeIn 0.5s ease-in;
+        .settings-wrapper {
+            display: flex;
+            min-height: 100vh;
         }
 
-        .settings-nav .nav-link {
-            border-radius: 50px;
-            margin: 0 10px;
-            padding: 12px 25px;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
+        .settings-sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
         }
 
-        .settings-nav .nav-link.active {
-            background: var(--primary-gradient);
-            border-color: rgba(255,255,255,0.2);
-            box-shadow: var(--hover-shadow);
-            transform: translateY(-2px);
+        .sidebar-header h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
         }
 
-        .settings-card {
-            border-radius: 20px;
-            border: none;
-            transition: transform 0.3s ease;
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
-        .settings-card:hover {
-            transform: translateY(-5px);
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: var(--text-color);
+            text-decoration: none;
+            transition: all 0.2s ease;
         }
 
-        .profile-card {
-            position: sticky;
-            top: 20px;
-            overflow: hidden;
-            border-radius: 20px;
+        .nav-item:hover {
+            background: var(--background-light);
         }
 
-        .avatar-upload {
-            position: relative;
-            margin: 0 auto 20px;
+        .nav-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .settings-content {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .profile-section, .security-section, .notifications-section {
+            margin-bottom: 2rem;
+        }
+
+        .profile-header h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-header p {
+            color: #6b7280;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .avatar-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
         }
 
         .avatar-preview {
+            position: relative;
             width: 150px;
             height: 150px;
+            margin: 0 auto 1rem;
             border-radius: 50%;
-            margin: 0 auto;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            overflow: hidden;
         }
 
-        .avatar-preview:hover {
-            transform: scale(1.05);
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .avatar-edit {
             position: absolute;
-            right: 10px;
             bottom: 10px;
-            background: #fff;
-            width: 40px;
-            height: 40px;
+            right: 10px;
+            background: white;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             cursor: pointer;
         }
 
-        .hover-zoom {
-            transition: transform 0.3s ease;
+        .form-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
-        .hover-zoom:hover {
-            transform: scale(1.05);
+        .form-group {
+            margin-bottom: 1.5rem;
         }
 
-        .form-floating > label {
-            padding: 1rem 1.25rem;
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .btn-save {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-save:hover {
+            background: var(--primary-hover);
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #e5e7eb;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        input:checked + .slider {
+            background: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
         }
 
         @media (max-width: 768px) {
-            .settings-nav .nav-link {
-                margin: 5px 0;
-                width: 100%;
-                text-align: center;
+            .settings-wrapper {
+                flex-direction: column;
             }
-            
-            .profile-card {
-                position: static;
-                margin-bottom: 2rem;
+
+            .settings-sidebar {
+                width: 100%;
+                box-shadow: none;
+                padding: 1rem;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -264,9 +353,5 @@
             };
             reader.readAsDataURL(event.target.files[0]);
         }
-
-        // Initialisation des tooltips Bootstrap
-        const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        tooltips.forEach(t => new bootstrap.Tooltip(t));
     </script>
 {% endblock %}

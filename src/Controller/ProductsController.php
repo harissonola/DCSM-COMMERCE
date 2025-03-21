@@ -52,7 +52,7 @@ class ProductsController extends AbstractController
         }
 
         return $this->render('products/dash.html.twig', [
-            'product' => $product,
+            'prod' => $product,
             'chartData' => $this->generateChartData($product, $priceRepository),
             'reward' => $user->getReward()
         ]);

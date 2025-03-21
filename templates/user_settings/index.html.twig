@@ -30,7 +30,7 @@
         <!-- Main Content -->
         <main class="settings-content">
             <!-- Profile Section -->
-            <section class="profile-section">
+            <section class="profile-section" id="profile-section">
                 <div class="profile-header">
                     <h2>Profil</h2>
                     <p>Gérez vos informations personnelles et vos préférences.</p>
@@ -39,79 +39,87 @@
                 <div class="profile-grid">
                     <!-- Avatar Upload -->
                     <div class="avatar-card">
-                        <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data">
-                            <div class="avatar-preview">
-                                <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
-                                <label class="avatar-edit">
-                                    <i class="bi bi-camera"></i>
-                                    <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" class="hidden-input">
-                                </label>
-                            </div>
-                            <button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
-                        </form>
+                        <turbo-frame id="avatar-frame">
+                            <form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
+                                <div class="avatar-preview">
+                                    <img src="{{ app.user.photo }}" alt="Avatar" id="profileImage">
+                                    <label class="avatar-edit">
+                                        <i class="bi bi-camera"></i>
+                                        <input type="file" id="avatarUpload" name="avatarUpload" accept="image/*" class="hidden-input">
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
+                            </form>
+                        </turbo-frame>
                     </div>
 
                     <!-- Personal Info Form -->
                     <div class="form-card">
                         <h4>Informations personnelles</h4>
-                        <form>
-                            <div class="form-group">
-                                <label for="username">Nom d'utilisateur</label>
-                                <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="email">Email</label>
-                                <input type="email" id="email" name="email" value="{{ app.user.email }}" required>
-                            </div>
-                            <button type="submit" class="btn-save">Sauvegarder</button>
-                        </form>
+                        <turbo-frame id="personal-info-frame">
+                            <form action="{{ path('app_user_personal_info_update') }}" method="POST" data-turbo-method="post">
+                                <div class="form-group">
+                                    <label for="username">Nom d'utilisateur</label>
+                                    <input type="text" id="username" name="username" value="{{ app.user.username }}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="email">Email</label>
+                                    <input type="email" id="email" name="email" value="{{ app.user.email }}" required>
+                                </div>
+                                <button type="submit" class="btn-save">Sauvegarder</button>
+                            </form>
+                        </turbo-frame>
                     </div>
                 </div>
             </section>
 
             <!-- Security Section -->
-            <section class="security-section">
+            <section class="security-section" id="security-section">
                 <h4>Sécurité du compte</h4>
                 <div class="form-card">
-                    <form>
-                        <div class="form-group">
-                            <label for="currentPassword">Mot de passe actuel</label>
-                            <input type="password" id="currentPassword" name="currentPassword" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">Nouveau mot de passe</label>
-                            <input type="password" id="newPassword" name="newPassword" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmPassword">Confirmer le mot de passe</label>
-                            <input type="password" id="confirmPassword" name="confirmPassword" required>
-                        </div>
-                        <button type="submit" class="btn-save">Changer le mot de passe</button>
-                    </form>
+                    <turbo-frame id="security-frame">
+                        <form action="{{ path('app_user_password_update') }}" method="POST" data-turbo-method="post">
+                            <div class="form-group">
+                                <label for="currentPassword">Mot de passe actuel</label>
+                                <input type="password" id="currentPassword" name="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">Nouveau mot de passe</label>
+                                <input type="password" id="newPassword" name="newPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirmer le mot de passe</label>
+                                <input type="password" id="confirmPassword" name="confirmPassword" required>
+                            </div>
+                            <button type="submit" class="btn-save">Changer le mot de passe</button>
+                        </form>
+                    </turbo-frame>
                 </div>
             </section>
 
             <!-- Notifications Section -->
-            <section class="notifications-section">
+            <section class="notifications-section" id="notifications-section">
                 <h4>Préférences de notifications</h4>
                 <div class="form-card">
-                    <form>
-                        <div class="form-group toggle-group">
-                            <label>Notifications par email</label>
-                            <label class="switch">
-                                <input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %}checked{% endif %}>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="form-group toggle-group">
-                            <label>Notifications push</label>
-                            <label class="switch">
-                                <input type="checkbox" name="pushNotifications">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <button type="submit" class="btn-save">Enregistrer</button>
-                    </form>
+                    <turbo-frame id="notifications-frame">
+                        <form action="{{ path('app_user_notifications_update') }}" method="POST" data-turbo-method="post">
+                            <div class="form-group toggle-group">
+                                <label>Notifications par email</label>
+                                <label class="switch">
+                                    <input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="form-group toggle-group">
+                                <label>Notifications push</label>
+                                <label class="switch">
+                                    <input type="checkbox" name="pushNotifications">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <button type="submit" class="btn-save">Enregistrer</button>
+                        </form>
+                    </turbo-frame>
                 </div>
             </section>
         </main>
@@ -355,6 +363,34 @@
             transform: translateX(24px);
         }
 
+        /* Feedback styles pour Turbo */
+        .turbo-progress-bar {
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+
+        .form-success-flash {
+            background-color: #10b981;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-error-flash {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         @media (max-width: 768px) {
             .settings-wrapper {
                 flex-direction: column;
@@ -376,6 +412,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const avatarInput = document.getElementById('avatarUpload');
             const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
+            const avatarForm = document.getElementById('avatarForm');
             
             avatarInput.addEventListener('change', function(e) {
                 if (this.files && this.files[0]) {
@@ -387,6 +424,58 @@
                     reader.readAsDataURL(this.files[0]);
                 }
             });
+
+            // Ajout de la gestion des notifications Turbo
+            document.addEventListener('turbo:submit-start', () => {
+                // Affiche un indicateur de chargement
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.id = 'loading-indicator';
+                loadingIndicator.innerText = 'Chargement...';
+                loadingIndicator.style.position = 'fixed';
+                loadingIndicator.style.top = '1rem';
+                loadingIndicator.style.right = '1rem';
+                loadingIndicator.style.background = 'var(--primary-color)';
+                loadingIndicator.style.color = 'white';
+                loadingIndicator.style.padding = '0.5rem 1rem';
+                loadingIndicator.style.borderRadius = '0.5rem';
+                document.body.appendChild(loadingIndicator);
+            });
+
+            document.addEventListener('turbo:submit-end', () => {
+                // Supprime l'indicateur de chargement
+                const loadingIndicator = document.getElementById('loading-indicator');
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+            });
+
+            // Formulaire de téléchargement d'avatar avec Turbo
+            if (avatarForm) {
+                avatarForm.addEventListener('submit', function(e) {
+                    if (avatarInput.files.length === 0) {
+                        e.preventDefault();
+                        return;
+                    }
+                });
+            }
+        });
+
+        // Écouteurs d'événements pour les réponses Turbo
+        document.addEventListener('turbo:frame-render', (event) => {
+            const frame = event.target;
+            
+            // Réinitialise les formulaires après soumission réussie
+            if (frame.querySelector('.form-success-flash')) {
+                setTimeout(() => {
+                    const successFlash = frame.querySelector('.form-success-flash');
+                    if (successFlash) {
+                        successFlash.style.opacity = '0';
+                        setTimeout(() => {
+                            successFlash.remove();
+                        }, 300);
+                    }
+                }, 3000);
+            }
         });
     </script>
 {% endblock %}

@@ -10,7 +10,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 final class UserSettingsController extends AbstractController
 {
@@ -47,19 +46,19 @@ final class UserSettingsController extends AbstractController
             $errors = [];
             $updatedFields = [];
 
-            // Mise à jour username avec validation
+            // Mise à jour username
             $this->handleUsernameUpdate($request, $user, $errors, $updatedFields);
 
-            // Mise à jour email avec validation
+            // Mise à jour email
             $this->handleEmailUpdate($request, $user, $errors, $updatedFields);
 
-            // Gestion avatar avec VichUploader
-            $this->handleAvatarUpload($request, $user, $errors, $updatedFields);
+            // Gestion avatar
+            $this->handleAvatarUpload($request, $user, $updatedFields);
 
-            // Mise à jour mot de passe avec validation
+            // Mise à jour mot de passe
             $this->handlePasswordUpdate($request, $user, $passwordHasher, $errors, $updatedFields);
 
-            // Mise à jour des préférences
+            // Notifications
             $this->handleNotifications($request, $user, $updatedFields);
 
             if (!empty($errors)) {
@@ -74,6 +73,7 @@ final class UserSettingsController extends AbstractController
                 'photo' => $user->getPhoto(),
                 'updatedFields' => array_unique($updatedFields)
             ]);
+
         } catch (\Exception $e) {
             return $this->jsonExceptionResponse($e, $errors ?? []);
         }
@@ -105,41 +105,12 @@ final class UserSettingsController extends AbstractController
         }
     }
 
-    private function handleAvatarUpload(Request $request, User $user, array &$errors, array &$updatedFields): void
+    private function handleAvatarUpload(Request $request, User $user, array &$updatedFields): void
     {
-        $avatarFile = $request->files->get('avatar');
-        if (!$avatarFile) return;
-
-        $allowedMimeTypes = [
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-            'image/svg+xml',
-            'image/tiff',
-            'image/bmp'
-        ];
-
-        $mimeType = $avatarFile->getMimeType();
-        $fileInfo = getimagesize($avatarFile->getPathname());
-
-        // Validation MIME type
-        if (!$fileInfo || !in_array($mimeType, $allowedMimeTypes)) {
-            $errors['avatar'] = 'Format d\'image non supporté';
-            return;
+        if ($request->files->has('imageFile')) {
+            $user->setImageFile($request->files->get('imageFile'));
+            $updatedFields[] = 'photo';
         }
-
-        // Sécurité SVG
-        if ($mimeType === 'image/svg+xml') {
-            $svgContent = file_get_contents($avatarFile->getPathname());
-            if (preg_match('/<script/i', $svgContent)) {
-                $errors['avatar'] = 'SVG dangereux détecté';
-                return;
-            }
-        }
-
-        $user->setPhoto($avatarFile);
-        $updatedFields[] = 'avatar';
     }
 
     private function handlePasswordUpdate(

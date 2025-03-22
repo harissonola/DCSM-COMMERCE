@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -59,36 +58,11 @@ final class UserSettingsController extends AbstractController
 
             $entityManager->flush();
 
-            // Réponse adaptée pour Turbo
-            if ($request->headers->get('Turbo-Frame')) {
-                return $this->render('user_settings/index.html.twig', [
-                    'app' => ['user' => $user],
-                    'error' => null
-                ]);
-            }
-
-            return new JsonResponse([
-                'status' => 'success',
-                'message' => 'Mises à jour effectuées avec succès',
-                'photo' => $user->getPhoto(),
-                'updatedFields' => array_unique($updatedFields)
-            ]);
+            $this->addFlash('success', 'Mises à jour effectuées avec succès');
+            return $this->redirectToRoute('app_user_settings');
         } catch (\Exception $e) {
-            // Gestion des erreurs pour Turbo
-            if ($request->headers->get('Turbo-Frame')) {
-                $response = $this->render('user_settings/index.html.twig', [
-                    'app' => ['user' => $this->getUser()],
-                    'error' => $e->getMessage()
-                ]);
-                $response->setStatusCode($e->getCode() ?: 400);
-                return $response;
-            }
-
-            return new JsonResponse([
-                'status' => 'error',
-                'message' => $e->getMessage(),
-                'errors' => $errors ?? []
-            ], $e->getCode() ?: 400);
+            $this->addFlash('error', $e->getMessage());
+            return $this->redirectToRoute('app_user_settings');
         }
     }
 
@@ -122,7 +96,7 @@ final class UserSettingsController extends AbstractController
     {
         if ($request->files->has('imageFile')) {
             $file = $request->files->get('imageFile');
-            
+
             // Validation du fichier
             if (!$file->isValid()) {
                 $errors[] = 'Fichier invalide : ' . $file->getErrorMessage();

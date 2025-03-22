@@ -28,7 +28,7 @@ final class UserSettingsController extends AbstractController
         Request $request,
         EntityManagerInterface $entityManager,
         UserPasswordHasherInterface $passwordHasher
-    ): JsonResponse {
+    ): Response {
         try {
             /** @var User $user */
             $user = $this->getUser();
@@ -46,26 +46,26 @@ final class UserSettingsController extends AbstractController
             $errors = [];
             $updatedFields = [];
 
-            // Mise à jour username
+            // Gestion des mises à jour
             $this->handleUsernameUpdate($request, $user, $errors, $updatedFields);
-
-            // Mise à jour email
             $this->handleEmailUpdate($request, $user, $errors, $updatedFields);
-
-            // Gestion avatar
-            $this->handleAvatarUpload($request, $user, $updatedFields);
-
-            // Mise à jour mot de passe
+            $this->handleAvatarUpload($request, $user, $errors, $updatedFields);
             $this->handlePasswordUpdate($request, $user, $passwordHasher, $errors, $updatedFields);
-
-            // Notifications
             $this->handleNotifications($request, $user, $updatedFields);
 
             if (!empty($errors)) {
-                return $this->jsonErrorResponse($errors);
+                throw new \Exception(implode(', ', $errors), 422);
             }
 
             $entityManager->flush();
+
+            // Réponse adaptée pour Turbo
+            if ($request->headers->get('Turbo-Frame')) {
+                return $this->render('user_settings/index.html.twig', [
+                    'app' => ['user' => $user],
+                    'error' => null
+                ]);
+            }
 
             return new JsonResponse([
                 'status' => 'success',
@@ -75,7 +75,19 @@ final class UserSettingsController extends AbstractController
             ]);
 
         } catch (\Exception $e) {
-            return $this->jsonExceptionResponse($e, $errors ?? []);
+            // Gestion des erreurs pour Turbo
+            if ($request->headers->get('Turbo-Frame')) {
+                return $this->render('user_settings/index.html.twig', [
+                    'app' => ['user' => $this->getUser()],
+                    'error' => $e->getMessage()
+                ], new Response('', $e->getCode() ?: 400));
+            }
+
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'errors' => $errors ?? []
+            ], $e->getCode() ?: 400);
         }
     }
 
@@ -84,7 +96,7 @@ final class UserSettingsController extends AbstractController
         if ($request->request->has('username')) {
             $username = $request->request->get('username');
             if (empty($username)) {
-                $errors['username'] = 'Le nom d\'utilisateur ne peut pas être vide';
+                $errors[] = 'Le nom d\'utilisateur ne peut pas être vide';
             } else {
                 $user->setUsername($username);
                 $updatedFields[] = 'username';
@@ -97,7 +109,7 @@ final class UserSettingsController extends AbstractController
         if ($request->request->has('email')) {
             $email = $request->request->get('email');
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors['email'] = 'Adresse email invalide';
+                $errors[] = 'Adresse email invalide';
             } else {
                 $user->setEmail($email);
                 $updatedFields[] = 'email';
@@ -105,10 +117,29 @@ final class UserSettingsController extends AbstractController
         }
     }
 
-    private function handleAvatarUpload(Request $request, User $user, array &$updatedFields): void
+    private function handleAvatarUpload(Request $request, User $user, array &$errors, array &$updatedFields): void
     {
         if ($request->files->has('imageFile')) {
-            $user->setImageFile($request->files->get('imageFile'));
+            $file = $request->files->get('imageFile');
+            
+            // Validation du fichier
+            if (!$file->isValid()) {
+                $errors[] = 'Fichier invalide : ' . $file->getErrorMessage();
+                return;
+            }
+
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!in_array($file->getMimeType(), $allowedTypes)) {
+                $errors[] = 'Type de fichier non supporté (JPEG, PNG, GIF seulement)';
+                return;
+            }
+
+            if ($file->getSize() > 2 * 1024 * 1024) { // 2MB
+                $errors[] = 'Le fichier est trop volumineux (max 2MB)';
+                return;
+            }
+
+            $user->setImageFile($file);
             $updatedFields[] = 'photo';
         }
     }
@@ -127,11 +158,11 @@ final class UserSettingsController extends AbstractController
         $confirmPassword = $request->request->get('confirmPassword');
 
         if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
-            $errors['currentPassword'] = 'Mot de passe actuel incorrect';
+            $errors[] = 'Mot de passe actuel incorrect';
         }
 
         if ($newPassword !== $confirmPassword) {
-            $errors['confirmPassword'] = 'Les mots de passe ne correspondent pas';
+            $errors[] = 'Les mots de passe ne correspondent pas';
         }
 
         if (empty($errors)) {
@@ -146,23 +177,5 @@ final class UserSettingsController extends AbstractController
             $request->request->getBoolean('emailNotifications', false)
         );
         $updatedFields[] = 'notifications';
-    }
-
-    private function jsonErrorResponse(array $errors): JsonResponse
-    {
-        return new JsonResponse([
-            'status' => 'error',
-            'message' => 'Des erreurs de validation sont survenues',
-            'errors' => $errors
-        ], 400);
-    }
-
-    private function jsonExceptionResponse(\Exception $e, array $errors): JsonResponse
-    {
-        return new JsonResponse([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-            'errors' => $errors
-        ], $e->getCode() ?: 400);
     }
 }

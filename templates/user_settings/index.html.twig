@@ -276,10 +276,7 @@
 			grid-template-columns: 1fr;
 		}
 	}
-</style>
-{% endblock %}
-
-{% block body %}
+</style>{% endblock %}{% block body %}
 <div class="settings-wrapper" data-theme="dark">
 	<aside class="settings-sidebar">
 		<div class="sidebar-header">
@@ -307,7 +304,7 @@
 		<section class="profile-section" id="profile-section">
 			<div class="profile-grid">
 				<div class="avatar-card">
-					<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
+					<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data">
 						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 						<div class="avatar-preview">
 							{% if app.user.googleId and app.user.photo starts with 'http' %}
@@ -326,7 +323,7 @@
 
 				<div class="form-card">
 					<h4>Informations personnelles</h4>
-					<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+					<form action="{{ path('app_user_settings_update') }}" method="POST">
 						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 						<div class="form-group">
 							<label for="username">Nom d'utilisateur</label>
@@ -345,7 +342,7 @@
 		<section class="security-section" id="security-section">
 			<h4>Sécurité du compte</h4>
 			<div class="form-card">
-				<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+				<form action="{{ path('app_user_settings_update') }}" method="POST">
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 					<div class="form-group">
 						<label for="currentPassword">Mot de passe actuel</label>
@@ -367,7 +364,7 @@
 		<section class="notifications-section" id="notifications-section">
 			<h4>Préférences de notifications</h4>
 			<div class="form-card">
-				<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+				<form action="{{ path('app_user_settings_update') }}" method="POST">
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 					<div class="form-group toggle-group">
 						<label>Notifications par email</label>
@@ -390,7 +387,7 @@
 	</main>
 </div>
 
-<script>
+ <script>
     document.addEventListener('DOMContentLoaded', () => {
         const avatarInput = document.getElementById('avatarUpload');
         const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
@@ -411,12 +408,8 @@
             });
         }
     });
-</script>
-{% endblock %}
-
-{% block customScript %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-<script>
+</script>{% endblock %}{% block customScript %} <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+ <script>
     document.addEventListener('DOMContentLoaded', () => {
         toastr.options = {
             closeButton: true,
@@ -425,12 +418,11 @@
             preventDuplicates: true
         };
 
-        // Gestion des flash messages Symfony
+        // Affichage des messages flash via Toastr
         {% for type, messages in app.flashes %}
             {% for message in messages %}
                 toastr.{{ type }}("{{ message|e('js') }}");
             {% endfor %}
         {% endfor %}
     });
-</script>
-{% endblock %}
+</script>{% endblock %}

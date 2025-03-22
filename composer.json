@@ -63,6 +63,7 @@
         "twig/inky-extra": "^3.19",
         "twig/intl-extra": "^3.20",
         "twig/twig": "^2.12|^3.0",
+        "vich/uploader-bundle": "^2.5",
         "zenstruck/foundry": "^2.3"
     },
     "config": {

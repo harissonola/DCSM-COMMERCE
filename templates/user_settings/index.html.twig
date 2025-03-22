@@ -293,7 +293,7 @@
 		<section class="profile-section" id="profile-section">
 			<div class="profile-grid">
 				<div class="avatar-card">
-					<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data">
+					<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data">
 						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 						<div class="avatar-preview">
 							{% if app.user.googleId and app.user.photo starts with 'http' %}
@@ -312,7 +312,7 @@
 
 				<div class="form-card">
 					<h4>Informations personnelles</h4>
-					<form action="{{ path('app_user_settings_update') }}" method="POST">
+					<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST">
 						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 						<div class="form-group">
 							<label for="username">Nom d'utilisateur</label>
@@ -331,7 +331,7 @@
 		<section class="security-section" id="security-section">
 			<h4>Sécurité du compte</h4>
 			<div class="form-card">
-				<form action="{{ path('app_user_settings_update') }}" method="POST">
+				<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST">
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 					<div class="form-group">
 						<label for="currentPassword">Mot de passe actuel</label>
@@ -353,7 +353,7 @@
 		<section class="notifications-section" id="notifications-section">
 			<h4>Préférences de notifications</h4>
 			<div class="form-card">
-				<form action="{{ path('app_user_settings_update') }}" method="POST">
+				<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST">
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 					<div class="form-group toggle-group">
 						<label>Notifications par email</label>
@@ -414,7 +414,33 @@
 				timeOut: 3000
 			};
 
-			// Affichage des messages flash
+			// Interception de la soumission de tous les formulaires AJAX
+			document.querySelectorAll('form.ajaxForm').forEach(form => {
+				form.addEventListener('submit', function(e) {
+					e.preventDefault();
+
+					const formData = new FormData(form);
+					// Ajout du header pour que Symfony reconnaisse la requête comme AJAX
+					fetch(form.action, {
+						method: 'POST',
+						body: formData,
+						headers: { 'X-Requested-With': 'XMLHttpRequest' }
+					})
+					.then(response => response.json())
+					.then(data => {
+						if (data.success) {
+							toastr.success(data.message);
+						} else {
+							toastr.error(data.message);
+						}
+					})
+					.catch(error => {
+						toastr.error("Erreur lors de la requête AJAX.");
+					});
+				});
+			});
+
+			// Affichage des messages flash classiques en cas de navigation Turbo
 			{% for type, messages in app.flashes %}
 				{% for message in messages %}
 					toastr.{{ type }}("{{ message|e('js') }}");

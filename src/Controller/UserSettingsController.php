@@ -52,17 +52,20 @@ final class UserSettingsController extends AbstractController
             $this->handlePasswordUpdate($request, $user, $passwordHasher, $errors, $updatedFields);
             $this->handleNotifications($request, $user, $updatedFields);
 
+            // Si des erreurs ont été accumulées
             if (!empty($errors)) {
+                // On lève une exception pour la gérer dans le catch
                 throw new \Exception(implode(', ', $errors), 422);
             }
 
+            // Enregistrement en base
             $entityManager->flush();
 
-            $this->addFlash('success', 'Mises à jour effectuées avec succès');
-            return $this->redirectToRoute('app_user_settings');
+            // Si tout va bien
+            return $this->handleSuccessResponse($request, 'Mises à jour effectuées avec succès');
         } catch (\Exception $e) {
-            $this->addFlash('error', $e->getMessage());
-            return $this->redirectToRoute('app_user_settings');
+            // Si on a une erreur
+            return $this->handleErrorResponse($request, $e);
         }
     }
 
@@ -126,7 +129,11 @@ final class UserSettingsController extends AbstractController
         array &$errors,
         array &$updatedFields
     ): void {
-        if (!$request->request->has('currentPassword')) return;
+        // On vérifie s'il y a un champ currentPassword pour savoir si l'utilisateur
+        // veut changer le mot de passe
+        if (!$request->request->has('currentPassword')) {
+            return;
+        }
 
         $currentPassword = $request->request->get('currentPassword');
         $newPassword = $request->request->get('newPassword');
@@ -152,5 +159,45 @@ final class UserSettingsController extends AbstractController
             $request->request->getBoolean('emailNotifications', false)
         );
         $updatedFields[] = 'notifications';
+    }
+
+    /**
+     * Gère la réponse en cas de succès :
+     * - Si requête AJAX => JSON
+     * - Sinon => addFlash() + redirect
+     */
+    private function handleSuccessResponse(Request $request, string $message): Response
+    {
+        if ($request->isXmlHttpRequest()) {
+            // Requête AJAX => JSON
+            return $this->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        }
+
+        // Requête classique => flash + redirection
+        $this->addFlash('success', $message);
+        return $this->redirectToRoute('app_user_settings');
+    }
+
+    /**
+     * Gère la réponse en cas d'erreur :
+     * - Si requête AJAX => JSON
+     * - Sinon => addFlash() + redirect
+     */
+    private function handleErrorResponse(Request $request, \Exception $exception): Response
+    {
+        if ($request->isXmlHttpRequest()) {
+            // Requête AJAX => JSON
+            return $this->json([
+                'success' => false,
+                'message' => $exception->getMessage()
+            ], ($exception->getCode() > 0 ? $exception->getCode() : 400));
+        }
+
+        // Requête classique => flash + redirection
+        $this->addFlash('error', $exception->getMessage());
+        return $this->redirectToRoute('app_user_settings');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -47,7 +48,7 @@ final class UserSettingsController extends AbstractController
                 throw new \Exception('Utilisateur non authentifié.', 401);
             }
 
-            // Vérification du token CSRF
+            // Vérification CSRF
             $submittedToken = $request->request->get('_csrf_token');
             if (!$this->isCsrfTokenValid('update_settings', $submittedToken)) {
                 throw new \Exception('Token CSRF invalide.');
@@ -56,7 +57,7 @@ final class UserSettingsController extends AbstractController
             $errors = [];
             $updatedFields = [];
 
-            // Mise à jour des informations de profil
+            // Mise à jour username
             if ($request->request->has('username')) {
                 $username = $request->request->get('username');
                 if (empty($username)) {
@@ -67,6 +68,7 @@ final class UserSettingsController extends AbstractController
                 }
             }
 
+            // Mise à jour email
             if ($request->request->has('email')) {
                 $email = $request->request->get('email');
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -77,7 +79,7 @@ final class UserSettingsController extends AbstractController
                 }
             }
 
-            // Gestion de l'avatar avec vérifications
+            // Gestion avatar
             $avatarFile = $request->files->get('avatar');
             if ($avatarFile) {
                 $allowedMimeTypes = [
@@ -93,13 +95,12 @@ final class UserSettingsController extends AbstractController
                 $mimeType = $avatarFile->getMimeType();
                 $fileInfo = getimagesize($avatarFile->getPathname());
 
-                // Vérification du type MIME
+                // Validation MIME type
                 if (!$fileInfo || !in_array($mimeType, $allowedMimeTypes)) {
-                    $errors['avatar'] = 'Format d\'image non supporté. Formats acceptés : ' . 
-                        'JPEG, PNG, GIF, WebP, BMP, TIFF, SVG';
+                    $errors['avatar'] = 'Format d\'image non supporté. Formats acceptés : JPEG, PNG, GIF, WebP, BMP, TIFF, SVG';
                 }
 
-                // Vérification supplémentaire pour les SVG
+                // Sécurité SVG
                 if ($mimeType === 'image/svg+xml') {
                     $svgContent = file_get_contents($avatarFile->getPathname());
                     if (preg_match('/<script/i', $svgContent)) {
@@ -112,14 +113,34 @@ final class UserSettingsController extends AbstractController
                         mkdir($this->uploadDirectory, 0775, true);
                     }
 
-                    $newFilename = $slugger->slug($user->getUsername()) . '-' . uniqid() . '.' . $avatarFile->guessExtension();
-                    $avatarFile->move($this->uploadDirectory, $newFilename);
-                    $user->setPhoto($newFilename);
-                    $updatedFields[] = 'avatar';
+                    $newFilename = $slugger->slug($user->getUsername())
+                        . '-' . uniqid() . '.' . $avatarFile->guessExtension();
+
+                    try {
+                        // Déplacement nouvelle image
+                        $avatarFile->move($this->uploadDirectory, $newFilename);
+
+                        // Suppression ancienne image
+                        $oldPhoto = $user->getPhoto();
+                        if ($oldPhoto && !str_contains($oldPhoto, 'default')) {
+                            $oldFilename = basename($oldPhoto);
+                            $oldFilePath = $this->uploadDirectory . '/' . $oldFilename;
+                            
+                            if (file_exists($oldFilePath) && is_writable($oldFilePath)) {
+                                unlink($oldFilePath);
+                            }
+                        }
+
+                        // Mise à jour chemin
+                        $user->setPhoto('/users/img/' . $newFilename);
+                        $updatedFields[] = 'avatar';
+                    } catch (FileException $e) {
+                        $errors['avatar'] = 'Erreur lors de l\'enregistrement de l\'image';
+                    }
                 }
             }
 
-            // Mise à jour du mot de passe
+            // Mise à jour mot de passe
             if ($request->request->has('currentPassword')) {
                 $currentPassword = $request->request->get('currentPassword');
                 $newPassword = $request->request->get('newPassword');
@@ -159,7 +180,7 @@ final class UserSettingsController extends AbstractController
                 'status' => 'success',
                 'message' => 'Mises à jour effectuées avec succès',
                 'photo' => $user->getPhoto(),
-                'updatedFields' => $updatedFields
+                'updatedFields' => array_unique($updatedFields)
             ]);
 
         } catch (\Exception $e) {
@@ -167,7 +188,7 @@ final class UserSettingsController extends AbstractController
                 'status' => 'error',
                 'message' => $e->getMessage(),
                 'errors' => $errors ?? []
-            ], 400);
+            ], $e->getCode() ?: 400);
         }
     }
 }

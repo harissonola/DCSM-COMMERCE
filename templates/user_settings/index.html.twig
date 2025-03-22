@@ -276,7 +276,10 @@
 			grid-template-columns: 1fr;
 		}
 	}
-</style>{% endblock %}{% block body %}
+</style>
+{% endblock %}
+
+{% block body %}
 <div class="settings-wrapper" data-theme="dark">
 	<aside class="settings-sidebar">
 		<div class="sidebar-header">
@@ -304,41 +307,37 @@
 		<section class="profile-section" id="profile-section">
 			<div class="profile-grid">
 				<div class="avatar-card">
-					<turbo-frame id="avatar-frame">
-						<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
-							<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
-							<div class="avatar-preview">
-								{% if app.user.googleId and app.user.photo starts with 'http' %}
-									<img src="{{ app.user.photo }}" class="profile-avatar">
-								{% else %}
-									<img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage">
-								{% endif %}
-								<label class="avatar-edit">
-									<i class="bi bi-camera"></i>
-									<input type="file" id="avatarUpload" name="imageFile" accept="image/*" class="hidden-input">
-								</label>
-							</div>
-							<button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
-						</form>
-					</turbo-frame>
+					<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
+						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
+						<div class="avatar-preview">
+							{% if app.user.googleId and app.user.photo starts with 'http' %}
+								<img src="{{ app.user.photo }}" class="profile-avatar">
+							{% else %}
+								<img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage">
+							{% endif %}
+							<label class="avatar-edit">
+								<i class="bi bi-camera"></i>
+								<input type="file" id="avatarUpload" name="imageFile" accept="image/*" class="hidden-input">
+							</label>
+						</div>
+						<button type="submit" class="btn-save hidden" id="avatarUpdateBtn">Mettre à jour</button>
+					</form>
 				</div>
 
 				<div class="form-card">
 					<h4>Informations personnelles</h4>
-					<turbo-frame id="personal-info-frame">
-						<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
-							<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
-							<div class="form-group">
-								<label for="username">Nom d'utilisateur</label>
-								<input type="text" id="username" name="username" value="{{ app.user.username }}" required>
-							</div>
-							<div class="form-group">
-								<label for="email">Email</label>
-								<input type="email" id="email" name="email" value="{{ app.user.email }}" required>
-							</div>
-							<button type="submit" class="btn-save">Sauvegarder</button>
-						</form>
-					</turbo-frame>
+					<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
+						<div class="form-group">
+							<label for="username">Nom d'utilisateur</label>
+							<input type="text" id="username" name="username" value="{{ app.user.username }}" required>
+						</div>
+						<div class="form-group">
+							<label for="email">Email</label>
+							<input type="email" id="email" name="email" value="{{ app.user.email }}" required>
+						</div>
+						<button type="submit" class="btn-save">Sauvegarder</button>
+					</form>
 				</div>
 			</div>
 		</section>
@@ -346,130 +345,92 @@
 		<section class="security-section" id="security-section">
 			<h4>Sécurité du compte</h4>
 			<div class="form-card">
-				<turbo-frame id="security-frame">
-					<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
-						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
-						<div class="form-group">
-							<label for="currentPassword">Mot de passe actuel</label>
-							<input type="password" id="currentPassword" name="currentPassword" required>
-						</div>
-						<div class="form-group">
-							<label for="newPassword">Nouveau mot de passe</label>
-							<input type="password" id="newPassword" name="newPassword" required>
-						</div>
-						<div class="form-group">
-							<label for="confirmPassword">Confirmer le mot de passe</label>
-							<input type="password" id="confirmPassword" name="confirmPassword" required>
-						</div>
-						<button type="submit" class="btn-save">Changer le mot de passe</button>
-					</form>
-				</turbo-frame>
+				<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
+					<div class="form-group">
+						<label for="currentPassword">Mot de passe actuel</label>
+						<input type="password" id="currentPassword" name="currentPassword" required>
+					</div>
+					<div class="form-group">
+						<label for="newPassword">Nouveau mot de passe</label>
+						<input type="password" id="newPassword" name="newPassword" required>
+					</div>
+					<div class="form-group">
+						<label for="confirmPassword">Confirmer le mot de passe</label>
+						<input type="password" id="confirmPassword" name="confirmPassword" required>
+					</div>
+					<button type="submit" class="btn-save">Changer le mot de passe</button>
+				</form>
 			</div>
 		</section>
 
 		<section class="notifications-section" id="notifications-section">
 			<h4>Préférences de notifications</h4>
 			<div class="form-card">
-				<turbo-frame id="notifications-frame">
-					<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
-						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
-						<div class="form-group toggle-group">
-							<label>Notifications par email</label>
-							<label class="switch">
-								<input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %} checked {% endif %}>
-								<span class="slider"></span>
-							</label>
-						</div>
-						<div class="form-group toggle-group">
-							<label>Notifications push</label>
-							<label class="switch">
-								<input type="checkbox" name="pushNotifications">
-								<span class="slider"></span>
-							</label>
-						</div>
-						<button type="submit" class="btn-save">Enregistrer</button>
-					</form>
-				</turbo-frame>
+				<form action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
+					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
+					<div class="form-group toggle-group">
+						<label>Notifications par email</label>
+						<label class="switch">
+							<input type="checkbox" name="emailNotifications" {% if app.user.emailNotifications %} checked {% endif %}>
+							<span class="slider"></span>
+						</label>
+					</div>
+					<div class="form-group toggle-group">
+						<label>Notifications push</label>
+						<label class="switch">
+							<input type="checkbox" name="pushNotifications">
+							<span class="slider"></span>
+						</label>
+					</div>
+					<button type="submit" class="btn-save">Enregistrer</button>
+				</form>
 			</div>
 		</section>
 	</main>
 </div>
 
- <script>
-        document.addEventListener('turbo:load', () => {
-            const avatarInput = document.getElementById('avatarUpload');
-            const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const avatarInput = document.getElementById('avatarUpload');
+        const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
 
-            // Gestion du changement d'avatar
-            avatarInput?.addEventListener('change', function(e) {
-                if (this.files?.[0]) {
+        // Gestion du changement d'avatar
+        if (avatarInput) {
+            avatarInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         document.getElementById('profileImage').src = e.target.result;
-                        avatarUpdateBtn?.classList.remove('hidden');
+                        if (avatarUpdateBtn) {
+                            avatarUpdateBtn.classList.remove('hidden');
+                        }
                     };
                     reader.readAsDataURL(this.files[0]);
                 }
             });
-
-            // Gestion des réponses
-            document.addEventListener('turbo:submit-end', async (event) => {
-                const fetchResponse = event.detail.fetchResponse;
-                if (!fetchResponse?.response) return;
-
-                try {
-                    const response = await fetchResponse.response;
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        toastr.success(data.message);
-                        if (data.photo) {
-                            document.getElementById('profileImage').src = data.photo;
-                            avatarUpdateBtn?.classList.add('hidden');
-                        }
-                    } else if (data.status === 'error') {
-                        this.handleFormErrors(data.errors);
-                    }
-                } catch (error) {
-                    toastr.error('Une erreur inattendue est survenue');
-                }
-            });
-
-            // Gestion centralisée des erreurs
-            function handleFormErrors(errors) {
-                document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
-
-                Object.entries(errors).forEach(([field, messages]) => {
-                    const input = document.getElementById(field);
-                    if (input) {
-                        input.classList.add('is-invalid');
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = Array.isArray(messages) ? messages.join(', ') : messages;
-                        input.parentNode.appendChild(errorDiv);
-                    }
-                });
-            }
-        });
-    </script>
+        }
+    });
+</script>
 {% endblock %}
-{% block customScript %} <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
- <script>
-        document.addEventListener('turbo:load', () => {
-            toastr.options = {
-                closeButton: true,
-                progressBar: true,
-                positionClass: 'toast-top-right',
-                preventDuplicates: true
-            };
 
-            // Gestion des flash messages Symfony
-            {% for type, messages in app.flashes %}
-                {% for message in messages %}
-                    toastr.{{ type }}("{{ message|e('js') }}");
-                {% endfor %}
+{% block customScript %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            preventDuplicates: true
+        };
+
+        // Gestion des flash messages Symfony
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                toastr.{{ type }}("{{ message|e('js') }}");
             {% endfor %}
-        });
-    </script>
+        {% endfor %}
+    });
+</script>
 {% endblock %}

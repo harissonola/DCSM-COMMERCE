@@ -309,7 +309,7 @@
                                 {% if app.user.googleId and app.user.photo starts with 'http' %}
                                     <img src="{{ app.user.photo }}" class="profile-avatar">
                                 {% else %}
-                                    <img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage">
+                                    <img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" class="profile-avatar" id="profileImage">
                                 {% endif %}
 								<label class="avatar-edit">
 									<i class="bi bi-camera"></i>

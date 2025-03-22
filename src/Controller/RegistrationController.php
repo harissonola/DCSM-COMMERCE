@@ -3,213 +3,192 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Form\RegistrationFormType;
-use App\Security\AppAuthenticator;
-use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
-class RegistrationController extends AbstractController
+final class UserSettingsController extends AbstractController
 {
-    private EmailVerifier $emailVerifier;
+    private string $uploadDirectory;
 
-    public function __construct(EmailVerifier $emailVerifier)
+    public function __construct(ParameterBagInterface $params)
     {
-        $this->emailVerifier = $emailVerifier;
+        $this->uploadDirectory = $params->get('users_img_directory');
     }
 
-    #[Route('/register', name: 'app_register')]
-    public function register(
+    #[Route('/user/settings', name: 'app_user_settings')]
+    public function index(): Response
+    {
+        if (!$this->getUser()) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        return $this->render('user_settings/index.html.twig');
+    }
+
+    #[Route('/user/settings/update', name: 'app_user_settings_update', methods: ['POST'])]
+    public function update(
         Request $request,
-        UserPasswordHasherInterface $userPasswordHasher,
-        Security $security,
         EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer
-    ): Response {
-        if ($this->getUser()) {
-            return $this->redirectToRoute('app_dashboard');
-        }
-
-        $user = new User();
-        $form = $this->createForm(RegistrationFormType::class, $user);
-
-        $referredBy = $request->query->get('ref');
-        if ($referredBy) {
-            $form->get('referredBy')->setData($referredBy);
-        }
-
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $plainPassword = $form->get('plainPassword')->getData();
-            $confirmPassword = $form->get('confirmPassword')->getData();
-
-            if ($plainPassword !== $confirmPassword) {
-                $form->addError(new FormError('Les mots de passe ne correspondent pas.'));
-            } else {
-                $referralCode = uniqid('ref_');
-                $user->setReferralCode($referralCode);
-
-                $referredBy = $form->get('referredBy')->getData();
-                if ($referredBy) {
-                    $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
-                    if ($referrer) {
-                        $user->setReferredBy($referredBy);
-                    }
-                }
-
-                $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
-                $user->setCreatedAt(new \DateTimeImmutable())
-                    ->setMiningBotActive(0);
-
-                $image = $form->get('photo')->getData();
-                if ($image) {
-                    $newFilename = uniqid() . '.' . $image->guessExtension();
-                    try {
-                        $image->move($this->getParameter('users_img_directory'), $newFilename);
-                    } catch (FileException $e) {
-                        $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
-                        return $this->redirectToRoute('app_register');
-                    }
-                    $user->setPhoto($newFilename);
-                } else {
-                    $user->setPhoto("/users/img/"."default" . rand(1, 7) . ".jpg");
-                }
-
-                $entityManager->persist($user);
-                $entityManager->flush();
-
-                // Générer le lien de référence
-                $referralLink = $urlGenerator->generate(
-                    'app_register',
-                    ['ref' => $referralCode],
-                    UrlGeneratorInterface::ABSOLUTE_URL
-                );
-                $qrCode = new QrCode($referralLink);
-                $writer = new PngWriter();
-                $qrResult = $writer->write($qrCode);
-
-                $qrCodeDirectory = $this->getParameter('qr_code_directory');
-                if (!is_dir($qrCodeDirectory)) {
-                    mkdir($qrCodeDirectory, 0755, true);
-                }
-                $qrCodeFileName = $referralCode . '.png';
-                $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
-                file_put_contents($filePath, $qrResult->getString());
-
-                $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
-                $user->setQrCodePath($publicQrCodeUrl);
-                $entityManager->flush();
-
-                // Envoi de l'email de confirmation
-                $this->emailVerifier->sendEmailConfirmation(
-                    'app_verify_email',
-                    $user,
-                    (new TemplatedEmail())
-                        ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                        ->to((string) $user->getEmail())
-                        ->subject('Confirmer votre adresse mail')
-                        ->htmlTemplate('registration/confirmation_email.html.twig')
-                );
-
-                // Envoi du lien de référence avec QR Code
-                $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
-
-                // Connecter l'utilisateur après l'inscription
-                return $security->login($user, AppAuthenticator::class, 'main');
-            }
-        }
-
-        return $this->render('registration/register.html.twig', [
-            'registrationForm' => $form->createView(),
-        ]);
-    }
-
-    #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyEmail(Request $request): Response
-    {
-        $user = $this->getUser();
-
-        if (!$user) {
-            // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
-            return $this->redirectToRoute('app_main');
-        }
-
+        UserPasswordHasherInterface $passwordHasher,
+        SluggerInterface $slugger
+    ): JsonResponse {
         try {
-            // Valider et gérer la confirmation de l'email
-            $this->emailVerifier->handleEmailConfirmation($request, $user);
+            /** @var User $user */
+            $user = $this->getUser();
+            
+            if (!$user) {
+                throw new \Exception('Utilisateur non authentifié.', 401);
+            }
 
-            // Afficher un message de succès
-            $this->addFlash('success', 'Votre adresse email a été confirmée avec succès.');
+            // Vérification CSRF
+            $submittedToken = $request->request->get('_csrf_token');
+            if (!$this->isCsrfTokenValid('update_settings', $submittedToken)) {
+                throw new \Exception('Token CSRF invalide.');
+            }
 
-            return $this->redirectToRoute('app_dashboard');
-        } catch (VerifyEmailExceptionInterface $exception) {
-            // Gérer les erreurs de validation de l'email
-            $this->addFlash('error', 'L\'adresse email n\'est pas valide.');
+            $errors = [];
+            $updatedFields = [];
 
-            return $this->redirectToRoute('app_main');
-        }
-    }
+            // Mise à jour username
+            if ($request->request->has('username')) {
+                $username = $request->request->get('username');
+                if (empty($username)) {
+                    $errors['username'] = 'Le nom d\'utilisateur ne peut pas être vide';
+                } else {
+                    $user->setUsername($username);
+                    $updatedFields[] = 'username';
+                }
+            }
 
-    #[Route('/verify/email/resend', name: 'app_verify_email_send')]
-    public function resendEmailConfirmation(MailerInterface $mailer): Response
-    {
-        $user = $this->getUser();
+            // Mise à jour email
+            if ($request->request->has('email')) {
+                $email = $request->request->get('email');
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $errors['email'] = 'Adresse email invalide';
+                } else {
+                    $user->setEmail($email);
+                    $updatedFields[] = 'email';
+                }
+            }
 
-        if (!$user) {
-            // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
-            return $this->redirectToRoute('app_main');
-        }
+            // Gestion avatar
+            $avatarFile = $request->files->get('avatar');
+            if ($avatarFile) {
+                $allowedMimeTypes = [
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp',
+                    'image/svg+xml',
+                    'image/tiff',
+                    'image/bmp'
+                ];
 
-        // Vérifie si l'utilisateur a déjà confirmé son email
-        if ($user->isVerified()) {
-            $this->addFlash('info', 'Votre email est déjà confirmé.');
-            return $this->redirectToRoute('app_dashboard');
-        }
+                $mimeType = $avatarFile->getMimeType();
+                $fileInfo = getimagesize($avatarFile->getPathname());
 
-        // Envoie l'email de confirmation
-        $this->emailVerifier->sendEmailConfirmation(
-            'app_verify_email',
-            $user,
-            (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                ->to((string) $user->getEmail())
-                ->subject('Confirmer votre adresse mail')
-                ->htmlTemplate('registration/confirmation_email.html.twig')
-        );
+                // Validation MIME type
+                if (!$fileInfo || !in_array($mimeType, $allowedMimeTypes)) {
+                    $errors['avatar'] = 'Format d\'image non supporté. Formats acceptés : JPEG, PNG, GIF, WebP, BMP, TIFF, SVG';
+                }
 
-        $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé à votre adresse email.');
+                // Sécurité SVG
+                if ($mimeType === 'image/svg+xml') {
+                    $svgContent = file_get_contents($avatarFile->getPathname());
+                    if (preg_match('/<script/i', $svgContent)) {
+                        $errors['avatar'] = 'Les SVG contenant des scripts ne sont pas autorisés';
+                    }
+                }
 
-        return $this->redirectToRoute('app_dashboard');
-    }
+                if (!isset($errors['avatar'])) {
+                    if (!is_dir($this->uploadDirectory)) {
+                        mkdir($this->uploadDirectory, 0775, true);
+                    }
 
-    private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
-    {
-        $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-            ->to($user->getEmail())
-            ->subject('Votre lien d\'affiliation et QR Code')
-            ->htmlTemplate('emails/referral_email.html.twig')
-            ->context([
-                'user' => $user,
-                'referralLink' => $referralLink,
-                'qrCodePath' => $qrCodePath,
+                    $newFilename = $slugger->slug($user->getUsername())
+                        . '-' . uniqid() . '.' . $avatarFile->guessExtension();
+
+                    try {
+                        // Déplacement nouvelle image
+                        $avatarFile->move($this->uploadDirectory, $newFilename);
+
+                        // Suppression ancienne image
+                        $oldPhoto = $user->getPhoto();
+                        if ($oldPhoto && !str_contains($oldPhoto, 'default')) {
+                            $oldFilename = basename($oldPhoto);
+                            $oldFilePath = $this->uploadDirectory . '/' . $oldFilename;
+                            
+                            if (file_exists($oldFilePath) && is_writable($oldFilePath)) {
+                                unlink($oldFilePath);
+                            }
+                        }
+
+                        // Mise à jour chemin
+                        $user->setPhoto('/users/img/' . $newFilename);
+                        $updatedFields[] = 'avatar';
+                    } catch (FileException $e) {
+                        $errors['avatar'] = 'Erreur lors de l\'enregistrement de l\'image';
+                    }
+                }
+            }
+
+            // Mise à jour mot de passe
+            if ($request->request->has('currentPassword')) {
+                $currentPassword = $request->request->get('currentPassword');
+                $newPassword = $request->request->get('newPassword');
+                $confirmPassword = $request->request->get('confirmPassword');
+
+                if (!$passwordHasher->isPasswordValid($user, $currentPassword)) {
+                    $errors['currentPassword'] = 'Mot de passe actuel incorrect';
+                }
+
+                if ($newPassword !== $confirmPassword) {
+                    $errors['confirmPassword'] = 'Les mots de passe ne correspondent pas';
+                }
+
+                if (empty($errors)) {
+                    $user->setPassword($passwordHasher->hashPassword($user, $newPassword));
+                    $updatedFields[] = 'password';
+                }
+            }
+
+            // Notifications
+            $user->setEmailNotifications(
+                $request->request->getBoolean('emailNotifications', false)
+            );
+            $updatedFields[] = 'notifications';
+
+            if (!empty($errors)) {
+                return new JsonResponse([
+                    'status' => 'error',
+                    'message' => 'Des erreurs de validation sont survenues',
+                    'errors' => $errors
+                ], 400);
+            }
+
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'status' => 'success',
+                'message' => 'Mises à jour effectuées avec succès',
+                'photo' => $user->getPhoto(),
+                'updatedFields' => array_unique($updatedFields)
             ]);
-        $mailer->send($email);
+
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'errors' => $errors ?? []
+            ], $e->getCode() ?: 400);
+        }
     }
 }

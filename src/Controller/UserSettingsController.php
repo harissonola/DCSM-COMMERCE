@@ -43,7 +43,7 @@ final class UserSettingsController extends AbstractController
         try {
             /** @var User $user */
             $user = $this->getUser();
-            
+
             if (!$user) {
                 throw new \Exception('Utilisateur non authentifié.', 401);
             }
@@ -125,7 +125,7 @@ final class UserSettingsController extends AbstractController
                         if ($oldPhoto && !str_contains($oldPhoto, 'default')) {
                             $oldFilename = basename($oldPhoto);
                             $oldFilePath = $this->uploadDirectory . '/' . $oldFilename;
-                            
+
                             if (file_exists($oldFilePath) && is_writable($oldFilePath)) {
                                 unlink($oldFilePath);
                             }
@@ -182,7 +182,6 @@ final class UserSettingsController extends AbstractController
                 'photo' => $user->getPhoto(),
                 'updatedFields' => array_unique($updatedFields)
             ]);
-
         } catch (\Exception $e) {
             return new JsonResponse([
                 'status' => 'error',

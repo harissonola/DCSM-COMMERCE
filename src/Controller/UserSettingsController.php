@@ -73,14 +73,15 @@ final class UserSettingsController extends AbstractController
                 'photo' => $user->getPhoto(),
                 'updatedFields' => array_unique($updatedFields)
             ]);
-
         } catch (\Exception $e) {
             // Gestion des erreurs pour Turbo
             if ($request->headers->get('Turbo-Frame')) {
-                return $this->render('user_settings/index.html.twig', [
+                $response = $this->render('user_settings/index.html.twig', [
                     'app' => ['user' => $this->getUser()],
                     'error' => $e->getMessage()
-                ], new Response('', $e->getCode() ?: 400));
+                ]);
+                $response->setStatusCode($e->getCode() ?: 400);
+                return $response;
             }
 
             return new JsonResponse([

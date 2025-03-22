@@ -297,7 +297,7 @@
 						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 						<div class="avatar-preview">
 							{% if app.user.googleId and app.user.photo starts with 'http' %}
-								<img src="{{ app.user.photo }}" class="profile-avatar">
+								<img src="{{ app.user.photo }}" class="profile-avatar" id="profileImage">
 							{% else %}
 								<img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage">
 							{% endif %}

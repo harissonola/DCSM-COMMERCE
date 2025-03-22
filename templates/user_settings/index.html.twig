@@ -306,7 +306,11 @@
 						<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
 							<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 							<div class="avatar-preview">
-								<img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage">
+                                {% if app.user.googleId and app.user.photo starts with 'http' %}
+                                    <img src="{{ app.user.photo }}" class="profile-avatar">
+                                {% else %}
+                                    <img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage">
+                                {% endif %}
 								<label class="avatar-edit">
 									<i class="bi bi-camera"></i>
 									<input type="file" id="avatarUpload" name="imageFile" accept="image/*" class="hidden-input">

@@ -11,12 +11,14 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
+use Vich\UploaderBundle\Mapping\Annotation as Vich;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
 #[UniqueEntity(fields: ['username'], message: "Ce nom d'utilisateur existe deja")]
 #[UniqueEntity(fields: ['email'], message: "Cette adresse mail existe deja")]
+#[Vich\Uploadable]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
@@ -117,6 +119,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $lastMiningTime = null;
+
+    #[Vich\UploadableField(mapping: 'user_photo', fileNameProperty: 'photo')]
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $imageFile = null;
 
     public function __construct()
     {
@@ -486,6 +492,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastMiningTime(?\DateTimeInterface $lastMiningTime): static
     {
         $this->lastMiningTime = $lastMiningTime;
+
+        return $this;
+    }
+
+    public function getImageFile(): ?string
+    {
+        return $this->imageFile;
+    }
+
+    public function setImageFile(?string $imageFile): static
+    {
+        $this->imageFile = $imageFile;
 
         return $this;
     }

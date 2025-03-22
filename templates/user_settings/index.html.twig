@@ -312,7 +312,7 @@
 
 				<div class="form-card">
 					<h4>Informations personnelles</h4>
-					<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST">
+					<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
 						<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 						<div class="form-group">
 							<label for="username">Nom d'utilisateur</label>
@@ -331,7 +331,7 @@
 		<section class="security-section" id="security-section">
 			<h4>Sécurité du compte</h4>
 			<div class="form-card">
-				<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST">
+				<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 					<div class="form-group">
 						<label for="currentPassword">Mot de passe actuel</label>
@@ -353,7 +353,7 @@
 		<section class="notifications-section" id="notifications-section">
 			<h4>Préférences de notifications</h4>
 			<div class="form-card">
-				<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST">
+				<form class="ajaxForm" action="{{ path('app_user_settings_update') }}" method="POST" data-turbo-method="post">
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 					<div class="form-group toggle-group">
 						<label>Notifications par email</label>

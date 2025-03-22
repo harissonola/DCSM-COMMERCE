@@ -306,11 +306,11 @@
 						<form id="avatarForm" action="{{ path('app_user_settings_update') }}" method="POST" enctype="multipart/form-data" data-turbo-method="post">
 							<input type="hidden" name="_csrf_token" value="{{ csrf_token('update_settings') }}">
 							<div class="avatar-preview">
-                                {% if app.user.googleId and app.user.photo starts with 'http' %}
-                                    <img src="{{ app.user.photo }}" class="profile-avatar">
-                                {% else %}
-                                    <img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" class="profile-avatar" id="profileImage">
-                                {% endif %}
+								{% if app.user.googleId and app.user.photo starts with 'http' %}
+									<img src="{{ app.user.photo }}" class="profile-avatar" id="profileImage">
+								{% else %}
+									<img src="{{ vich_uploader_asset(app.user, 'imageFile') }}" alt="Avatar" id="profileImage" class="profile-avatar">
+								{% endif %}
 								<label class="avatar-edit">
 									<i class="bi bi-camera"></i>
 									<input type="file" id="avatarUpload" name="imageFile" accept="image/*" class="hidden-input">
@@ -394,64 +394,69 @@
 </div>
 
  <script>
-        document.addEventListener('turbo:load', () => {
-            const avatarInput = document.getElementById('avatarUpload');
-            const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
-            const avatarForm = document.getElementById('avatarForm');
+    document.addEventListener('turbo:load', () => {
+        const avatarInput = document.getElementById('avatarUpload');
+        const avatarUpdateBtn = document.getElementById('avatarUpdateBtn');
 
-            // Gestion du changement d'avatar
-            avatarInput?.addEventListener('change', function(e) {
-                if (this.files?.[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        document.getElementById('profileImage').src = e.target.result;
+        // Gestion du changement d'avatar avec vérification null
+        avatarInput?.addEventListener('change', function(e) {
+            if (this.files?.[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const profileImage = document.getElementById('profileImage');
+                    if (profileImage) {
+                        profileImage.src = e.target.result;
                         avatarUpdateBtn?.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(this.files[0]);
-                }
-            });
-
-            // Gestion des réponses
-            document.addEventListener('turbo:submit-end', async (event) => {
-                const fetchResponse = event.detail.fetchResponse;
-                if (!fetchResponse?.response) return;
-
-                try {
-                    const response = await fetchResponse.response;
-                    const data = await response.json();
-
-                    if (data.status === 'success') {
-                        toastr.success(data.message);
-                        if (data.photo) {
-                            document.getElementById('profileImage').src = data.photo;
-                            avatarUpdateBtn?.classList.add('hidden');
-                        }
-                    } else if (data.status === 'error') {
-                        this.handleFormErrors(data.errors);
                     }
-                } catch (error) {
-                    toastr.error('Une erreur inattendue est survenue');
-                }
-            });
-
-            // Gestion centralisée des erreurs
-            function handleFormErrors(errors) {
-                document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-                document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
-
-                Object.entries(errors).forEach(([field, messages]) => {
-                    const input = document.getElementById(field);
-                    if (input) {
-                        input.classList.add('is-invalid');
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'invalid-feedback';
-                        errorDiv.textContent = Array.isArray(messages) ? messages.join(', ') : messages;
-                        input.parentNode.appendChild(errorDiv);
-                    }
-                });
+                };
+                reader.readAsDataURL(this.files[0]);
             }
         });
-    </script>{% endblock %}{% block customScript %} <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+        // Gestion des réponses
+        document.addEventListener('turbo:submit-end', async (event) => {
+            const fetchResponse = event.detail.fetchResponse;
+            if (!fetchResponse?.response) return;
+
+            try {
+                const response = await fetchResponse.response;
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    toastr.success(data.message);
+                    if (data.photo) {
+                        const profileImage = document.getElementById('profileImage');
+                        if (profileImage) {
+                            profileImage.src = data.photo;
+                            avatarUpdateBtn?.classList.add('hidden');
+                        }
+                    }
+                } else if (data.status === 'error') {
+                    handleFormErrors(data.errors);
+                }
+            } catch (error) {
+                toastr.error('Une erreur inattendue est survenue');
+            }
+        });
+
+        // Gestion des erreurs de formulaire
+        function handleFormErrors(errors) {
+            document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+
+            Object.entries(errors).forEach(([field, messages]) => {
+                const input = document.getElementById(field);
+                if (input) {
+                    input.classList.add('is-invalid');
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = Array.isArray(messages) ? messages.join(', ') : messages;
+                    input.parentNode.appendChild(errorDiv);
+                }
+            });
+        }
+    });
+</script>{% endblock %}{% block customScript %} <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
  <script>
         document.addEventListener('turbo:load', () => {
             toastr.options = {

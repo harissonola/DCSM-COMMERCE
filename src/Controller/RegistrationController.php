@@ -41,64 +41,71 @@ class RegistrationController extends AbstractController
         UrlGeneratorInterface $urlGenerator,
         MailerInterface $mailer
     ): Response {
+        // Redirige les utilisateurs déjà connectés vers le tableau de bord
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
 
+        // Création d'un nouvel utilisateur et du formulaire d'inscription
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
 
+        // Vérifie si un code de parrainage est présent dans l'URL
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
             $form->get('referredBy')->setData($referredBy);
         }
 
+        // Gestion de la soumission du formulaire
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Validation des mots de passe
             $plainPassword = $form->get('plainPassword')->getData();
             $confirmPassword = $form->get('confirmPassword')->getData();
 
             if ($plainPassword !== $confirmPassword) {
                 $form->addError(new FormError('Les mots de passe ne correspondent pas.'));
             } else {
+                // Génération d'un code de parrainage unique pour le nouvel utilisateur
                 $referralCode = uniqid('ref_');
                 $user->setReferralCode($referralCode);
 
+                // Gestion du parrainage
                 $referredBy = $form->get('referredBy')->getData();
-                $referrer = null;
-                
                 if ($referredBy) {
                     $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
                     if ($referrer) {
                         $user->setReferredBy($referredBy);
-                        
-                        // Mise à jour des informations de parrainage
+
+                        // Mise à jour des informations de parrainage pour le parrain
                         $referrer->setReferralCount($referrer->getReferralCount() + 1);
-                        $this->updateReferralRewards($referrer);
-                        $entityManager->persist($referrer);
+                        $this->updateReferrerRewards($referrer, $entityManager);
                     }
                 }
 
+                // Configuration des données de l'utilisateur
                 $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword))
                     ->setCreatedAt(new \DateTimeImmutable())
                     ->setMiningBotActive(0)
                     ->setBalance(0);
 
+                // Gestion de l'image de profil
                 $image = $form->get('photo')->getData();
                 if ($image) {
-                    $newFilename = uniqid().'.'.$image->guessExtension();
+                    $newFilename = uniqid() . '.' . $image->guessExtension();
                     try {
                         $image->move($this->getParameter('users_img_directory'), $newFilename);
                     } catch (FileException $e) {
                         $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
                         return $this->redirectToRoute('app_register');
                     }
-                    $user->setPhoto("/users/img/".$newFilename);
+                    $user->setPhoto("/users/img/" . $newFilename);
                 } else {
-                    $user->setPhoto("/users/img/"."default".rand(1,7).".jpg");
+                    $user->setPhoto("/users/img/default" . rand(1, 7) . ".jpg");
                 }
 
+                // Enregistrement de l'utilisateur en base de données
                 $entityManager->persist($user);
                 $entityManager->flush();
 
@@ -108,8 +115,8 @@ class RegistrationController extends AbstractController
                     ['ref' => $referralCode],
                     UrlGeneratorInterface::ABSOLUTE_URL
                 );
-                
-                // Génération du QR Code
+
+                // Génération du QR Code pour le lien de parrainage
                 $qrCode = new QrCode($referralLink);
                 $writer = new PngWriter();
                 $qrResult = $writer->write($qrCode);
@@ -118,15 +125,15 @@ class RegistrationController extends AbstractController
                 if (!is_dir($qrCodeDirectory)) {
                     mkdir($qrCodeDirectory, 0755, true);
                 }
-                $qrCodeFileName = $referralCode.'.png';
-                $filePath = $qrCodeDirectory.'/'.$qrCodeFileName;
+                $qrCodeFileName = $referralCode . '.png';
+                $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
                 file_put_contents($filePath, $qrResult->getString());
 
-                $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL).'uploads/user/'.$qrCodeFileName;
+                $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 
-                // Envoi de l'email de confirmation
+                // Envoi de l'e-mail de confirmation
                 $this->emailVerifier->sendEmailConfirmation(
                     'app_verify_email',
                     $user,
@@ -137,9 +144,10 @@ class RegistrationController extends AbstractController
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
-                // Envoi du lien de parrainage
+                // Envoi du lien de parrainage et du QR Code par e-mail
                 $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
 
+                // Connexion automatique après inscription
                 return $security->login($user, AppAuthenticator::class, 'main');
             }
         }
@@ -211,21 +219,24 @@ class RegistrationController extends AbstractController
         $mailer->send($email);
     }
 
-    private function updateReferralRewards(User $user): void
+    private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
     {
-        $count = $user->getReferralCount();
-        
+        $count = $referrer->getReferralCount();
+
+        // Attribution des récompenses en fonction du nombre de parrainages
         if ($count >= 40) {
-            $user->setReferralRewardRate(10.0);
-            if ($user->getReward() === null) {
-                $user->setReward(10.0);
-            }
+            $referrer->setReferralRewardRate(10.0);
+            $referrer->setBalance($referrer->getBalance() + 10); // Bonus de 10$
         } elseif ($count >= 20) {
-            $user->setReferralRewardRate(10.0);
+            $referrer->setReferralRewardRate(10.0);
         } elseif ($count >= 10) {
-            $user->setReferralRewardRate(7.0);
+            $referrer->setReferralRewardRate(7.0);
         } elseif ($count >= 5) {
-            $user->setReferralRewardRate(6.0);
+            $referrer->setReferralRewardRate(6.0);
         }
+
+        // Enregistrement des modifications
+        $entityManager->persist($referrer);
+        $entityManager->flush();
     }
 }

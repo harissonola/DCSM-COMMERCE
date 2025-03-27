@@ -23,10 +23,6 @@ services:
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }
-    
-    # Configuration automatique pour toutes les classes dans src/
-    App\Command\CalculateDailyRewards:
-        tags: ['console.command']
 
     # Autres services
     App\:

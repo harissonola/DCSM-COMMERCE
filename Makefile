@@ -7,7 +7,9 @@ install: vendor/autoload.php
 	php bin/console d:s:u -f
 	php bin/console asset-map:compile
 	composer dump-env prod
+	composer dump-autoload
 	php bin/console cache:clear
+
 
 vendor/autoload.php: composer.json composer.lock
 	composer install --no-dev --optimize-autoloader

@@ -66,20 +66,28 @@ class RegistrationController extends AbstractController
                 $user->setReferralCode($referralCode);
 
                 $referredBy = $form->get('referredBy')->getData();
+                $referrer = null;
+                
                 if ($referredBy) {
                     $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
                     if ($referrer) {
                         $user->setReferredBy($referredBy);
+                        
+                        // Mise à jour des informations de parrainage
+                        $referrer->setReferralCount($referrer->getReferralCount() + 1);
+                        $this->updateReferralRewards($referrer);
+                        $entityManager->persist($referrer);
                     }
                 }
 
-                $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
-                $user->setCreatedAt(new \DateTimeImmutable())
-                    ->setMiningBotActive(0);
+                $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword))
+                    ->setCreatedAt(new \DateTimeImmutable())
+                    ->setMiningBotActive(0)
+                    ->setBalance(0);
 
                 $image = $form->get('photo')->getData();
                 if ($image) {
-                    $newFilename = uniqid() . '.' . $image->guessExtension();
+                    $newFilename = uniqid().'.'.$image->guessExtension();
                     try {
                         $image->move($this->getParameter('users_img_directory'), $newFilename);
                     } catch (FileException $e) {
@@ -88,18 +96,20 @@ class RegistrationController extends AbstractController
                     }
                     $user->setPhoto("/users/img/".$newFilename);
                 } else {
-                    $user->setPhoto("/users/img/"."default" . rand(1, 7) . ".jpg");
+                    $user->setPhoto("/users/img/"."default".rand(1,7).".jpg");
                 }
 
                 $entityManager->persist($user);
                 $entityManager->flush();
 
-                // Générer le lien de référence
+                // Génération du lien de parrainage
                 $referralLink = $urlGenerator->generate(
                     'app_register',
                     ['ref' => $referralCode],
                     UrlGeneratorInterface::ABSOLUTE_URL
                 );
+                
+                // Génération du QR Code
                 $qrCode = new QrCode($referralLink);
                 $writer = new PngWriter();
                 $qrResult = $writer->write($qrCode);
@@ -108,11 +118,11 @@ class RegistrationController extends AbstractController
                 if (!is_dir($qrCodeDirectory)) {
                     mkdir($qrCodeDirectory, 0755, true);
                 }
-                $qrCodeFileName = $referralCode . '.png';
-                $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
+                $qrCodeFileName = $referralCode.'.png';
+                $filePath = $qrCodeDirectory.'/'.$qrCodeFileName;
                 file_put_contents($filePath, $qrResult->getString());
 
-                $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
+                $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL).'uploads/user/'.$qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 
@@ -127,10 +137,9 @@ class RegistrationController extends AbstractController
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
-                // Envoi du lien de référence avec QR Code
+                // Envoi du lien de parrainage
                 $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
 
-                // Connecter l'utilisateur après l'inscription
                 return $security->login($user, AppAuthenticator::class, 'main');
             }
         }
@@ -146,22 +155,15 @@ class RegistrationController extends AbstractController
         $user = $this->getUser();
 
         if (!$user) {
-            // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
             return $this->redirectToRoute('app_main');
         }
 
         try {
-            // Valider et gérer la confirmation de l'email
             $this->emailVerifier->handleEmailConfirmation($request, $user);
-
-            // Afficher un message de succès
             $this->addFlash('success', 'Votre adresse email a été confirmée avec succès.');
-
             return $this->redirectToRoute('app_dashboard');
         } catch (VerifyEmailExceptionInterface $exception) {
-            // Gérer les erreurs de validation de l'email
             $this->addFlash('error', 'L\'adresse email n\'est pas valide.');
-
             return $this->redirectToRoute('app_main');
         }
     }
@@ -172,17 +174,14 @@ class RegistrationController extends AbstractController
         $user = $this->getUser();
 
         if (!$user) {
-            // Si l'utilisateur n'est pas connecté, rediriger vers la page d'accueil
             return $this->redirectToRoute('app_main');
         }
 
-        // Vérifie si l'utilisateur a déjà confirmé son email
         if ($user->isVerified()) {
             $this->addFlash('info', 'Votre email est déjà confirmé.');
             return $this->redirectToRoute('app_dashboard');
         }
 
-        // Envoie l'email de confirmation
         $this->emailVerifier->sendEmailConfirmation(
             'app_verify_email',
             $user,
@@ -194,7 +193,6 @@ class RegistrationController extends AbstractController
         );
 
         $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé à votre adresse email.');
-
         return $this->redirectToRoute('app_dashboard');
     }
 
@@ -211,5 +209,23 @@ class RegistrationController extends AbstractController
                 'qrCodePath' => $qrCodePath,
             ]);
         $mailer->send($email);
+    }
+
+    private function updateReferralRewards(User $user): void
+    {
+        $count = $user->getReferralCount();
+        
+        if ($count >= 40) {
+            $user->setReferralRewardRate(10.0);
+            if ($user->getReward() === null) {
+                $user->setReward(10.0);
+            }
+        } elseif ($count >= 20) {
+            $user->setReferralRewardRate(10.0);
+        } elseif ($count >= 10) {
+            $user->setReferralRewardRate(7.0);
+        } elseif ($count >= 5) {
+            $user->setReferralRewardRate(6.0);
+        }
     }
 }

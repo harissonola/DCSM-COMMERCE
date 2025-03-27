@@ -11,7 +11,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class CalculateDailyRewards extends Command
 {
-    protected static $defaultName = 'app:calculate-daily-rewards'; // Nom de la commande
+    // Nom de la commande
+    protected static $defaultName = 'app:calculate-daily-rewards';
     protected static $defaultDescription = 'Calcule les récompenses quotidiennes des utilisateurs';
 
     private $entityManager;
@@ -31,7 +32,7 @@ class CalculateDailyRewards extends Command
             $totalReward = 0;
 
             // Calcul des intérêts quotidiens basés sur les produits achetés
-            foreach ($user->getProducts() as $product) {
+            foreach ($user->getProduct() as $product) {
                 $totalReward += $product->getPrice() * ($user->getReferralRewardRate() / 100);
             }
 

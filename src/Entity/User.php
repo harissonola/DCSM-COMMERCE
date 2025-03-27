@@ -124,6 +124,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $imageFile = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $referralCount = null;
+
+    #[ORM\Column]
+    private float $referralRewardRate = 0.4;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -504,6 +510,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setImageFile(?string $imageFile): static
     {
         $this->imageFile = $imageFile;
+
+        return $this;
+    }
+
+    public function getReferralCount(): ?int
+    {
+        return $this->referralCount;
+    }
+
+    public function setReferralCount(?int $referralCount): static
+    {
+        $this->referralCount = $referralCount;
+
+        return $this;
+    }
+
+    public function getReferralRewardRate(): ?float
+    {
+        return $this->referralRewardRate;
+    }
+
+    public function setReferralRewardRate(float $referralRewardRate): static
+    {
+        $this->referralRewardRate = $referralRewardRate;
 
         return $this;
     }

@@ -23,6 +23,9 @@ services:
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }
+    
+    App\Command\CalculateDailyRewards:
+        tags: ['console.command']
 
     # Autres services
     App\:

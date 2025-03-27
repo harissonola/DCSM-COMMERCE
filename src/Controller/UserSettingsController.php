@@ -51,6 +51,7 @@ final class UserSettingsController extends AbstractController
             $this->handleAvatarUpload($request, $user, $errors, $updatedFields);
             $this->handlePasswordUpdate($request, $user, $passwordHasher, $errors, $updatedFields);
             $this->handleNotifications($request, $user, $updatedFields);
+            $this->handleNameUpdate($request, $user, $errors, $updatedFields); // Ajout de la gestion des noms
 
             // Si des erreurs ont été accumulées
             if (!empty($errors)) {
@@ -159,6 +160,32 @@ final class UserSettingsController extends AbstractController
             $request->request->getBoolean('emailNotifications', false)
         );
         $updatedFields[] = 'notifications';
+    }
+
+    /**
+     * Gère la mise à jour du prénom (fname) et du nom (lname).
+     */
+    private function handleNameUpdate(Request $request, User $user, array &$errors, array &$updatedFields): void
+    {
+        if ($request->request->has('fname') || $request->request->has('lname')) {
+            $fname = $request->request->get('fname');
+            $lname = $request->request->get('lname');
+
+            if (empty($fname)) {
+                $errors[] = 'Le prénom ne peut pas être vide';
+            }
+
+            if (empty($lname)) {
+                $errors[] = 'Le nom ne peut pas être vide';
+            }
+
+            if (empty($errors)) {
+                $user->setFname($fname);
+                $user->setLname($lname);
+                $updatedFields[] = 'fname';
+                $updatedFields[] = 'lname';
+            }
+        }
     }
 
     /**

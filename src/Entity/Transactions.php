@@ -26,6 +26,12 @@ class Transactions
     #[ORM\Column(nullable: true)]
     private ?float $amount = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $ExternalId = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $status = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -75,6 +81,30 @@ class Transactions
     public function setAmount(?float $amount): static
     {
         $this->amount = $amount;
+
+        return $this;
+    }
+
+    public function getExternalId(): ?string
+    {
+        return $this->ExternalId;
+    }
+
+    public function setExternalId(?string $ExternalId): static
+    {
+        $this->ExternalId = $ExternalId;
+
+        return $this;
+    }
+
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
+
+    public function setStatus(?string $status): static
+    {
+        $this->status = $status;
 
         return $this;
     }

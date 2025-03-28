@@ -33,42 +33,59 @@ class CronController extends AbstractController
         try {
             $this->logger->info('Début mise à jour des prix');
             $products = $this->em->getRepository(Product::class)->findAll();
+            $updatedPrices = [];
 
             if (empty($products)) {
                 return new JsonResponse(['status' => 'Aucun produit trouvé']);
             }
 
             foreach ($products as $product) {
-                $this->processProduct($product);
+                $newPrice = $this->processProduct($product);
+                if ($newPrice !== null) {
+                    $updatedPrices[] = [
+                        'product_id' => $product->getId(),
+                        'new_price' => $newPrice
+                    ];
+                }
             }
 
             $this->em->flush();
+            
             return new JsonResponse([
                 'status' => 'success',
-                'count' => count($products)
+                'count' => count($products),
+                'updated_prices' => $updatedPrices
             ]);
 
         } catch (\Exception $e) {
             $this->logger->error('Erreur : ' . $e->getMessage());
-            return new JsonResponse(['status' => 'error'], 500);
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
-    private function processProduct(Product $product): void
+    private function processProduct(Product $product): ?float
     {
         $prices = $this->em->getRepository(ProductPrice::class)
             ->findBy(
                 ['product' => $product], 
-                ['timestamp' => 'DESC'], // Correction ici
+                ['timestamp' => 'DESC'],
                 5
             );
 
-        if (empty($prices)) return;
+        if (empty($prices)) {
+            $this->logger->warning("Aucun historique pour le produit {$product->getId()}");
+            return null;
+        }
 
         $currentPrice = $prices[0]->getPrice();
         $newPrice = $this->calculateNewPrice($currentPrice, $prices);
         
         $this->createPriceEntry($product, $newPrice);
+        
+        return $newPrice;
     }
 
     private function calculateNewPrice(float $currentPrice, array $prices): float
@@ -108,6 +125,11 @@ class CronController extends AbstractController
             ->setTimestamp(new \DateTimeImmutable());
 
         $this->em->persist($entry);
-        $this->logger->info("Produit {$product->getId()} : {$price}");
+        $this->logger->info(sprintf(
+            'Produit %d - Ancien prix: %.2f - Nouveau prix: %.2f',
+            $product->getId(),
+            $product->getPrice(),
+            $price
+        ));
     }
 }

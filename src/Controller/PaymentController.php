@@ -20,14 +20,73 @@ use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 
 class PaymentController extends AbstractController
 {
-    #[Route('/withdraw', name: 'app_withdraw')]
-    public function withdraw(): Response
+    // Remplacez l'ancienne route /withdraw par :
+    #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
+    public function withdraw(Request $request, EntityManagerInterface $em): Response
     {
-        if (!$this->getUser()) {
+        $user = $this->getUser();
+        if (!$user) {
             return $this->redirectToRoute('app_login');
         }
-        // Logique de retrait...
-        dd('withdraw');
+
+        $amount = (float)$request->request->get('amount');
+        $recipient = $request->request->get('recipient');
+
+        // Validation
+        if ($amount <= 0 || !filter_var($recipient, FILTER_SANITIZE_STRING)) {
+            $this->addFlash('danger', 'Données invalides');
+            return $this->redirectToRoute('app_profile');
+        }
+
+        if ($user->getBalance() < $amount) {
+            $this->addFlash('danger', 'Solde insuffisant');
+            return $this->redirectToRoute('app_profile');
+        }
+
+        try {
+            // Simulation d'appel API crypto
+            if (!$this->processCryptoWithdrawal($recipient, $amount)) {
+                throw new \Exception('Échec du transfert réseau');
+            }
+
+            // Mise à jour du solde
+            $user->setBalance($user->getBalance() - $amount);
+
+            // Création de la transaction
+            $transaction = new Transactions();
+            $transaction->setUser($user)
+                ->setAmount(-$amount)
+                ->setMethod('Crypto')
+                ->setCreatedAt(new \DateTimeImmutable());
+
+            $em->persist($user);
+            $em->persist($transaction);
+            $em->flush();
+
+            $this->addFlash('success', 'Retrait de ' . $amount . ' USDT effectué');
+        } catch (\Exception $e) {
+            $this->addFlash('danger', 'Erreur : ' . $e->getMessage());
+        }
+
+        return $this->redirectToRoute('app_profile');
+    }
+
+    private function processCryptoWithdrawal(string $address, float $amount): bool
+    {
+        // Implémentez l'appel à votre API crypto ici
+        // Exemple avec CoinPayments :
+        try {
+            $params = [
+                'amount' => $amount,
+                'currency' => 'USDT',
+                'address' => $address,
+            ];
+
+            $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
+            return $response['error'] === 'ok';
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
@@ -152,14 +211,14 @@ class PaymentController extends AbstractController
             if (!$txnId) {
                 return new Response('Transaction ID missing', 400);
             }
-            
+
             // Vérifiez si la transaction a déjà été enregistrée (à adapter selon votre modèle)
             $existingTransaction = $em->getRepository(Transactions::class)->findOneBy(['externalId' => $txnId]);
             if ($existingTransaction) {
                 // Transaction déjà traitée, on renvoie OK.
                 return new Response('Transaction already processed', 200);
             }
-            
+
             // Récupération de l'utilisateur par email (vous devez vous assurer que l'email correspond à un utilisateur)
             $buyerEmail = $data['buyer_email'] ?? null;
             if (!$buyerEmail) {
@@ -169,7 +228,7 @@ class PaymentController extends AbstractController
             if (!$user) {
                 return new Response('User not found', 400);
             }
-            
+
             // Créer et enregistrer une nouvelle transaction
             $transaction = new Transactions();
             $transaction->setUser($user);
@@ -187,7 +246,7 @@ class PaymentController extends AbstractController
 
             return new Response('OK', 200);
         }
-        
+
         // Pour d'autres statuts, vous pouvez enregistrer le payload ou effectuer d'autres actions.
         return new Response('IPN received', 200);
     }
@@ -205,7 +264,7 @@ class PaymentController extends AbstractController
         $cancelUrl = $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $client = $this->getPayPalClient();
-        
+
         try {
             $paypalRequest = new OrdersCreateRequest();
             $paypalRequest->prefer('return=representation');
@@ -225,12 +284,12 @@ class PaymentController extends AbstractController
                     'user_action' => 'PAY_NOW',
                 ]
             ];
-            
+
             $response = $client->execute($paypalRequest);
             if ($response->statusCode !== 201) {
                 throw new \Exception('Échec de la création de l\'ordre PayPal: ' . $response->statusCode);
             }
-            
+
             $request->getSession()->set('paypal_order_id', $response->result->id);
             $approvalLink = null;
             foreach ($response->result->links as $link) {
@@ -239,11 +298,11 @@ class PaymentController extends AbstractController
                     break;
                 }
             }
-            
+
             if (!$approvalLink) {
                 throw new \Exception('Lien d\'approbation PayPal non trouvé');
             }
-            
+
             return $this->redirect($approvalLink);
         } catch (\Exception $e) {
             $this->addFlash('danger', 'Erreur PayPal: ' . $e->getMessage());
@@ -281,22 +340,22 @@ class PaymentController extends AbstractController
                     break;
                 }
             }
-            
+
             if ($amount <= 0) {
                 throw new \Exception('Montant de paiement invalide');
             }
-            
+
             $transaction = new Transactions();
             $transaction->setUser($user);
             $transaction->setAmount($amount);
             $transaction->setMethod('paypal');
             $transaction->setCreatedAt(new \DateTimeImmutable());
             $em->persist($transaction);
-            
+
             $user->setBalance($user->getBalance() + $amount);
             $em->persist($user);
             $em->flush();
-            
+
             $this->addFlash('success', "Dépôt de $amount USD réussi via PayPal !");
             return $this->redirectToRoute('app_profile');
         } catch (\Exception $e) {

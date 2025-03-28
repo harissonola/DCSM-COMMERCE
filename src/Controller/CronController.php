@@ -43,7 +43,8 @@ class CronController extends AbstractController
                 $newPrice = $this->processProduct($product);
                 $updatedPrices[] = [
                     'product_id' => $product->getId(),
-                    'new_price' => $newPrice ?? $product->getPrice() // Garde le prix actuel si null
+                    'new_price' => $newPrice,
+                    'updated_at' => (new \DateTime())->format('Y-m-d H:i:s')
                 ];
             }
 
@@ -52,66 +53,84 @@ class CronController extends AbstractController
             return new JsonResponse([
                 'status' => 'success',
                 'count' => count($products),
-                'updated_prices' => $updatedPrices
+                'updated_prices' => $updatedPrices,
+                'execution_time' => (new \DateTime())->format('Y-m-d H:i:s')
             ]);
 
         } catch (\Exception $e) {
             $this->logger->error('Erreur : ' . $e->getMessage());
             return new JsonResponse([
                 'status' => 'error',
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'timestamp' => (new \DateTime())->format('Y-m-d H:i:s')
             ], 500);
         }
     }
 
-    private function processProduct(Product $product): ?float
+    private function processProduct(Product $product): float
     {
         $prices = $this->em->getRepository(ProductPrice::class)
-            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 5);
+            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 10); // Augmenté à 10 entrées
 
-        // Si pas d'historique, on crée un premier prix basé sur le prix du produit
+        $basePrice = $product->getPrice() ?? 100.00;
+        
         if (empty($prices)) {
-            $basePrice = $product->getPrice() ?? 100.00; // Valeur par défaut si null
-            $newPrice = $this->generateInitialPrice($basePrice);
+            $newPrice = $this->generateRandomPrice($basePrice, 0.15); // +-15% pour le premier prix
             $this->createPriceEntry($product, $newPrice);
             return $newPrice;
         }
 
         $currentPrice = $prices[0]->getPrice();
-        $newPrice = $this->calculateNewPrice($currentPrice, $prices);
+        $newPrice = $this->calculateDynamicPrice($currentPrice, $prices);
         $this->createPriceEntry($product, $newPrice);
         
         return $newPrice;
     }
 
-    private function generateInitialPrice(float $basePrice): float
+    private function calculateDynamicPrice(float $currentPrice, array $priceHistory): float
     {
-        // Variation aléatoire entre -10% et +10% pour le premier prix
-        $variation = mt_rand(-10, 10) / 100;
-        return round($basePrice * (1 + $variation), 2);
-    }
-
-    private function calculateNewPrice(float $currentPrice, array $prices): float
-    {
-        $maxVariation = 0.05;
-        $trend = count($prices) > 1 ? $this->calculateTrend($prices) : 0;
-        $variation = $trend * mt_rand(90, 110) / 100 * $maxVariation;
+        // Paramètres ajustables
+        $maxDailyVariation = 0.20; // 20% max par jour
+        $minVariation = 0.01; // 1% minimum
+        
+        // Calcul de tendance pondérée
+        $trend = $this->calculateWeightedTrend($priceHistory);
+        
+        // Variation aléatoire plus dynamique
+        $randomFactor = mt_rand(80, 120) / 100;
+        $variation = $trend * $randomFactor * ($maxDailyVariation / 48); // 48 updates par jour (toutes les 30 min)
+        
+        // Garantir une variation minimale
+        $variation = abs($variation) < $minVariation 
+            ? ($variation >= 0 ? $minVariation : -$minVariation)
+            : $variation;
         
         $newPrice = $currentPrice * (1 + $variation);
-        $boundedPrice = max($currentPrice * 0.95, min($currentPrice * 1.05, $newPrice));
         
-        return round($boundedPrice, 2);
+        return round($newPrice, 2);
     }
 
-    private function calculateTrend(array $prices): float
+    private function calculateWeightedTrend(array $prices): float
     {
+        if (count($prices) < 2) return 0;
+
         $total = 0;
+        $totalWeight = 0;
+        
         for ($i = 1; $i < count($prices); $i++) {
-            $older = $prices[$i]->getPrice();
-            $newer = $prices[$i-1]->getPrice();
-            $total += ($newer - $older) / $older;
+            $weight = pow(1.5, $i); // Poids exponentiel
+            $change = ($prices[$i-1]->getPrice() - $prices[$i]->getPrice()) / $prices[$i]->getPrice();
+            $total += $change * $weight;
+            $totalWeight += $weight;
         }
-        return $total / (count($prices) - 1);
+        
+        return $total / $totalWeight;
+    }
+
+    private function generateRandomPrice(float $basePrice, float $variationPercent): float
+    {
+        $variation = mt_rand(-$variationPercent*100, $variationPercent*100) / 100;
+        return round($basePrice * (1 + $variation), 2);
     }
 
     private function createPriceEntry(Product $product, float $price): void
@@ -123,9 +142,11 @@ class CronController extends AbstractController
 
         $this->em->persist($entry);
         $this->logger->info(sprintf(
-            'Produit %d - Prix: %.2f',
+            'Produit %d - Ancien: %.2f | Nouveau: %.2f | Variation: %.2f%%',
             $product->getId(),
-            $price
+            $product->getPrice(),
+            $price,
+            (($price - $product->getPrice()) / $product->getPrice()) * 100
         ));
     }
 }

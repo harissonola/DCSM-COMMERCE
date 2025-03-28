@@ -35,4 +35,4 @@ framework:
             Symfony\Component\Notifier\Message\SmsMessage: sync
 
             # Route les mises à jour des prix vers le transport dédié
-            App\Message\UpdateProductPricesMessage: product_price_update
+            App\Message\UpdatePricesMessage: product_price_update

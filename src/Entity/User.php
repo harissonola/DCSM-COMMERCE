@@ -130,6 +130,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private float $referralRewardRate = 0.4;
 
+    #[ORM\Column(nullable: true)]
+    private ?array $lastReferralRewards = null;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -534,6 +537,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReferralRewardRate(float $referralRewardRate): static
     {
         $this->referralRewardRate = $referralRewardRate;
+
+        return $this;
+    }
+
+    public function getLastReferralRewards(): ?array
+    {
+        return $this->lastReferralRewards;
+    }
+
+    public function setLastReferralRewards(?array $lastReferralRewards): static
+    {
+        $this->lastReferralRewards = $lastReferralRewards;
+
+        return $this;
+    }
+
+
+    /**
+     * Retourne la date de la dernière récompense pour un produit donné.
+     */
+    public function getLastReferralRewardTimeForProduct(Product $product): ?\DateTimeInterface
+    {
+        $lastReferralRewards = $this->getLastReferralRewards() ?? [];
+        if (isset($lastReferralRewards[$product->getId()])) {
+            return new \DateTimeImmutable($lastReferralRewards[$product->getId()]);
+        }
+        return null;
+    }
+
+    /**
+     * Met à jour la date de la dernière récompense pour un produit donné.
+     */
+    public function setLastReferralRewardTimeForProduct(Product $product, \DateTimeInterface $date): self
+    {
+        $lastReferralRewards = $this->getLastReferralRewards() ?? [];
+        // Stocke la date au format ISO 8601 (par exemple)
+        $lastReferralRewards[$product->getId()] = $date->format('c');
+        $this->setLastReferralRewards($lastReferralRewards);
 
         return $this;
     }

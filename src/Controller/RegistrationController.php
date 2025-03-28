@@ -225,7 +225,7 @@ class RegistrationController extends AbstractController
 
         // Attribution des récompenses en fonction du nombre de parrainages
         if ($count >= 40) {
-            $referrer->setReferralRewardRate(10.0);
+            $referrer->setReferralRewardRate(13.0);
             $referrer->setBalance($referrer->getBalance() + 10); // Bonus de 10$
         } elseif ($count >= 20) {
             $referrer->setReferralRewardRate(10.0);

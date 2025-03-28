@@ -37,139 +37,81 @@ class ProductsController extends AbstractController
     ): Response {
         /** @var User $user */
         $user = $this->getUser();
-        if (!$user) return $this->redirectToRoute("app_main");
+        if (!$user) {
+            return $this->redirectToRoute("app_main");
+        }
 
         $product = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$product) throw $this->createNotFoundException('Produit introuvable');
+        if (!$product) {
+            throw $this->createNotFoundException('Produit introuvable');
+        }
 
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$product->getUsers()->contains($user)) {
             $this->addFlash('danger', $this->generateAccessMessage($slug));
             return $this->redirectToRoute('app_main');
         }
 
-        if ($user->isMiningBotActive()) {
-            $this->handleAutomaticMining($product, $em, $user);
-        }
+        // Nouveau système : on parcourt les produits possédés par l'utilisateur
+        // et on attribue la récompense correspondante si 24h se sont écoulées depuis la dernière attribution.
+        $this->handleReferralRewards($em, $user);
 
         return $this->render('products/dash.html.twig', [
-            'prod' => $product,
+            'prod'      => $product,
             'chartData' => $this->generateChartData($product, $priceRepository),
-            'reward' => $user->getReward()
+            'balance'   => $user->getBalance()
         ]);
     }
 
-    #[Route('/buy-mining-bot', name: 'buy_mining_bot')]
-    public function buyMiningBot(EntityManagerInterface $em): Response
-    {
-        /** @var User $user */
-        $user = $this->getUser();
-        $botPrice = 50.00; // Prix en USD
-
-        if (!$user) {
-            return $this->redirectToRoute("app_main");
-        }
-
-        if ($user->getBalance() >= $botPrice) {
-            // Déduire le prix et activer le bot
-            $user->setBalance($user->getBalance() - $botPrice);
-            $user->setIsMiningBotActive(true);
-            $em->flush();
-
-            $this->addFlash('success', 'Bot de minage activé avec succès !');
-        } else {
-            $this->addFlash('error', 'Solde insuffisant pour acheter le bot');
-        }
-
-        return $this->redirectToRoute('app_main');
-    }
-
-    private function handleAutomaticMining(Product $product, EntityManagerInterface $em, User $user): void
-    {
-        $lastPrice = $em->getRepository(ProductPrice::class)
-            ->findOneBy(['product' => $product], ['timestamp' => 'DESC']);
-
-        if (!$lastPrice || $lastPrice->getTimestamp()->modify('+5 minutes') < new \DateTime()) {
-            $this->generateNewPrice($product, $em);
-        }
-
-        $this->calculateMiningRewards($user, $product, $em);
-    }
-
-    private function calculateMiningRewards(User $user, Product $product, EntityManagerInterface $em): void
+    /**
+     * Itère sur chaque produit possédé par l'utilisateur et, si 24h se sont écoulées
+     * depuis la dernière attribution pour ce produit, crédite sur son solde un pourcentage
+     * de la valeur actuelle du produit (calculé à partir du dernier enregistrement dans ProductPrice).
+     *
+     * Il est nécessaire d'avoir dans l'entité User des méthodes telles que :
+     * - getProducts() qui retourne la collection des produits possédés par l'utilisateur,
+     * - getLastReferralRewardTimeForProduct(Product $product) et
+     * - setLastReferralRewardTimeForProduct(Product $product, \DateTime $date)
+     * pour gérer la date de dernière attribution par produit.
+     */
+    private function handleReferralRewards(EntityManagerInterface $em, User $user): void
     {
         $now = new \DateTime();
-        $lastMining = $user->getLastMiningTime() ?? $now;
-        $interval = $now->diff($lastMining);
-        $hours = $interval->h + ($interval->days * 24) + ($interval->i / 60);
 
-        $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
-        if (!$latestPrice) return;
+        // On suppose que getProducts() retourne l'ensemble des produits possédés par l'utilisateur.
+        foreach ($user->getProduct() as $product) {
+            // Récupération de la dernière date de récompense pour ce produit
+            $lastRewardTime = $user->getLastReferralRewardTimeForProduct($product);
+            if (!$lastRewardTime) {
+                // Si aucune récompense n'a été attribuée, on considère que la dernière attribution date de plus de 24h
+                $lastRewardTime = (clone $now)->modify('-25 hours');
+            }
 
-        $rewardRate = match($product->getShop()->getSlug()) {
-            'vip-a' => 0.002,
-            'vip-b' => 0.0035,
-            'vip-c' => 0.005,
-            default => 0.001
-        };
+            // Si 24h (86400 secondes) se sont écoulées depuis la dernière attribution pour ce produit
+            if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) >= 86400) {
+                // Récupération de la valeur actuelle du produit via le dernier prix enregistré
+                $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
+                if (!$latestPrice) {
+                    continue;
+                }
 
-        $reward = $hours * ($latestPrice->getPrice() / 601.5) * $rewardRate;
-        $user->setReward(round($user->getReward() + $reward, 2));
-        $user->setLastMiningTime($now);
-        $em->flush();
-    }
+                // Calcul de la récompense en fonction du taux de parrainage (ex: 0.4 pour 4%)
+                $rewardRate = $user->getReferralRewardRate();
+                $reward = $latestPrice->getPrice() * $rewardRate;
 
-    #[Route('/claim-rewards', name: 'claim_rewards')]
-    public function claimRewards(EntityManagerInterface $em): Response
-    {
-        /** @var User $user */
-        $user = $this->getUser();
-        if ($user->getReward() > 0) {
-            $user->setBalance($user->getBalance() + $user->getReward());
-            $user->setReward(0);
-            $em->flush();
-            $this->addFlash('success', sprintf('%.2f USD transférés à votre solde !', $user->getReward()));
+                // Crédite la récompense sur le solde de l'utilisateur
+                $user->setBalance($user->getBalance() + $reward);
+
+                // Met à jour la date de dernière attribution pour ce produit
+                $user->setLastReferralRewardTimeForProduct($product, $now);
+
+                $this->addFlash('success', sprintf(
+                    'Vous avez reçu %.2f USD de récompense sur le produit %s !',
+                    $reward,
+                    $product->getSlug()
+                ));
+            }
         }
-        return $this->redirectToRoute('app_main');
-    }
 
-    #[Route('/{slug}/manual-mining', name: 'manual_mining')]
-    public function manualMining(
-        string $slug,
-        ProductRepository $productRepository,
-        EntityManagerInterface $em
-    ): Response {
-        /** @var User $user */
-        $user = $this->getUser();
-        $product = $productRepository->findOneBy(['slug' => $slug]);
-
-        if ($product && !$user->isMiningBotActive()) {
-            $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
-            $reward = ($latestPrice->getPrice() / 601.5) * 0.0008;
-            $user->setReward(round($user->getReward() + $reward, 2));
-            $em->flush();
-            $this->addFlash('success', sprintf('+%.2f USD (minage manuel)', $reward));
-        }
-        return $this->redirectToRoute('app_products_dashboard', ['slug' => $slug]);
-    }
-
-    private function generateNewPrice(Product $product, EntityManagerInterface $em): void
-    {
-        $shopSlug = $product->getShop()->getSlug();
-        $priceRanges = [
-            'vip-a' => [0, 50000],
-            'vip-b' => [0, 85000],
-            'vip-c' => [0, 150000],
-        ];
-
-        [$min, $max] = $priceRanges[$shopSlug] ?? [0, 500];
-        $priceValue = mt_rand($min, $max);
-
-        $price = (new ProductPrice())
-            ->setProduct($product)
-            ->setPrice($priceValue)
-            ->setTimestamp(new \DateTimeImmutable('now', new DateTimeZone('Africa/Porto-Novo')));
-
-        $em->persist($price);
         $em->flush();
     }
 
@@ -181,7 +123,7 @@ class ProductsController extends AbstractController
         foreach ($priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']) as $price) {
             $timestamp = $price->getTimestamp()->format('c');
             $data['price'][] = ['x' => $timestamp, 'y' => round($price->getPrice() / $exchangeRate, 2)];
-            
+
             if ($price->getMarketCap() !== null) {
                 $data['market_cap'][] = ['x' => $timestamp, 'y' => round($price->getMarketCap() / $exchangeRate, 2)];
             }
@@ -197,7 +139,7 @@ class ProductsController extends AbstractController
         );
     }
 
-    // Méthodes existantes inchangées
+
     #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
     public function sellProduct(
         Request $request,
@@ -236,10 +178,12 @@ class ProductsController extends AbstractController
     public function cinetpayCallback(Request $request): Response
     {
         $status = $request->query->get('status');
-        $this->addFlash($status === 'ACCEPTED' ? 'success' : 'error', 
-            $status === 'ACCEPTED' 
-            ? 'Paiement accepté !' 
-            : 'Échec du paiement');
+        $this->addFlash(
+            $status === 'ACCEPTED' ? 'success' : 'error',
+            $status === 'ACCEPTED'
+                ? 'Paiement accepté !'
+                : 'Échec du paiement'
+        );
         return $this->redirectToRoute('app_main');
     }
 
@@ -247,10 +191,12 @@ class ProductsController extends AbstractController
     public function paydunyaCallback(Request $request): Response
     {
         $status = $request->query->get('status');
-        $this->addFlash($status === 'completed' ? 'success' : 'error', 
-            $status === 'completed' 
-            ? 'Paiement réussi avec PayDunya' 
-            : 'Échec du paiement PayDunya');
+        $this->addFlash(
+            $status === 'completed' ? 'success' : 'error',
+            $status === 'completed'
+                ? 'Paiement réussi avec PayDunya'
+                : 'Échec du paiement PayDunya'
+        );
         return $this->redirectToRoute('app_main');
     }
 

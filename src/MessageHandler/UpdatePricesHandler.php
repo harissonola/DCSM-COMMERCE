@@ -58,7 +58,7 @@ class UpdatePricesHandler
 
     private function calculateNewPrice(float $currentPrice, array $lastPrices): float
     {
-        $maxVariationPerUpdate = 0.05; // 5% max par mise à jour
+        $maxVariationPerUpdate = 0.05;
         $trend = $this->calculateTrend($lastPrices);
         
         $variation = $trend * mt_rand(90, 110) / 100 * $maxVariationPerUpdate;
@@ -88,13 +88,14 @@ class UpdatePricesHandler
 
     private function createNewPriceEntry(Product $product, float $currentPrice, float $newPrice): void
     {
+        // Correction : Ajout de la parenthèse manquante
         $this->logger->info(sprintf(
             "Produit %d : %.2f → %.2f (Δ%.2f%%)",
             $product->getId(),
             $currentPrice,
             $newPrice,
             (($newPrice - $currentPrice) / $currentPrice * 100)
-        );
+        )); // ← Parenthèse ajoutée ici
 
         $priceEntry = (new ProductPrice())
             ->setProduct($product)

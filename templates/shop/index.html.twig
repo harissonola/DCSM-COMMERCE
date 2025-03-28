@@ -125,7 +125,7 @@
 					image: "{{ prod.image }}",
 					description: "{{ prod.description }}",
 					// Pour les admins, on garde l'URL de visualisation, sinon l'URL de vente.
-					url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('buy_product', { slug: prod.slug }) }}{% endif %}"
+					url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('sell_product', { slug: prod.slug }) }}{% endif %}"
 				},
 				{% endfor %}
 			];

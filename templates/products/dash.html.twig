@@ -54,7 +54,7 @@
 		</div>
 	</div>
 
-	<div class="container-fluid mt-4">
+	{# <div class="container-fluid mt-4">
 		{% if app.user and app.user.isMiningBotActive %}
 			<div class="alert alert-success">
 				Votre bot de minage est activé. Le minage se fait automatiquement.
@@ -63,11 +63,8 @@
 			<div class="alert alert-danger">
 				Vous n'avez pas le bot de minage. Vous pouvez miner manuellement, mais vous serez responsable de vos gains/pertes.
 			</div>
-			<div class="btn-group">
-				<a href="{{ path("app_products_buy_mining_bot") }}" id="buyMiningBot" class="btn btn-warning">Acheter le bot de minage</a>
-			</div>
 		{% endif %}
-	</div>
+	</div> #}
 {% endblock %}
 
 {% block customScript %}

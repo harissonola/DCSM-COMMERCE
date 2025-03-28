@@ -69,7 +69,7 @@
 
 {% block customScript %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('turbo:load', function () {
     const ctx = document.getElementById('tradingChart');
     const loadingOverlay = document.getElementById('chartLoading');
     if (!ctx) return;

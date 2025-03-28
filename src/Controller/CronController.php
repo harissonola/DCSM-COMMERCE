@@ -25,20 +25,17 @@ class CronController extends AbstractController
     #[Route('/cron/update-prices/{secret}', name: 'cron_update_prices', methods: ['GET'])]
     public function updatePrices(Request $request, string $secret): JsonResponse
     {
-        // Vérification du secret
         if ($secret !== $_ENV['CRON_SECRET']) {
-            $this->logger->warning('Tentative d\'accès non autorisée à la route cron');
+            $this->logger->warning('Tentative d\'accès non autorisée');
             return new JsonResponse(['status' => 'Unauthorized'], 401);
         }
 
         try {
-            $this->logger->info('Début de la mise à jour des prix');
-            
+            $this->logger->info('Début mise à jour des prix');
             $products = $this->em->getRepository(Product::class)->findAll();
 
             if (empty($products)) {
-                $this->logger->warning('Aucun produit trouvé');
-                return new JsonResponse(['status' => 'No products found']);
+                return new JsonResponse(['status' => 'Aucun produit trouvé']);
             }
 
             foreach ($products as $product) {
@@ -46,74 +43,71 @@ class CronController extends AbstractController
             }
 
             $this->em->flush();
-            $this->logger->info('Mise à jour des prix terminée avec succès');
-
             return new JsonResponse([
                 'status' => 'success',
-                'products_updated' => count($products)
+                'count' => count($products)
             ]);
 
         } catch (\Exception $e) {
-            $this->logger->error('Erreur lors de la mise à jour : ' . $e->getMessage());
-            return new JsonResponse(['status' => 'error', 'message' => $e->getMessage()], 500);
+            $this->logger->error('Erreur : ' . $e->getMessage());
+            return new JsonResponse(['status' => 'error'], 500);
         }
     }
 
     private function processProduct(Product $product): void
     {
-        $lastPrices = $this->em->getRepository(ProductPrice::class)
-            ->findBy(['product' => $product], ['createdAt' => 'DESC'], 5);
+        $prices = $this->em->getRepository(ProductPrice::class)
+            ->findBy(
+                ['product' => $product], 
+                ['timestamp' => 'DESC'], // Correction ici
+                5
+            );
 
-        if (empty($lastPrices)) {
-            $this->logger->warning("Aucun historique pour le produit {$product->getId()}");
-            return;
-        }
+        if (empty($prices)) return;
 
-        $currentPrice = $lastPrices[0]->getPrice();
-        $newPrice = $this->calculateNewPrice($currentPrice, $lastPrices);
-
+        $currentPrice = $prices[0]->getPrice();
+        $newPrice = $this->calculateNewPrice($currentPrice, $prices);
+        
         $this->createPriceEntry($product, $newPrice);
     }
 
-    private function calculateNewPrice(float $currentPrice, array $lastPrices): float
+    private function calculateNewPrice(float $currentPrice, array $prices): float
     {
-        $maxVariation = 0.05; // 5% max
-        $trend = $this->calculateTrend($lastPrices);
+        $maxVariation = 0.05;
+        $trend = $this->calculateTrend($prices);
         $variation = $trend * mt_rand(90, 110) / 100 * $maxVariation;
-
+        
         $newPrice = $currentPrice * (1 + $variation);
-        $minPrice = $currentPrice * (1 - $maxVariation);
-        $maxPrice = $currentPrice * (1 + $maxVariation);
-
-        return round(max($minPrice, min($maxPrice, $newPrice)), 2);
+        $boundedPrice = max(
+            $currentPrice * 0.95, 
+            min($currentPrice * 1.05, $newPrice)
+        );
+        
+        return round($boundedPrice, 2);
     }
 
-    private function calculateTrend(array $lastPrices): float
+    private function calculateTrend(array $prices): float
     {
-        if (count($lastPrices) < 2) return 0;
-
+        if (count($prices) < 2) return 0;
+        
         $total = 0;
-        for ($i = 1; $i < count($lastPrices); $i++) {
-            $prev = $lastPrices[$i]->getPrice();
-            $current = $lastPrices[$i-1]->getPrice();
-            $total += ($current - $prev) / $prev;
+        for ($i = 1; $i < count($prices); $i++) {
+            $older = $prices[$i]->getPrice();
+            $newer = $prices[$i-1]->getPrice();
+            $total += ($newer - $older) / $older;
         }
-
-        return $total / (count($lastPrices) - 1);
+        
+        return $total / (count($prices) - 1);
     }
 
     private function createPriceEntry(Product $product, float $price): void
     {
-        $priceEntry = new ProductPrice();
-        $priceEntry->setProduct($product)
+        $entry = (new ProductPrice())
+            ->setProduct($product)
             ->setPrice($price)
             ->setTimestamp(new \DateTimeImmutable());
 
-        $this->em->persist($priceEntry);
-        $this->logger->info(sprintf(
-            'Produit %d - Nouveau prix : %.2f',
-            $product->getId(),
-            $price
-        ));
+        $this->em->persist($entry);
+        $this->logger->info("Produit {$product->getId()} : {$price}");
     }
 }

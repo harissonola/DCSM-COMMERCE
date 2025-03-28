@@ -198,7 +198,7 @@ class ProductsController extends AbstractController
     }
 
     // Méthodes existantes inchangées
-    #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
+    #[Route('/sell-product/{slug}', name: 'app_sell_product', methods: ['POST'])]
     public function sellProduct(
         Request $request,
         ProductRepository $productRepository,

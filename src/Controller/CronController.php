@@ -41,12 +41,10 @@ class CronController extends AbstractController
 
             foreach ($products as $product) {
                 $newPrice = $this->processProduct($product);
-                if ($newPrice !== null) {
-                    $updatedPrices[] = [
-                        'product_id' => $product->getId(),
-                        'new_price' => $newPrice
-                    ];
-                }
+                $updatedPrices[] = [
+                    'product_id' => $product->getId(),
+                    'new_price' => $newPrice ?? $product->getPrice() // Garde le prix actuel si null
+                ];
             }
 
             $this->em->flush();
@@ -69,51 +67,50 @@ class CronController extends AbstractController
     private function processProduct(Product $product): ?float
     {
         $prices = $this->em->getRepository(ProductPrice::class)
-            ->findBy(
-                ['product' => $product], 
-                ['timestamp' => 'DESC'],
-                5
-            );
+            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 5);
 
+        // Si pas d'historique, on crée un premier prix basé sur le prix du produit
         if (empty($prices)) {
-            $this->logger->warning("Aucun historique pour le produit {$product->getId()}");
-            return null;
+            $basePrice = $product->getPrice() ?? 100.00; // Valeur par défaut si null
+            $newPrice = $this->generateInitialPrice($basePrice);
+            $this->createPriceEntry($product, $newPrice);
+            return $newPrice;
         }
 
         $currentPrice = $prices[0]->getPrice();
         $newPrice = $this->calculateNewPrice($currentPrice, $prices);
-        
         $this->createPriceEntry($product, $newPrice);
         
         return $newPrice;
     }
 
+    private function generateInitialPrice(float $basePrice): float
+    {
+        // Variation aléatoire entre -10% et +10% pour le premier prix
+        $variation = mt_rand(-10, 10) / 100;
+        return round($basePrice * (1 + $variation), 2);
+    }
+
     private function calculateNewPrice(float $currentPrice, array $prices): float
     {
         $maxVariation = 0.05;
-        $trend = $this->calculateTrend($prices);
+        $trend = count($prices) > 1 ? $this->calculateTrend($prices) : 0;
         $variation = $trend * mt_rand(90, 110) / 100 * $maxVariation;
         
         $newPrice = $currentPrice * (1 + $variation);
-        $boundedPrice = max(
-            $currentPrice * 0.95, 
-            min($currentPrice * 1.05, $newPrice)
-        );
+        $boundedPrice = max($currentPrice * 0.95, min($currentPrice * 1.05, $newPrice));
         
         return round($boundedPrice, 2);
     }
 
     private function calculateTrend(array $prices): float
     {
-        if (count($prices) < 2) return 0;
-        
         $total = 0;
         for ($i = 1; $i < count($prices); $i++) {
             $older = $prices[$i]->getPrice();
             $newer = $prices[$i-1]->getPrice();
             $total += ($newer - $older) / $older;
         }
-        
         return $total / (count($prices) - 1);
     }
 
@@ -126,9 +123,8 @@ class CronController extends AbstractController
 
         $this->em->persist($entry);
         $this->logger->info(sprintf(
-            'Produit %d - Ancien prix: %.2f - Nouveau prix: %.2f',
+            'Produit %d - Prix: %.2f',
             $product->getId(),
-            $product->getPrice(),
             $price
         ));
     }

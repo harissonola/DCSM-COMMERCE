@@ -21,7 +21,7 @@ class UpdatePricesHandler
         $this->logger = $logger;
     }
 
-    public function __invoke(UpdatePricesMessage $message)
+    public function __invoke(UpdatePricesMessage $message): void
     {
         $this->logger->info("Mise à jour des prix lancée à " . $message->getTimestamp()->format('Y-m-d H:i:s'));
 
@@ -33,44 +33,41 @@ class UpdatePricesHandler
         }
 
         foreach ($products as $product) {
-            $lastPrices = $this->entityManager->getRepository(ProductPrice::class)
-                ->findBy(['product' => $product], ['createdAt' => 'DESC'], 5); // Récupère les 5 derniers prix
-
-            if (empty($lastPrices)) {
-                $this->logger->warning("Aucun prix trouvé pour le produit {$product->getId()}");
-                continue;
-            }
-
-            $currentPrice = $lastPrices[0]->getPrice();
-            $newPrice = $this->calculateNewPrice($currentPrice, $lastPrices);
-            
-            $this->generateNewPrice($product, $newPrice);
+            $this->updateProductPrice($product);
         }
 
         $this->entityManager->flush();
         $this->logger->info("Mise à jour des prix terminée.");
     }
 
+    private function updateProductPrice(Product $product): void
+    {
+        $lastPrices = $this->entityManager->getRepository(ProductPrice::class)
+            ->findBy(['product' => $product], ['createdAt' => 'DESC'], 5);
+
+        if (empty($lastPrices)) {
+            $this->logger->warning("Aucun prix trouvé pour le produit {$product->getId()}");
+            return;
+        }
+
+        $currentPrice = $lastPrices[0]->getPrice();
+        $newPrice = $this->calculateNewPrice($currentPrice, $lastPrices);
+        
+        $this->createNewPriceEntry($product, $currentPrice, $newPrice);
+    }
+
     private function calculateNewPrice(float $currentPrice, array $lastPrices): float
     {
-        // Paramètres de variation
-        $maxDailyVariation = 0.20; // 20% de variation max par jour
-        $maxVariationPerUpdate = $maxDailyVariation / (24 * 20); // 20 updates par heure * 24h = 480 updates par jour
-        
-        // Calcul de la tendance basée sur les derniers prix
+        $maxVariationPerUpdate = 0.05; // 5% max par mise à jour
         $trend = $this->calculateTrend($lastPrices);
         
-        // Variation aléatoire mais limitée et influencée par la tendance
-        $variation = $trend * mt_rand(80, 120) / 100 * $maxVariationPerUpdate;
-        
-        // Calcul du nouveau prix
+        $variation = $trend * mt_rand(90, 110) / 100 * $maxVariationPerUpdate;
         $newPrice = $currentPrice * (1 + $variation);
         
-        // On s'assure que le prix ne descend pas en dessous d'un minimum
-        $minPrice = $currentPrice * 0.90; // Pas plus de 10% de baisse en une fois
-        $maxPrice = $currentPrice * 1.10; // Pas plus de 10% de hausse en une fois
+        $minPrice = $currentPrice * (1 - $maxVariationPerUpdate);
+        $maxPrice = $currentPrice * (1 + $maxVariationPerUpdate);
         
-        return max($minPrice, min($maxPrice, $newPrice));
+        return round(max($minPrice, min($maxPrice, $newPrice)), 2);
     }
 
     private function calculateTrend(array $lastPrices): float
@@ -78,39 +75,32 @@ class UpdatePricesHandler
         if (count($lastPrices) < 2) {
             return 0;
         }
-        
-        $sum = 0;
-        $count = 0;
-        
+
+        $totalVariation = 0;
         for ($i = 1; $i < count($lastPrices); $i++) {
-            $previousPrice = $lastPrices[$i]->getPrice();
-            $currentPrice = $lastPrices[$i-1]->getPrice();
-            $sum += ($currentPrice - $previousPrice) / $previousPrice;
-            $count++;
+            $previous = $lastPrices[$i]->getPrice();
+            $current = $lastPrices[$i-1]->getPrice();
+            $totalVariation += ($current - $previous) / $previous;
         }
         
-        return $sum / $count;
+        return $totalVariation / (count($lastPrices) - 1);
     }
 
-    private function generateNewPrice(Product $product, float $newPrice): void
+    private function createNewPriceEntry(Product $product, float $currentPrice, float $newPrice): void
     {
-        $newPrice = round($newPrice, 2);
-        $currentPrice = $this->entityManager->getRepository(ProductPrice::class)
-            ->findOneBy(['product' => $product], ['createdAt' => 'DESC'])->getPrice();
-
         $this->logger->info(sprintf(
-            "Produit %d : Ancien prix %.2f → Nouveau prix %.2f (Variation: %.2f%%)",
+            "Produit %d : %.2f → %.2f (Δ%.2f%%)",
             $product->getId(),
             $currentPrice,
             $newPrice,
-            (($newPrice - $currentPrice) / $currentPrice) * 100
-        ));
+            (($newPrice - $currentPrice) / $currentPrice * 100)
+        );
 
-        $productPrice = new ProductPrice();
-        $productPrice->setProduct($product);
-        $productPrice->setPrice($newPrice);
-        $productPrice->setTimestamp(new \DateTimeImmutable());
+        $priceEntry = (new ProductPrice())
+            ->setProduct($product)
+            ->setPrice($newPrice)
+            ->setTimestamp(new \DateTimeImmutable());
 
-        $this->entityManager->persist($productPrice);
+        $this->entityManager->persist($priceEntry);
     }
 }

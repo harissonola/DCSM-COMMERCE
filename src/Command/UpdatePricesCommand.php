@@ -12,23 +12,23 @@ class UpdatePricesCommand extends Command
 {
     protected static $defaultName = 'app:update-prices';
     
-    private MessageBusInterface $messageBus;
-
-    public function __construct(MessageBusInterface $messageBus)
-    {
+    public function __construct(
+        private MessageBusInterface $messageBus
+    ) {
         parent::__construct();
-        $this->messageBus = $messageBus;
     }
 
-    protected function configure()
+    protected function configure(): void
     {
         $this->setDescription('Met à jour les prix des produits toutes les 3 minutes');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('Envoi de la commande de mise à jour des prix...');
+        $output->writeln('Début de la mise à jour des prix...');
         $this->messageBus->dispatch(new UpdatePricesMessage());
+        $output->writeln('Commande envoyée avec succès');
+        
         return Command::SUCCESS;
     }
 }

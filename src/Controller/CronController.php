@@ -70,12 +70,12 @@ class CronController extends AbstractController
     private function processProduct(Product $product): float
     {
         $prices = $this->em->getRepository(ProductPrice::class)
-            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 10); // Augmenté à 10 entrées
+            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 10);
 
         $basePrice = $product->getPrice() ?? 100.00;
         
         if (empty($prices)) {
-            $newPrice = $this->generateRandomPrice($basePrice, 0.15); // +-15% pour le premier prix
+            $newPrice = $this->generateRandomPrice($basePrice, 0.30);
             $this->createPriceEntry($product, $newPrice);
             return $newPrice;
         }
@@ -89,25 +89,23 @@ class CronController extends AbstractController
 
     private function calculateDynamicPrice(float $currentPrice, array $priceHistory): float
     {
-        // Paramètres ajustables
-        $maxDailyVariation = 0.20; // 20% max par jour
-        $minVariation = 0.01; // 1% minimum
+        $maxDailyVariation = 0.40;
+        $volatilityFactor = 2.5;
         
-        // Calcul de tendance pondérée
         $trend = $this->calculateWeightedTrend($priceHistory);
         
-        // Variation aléatoire plus dynamique
-        $randomFactor = mt_rand(80, 120) / 100;
-        $variation = $trend * $randomFactor * ($maxDailyVariation / 48); // 48 updates par jour (toutes les 30 min)
+        // Génération de variation avec distribution normale
+        $randomFactor = $this->getGaussianRandom(1, 0.3) * $volatilityFactor;
         
-        // Garantir une variation minimale
-        $variation = abs($variation) < $minVariation 
-            ? ($variation >= 0 ? $minVariation : -$minVariation)
-            : $variation;
+        // Applique les facteurs avec limite dynamique
+        $variation = $trend * $randomFactor * ($maxDailyVariation / 24);
+        
+        // Limite à -50% max par update (cumulable)
+        $variation = max($variation, -0.50);
         
         $newPrice = $currentPrice * (1 + $variation);
         
-        return round($newPrice, 2);
+        return max(round($newPrice, 2), 0);
     }
 
     private function calculateWeightedTrend(array $prices): float
@@ -116,15 +114,18 @@ class CronController extends AbstractController
 
         $total = 0;
         $totalWeight = 0;
+        $count = count($prices);
         
-        for ($i = 1; $i < count($prices); $i++) {
-            $weight = pow(1.5, $i); // Poids exponentiel
-            $change = ($prices[$i-1]->getPrice() - $prices[$i]->getPrice()) / $prices[$i]->getPrice();
+        for ($i = 1; $i < $count; $i++) {
+            // Pondération exponentielle inverse (données récentes = poids x3)
+            $weight = pow(3, $count - $i); 
+            $change = ($prices[$i-1]->getPrice() - $prices[$i]->getPrice()) 
+                    / $prices[$i]->getPrice();
             $total += $change * $weight;
             $totalWeight += $weight;
         }
         
-        return $total / $totalWeight;
+        return $totalWeight ? $total / $totalWeight : 0;
     }
 
     private function generateRandomPrice(float $basePrice, float $variationPercent): float
@@ -135,6 +136,8 @@ class CronController extends AbstractController
 
     private function createPriceEntry(Product $product, float $price): void
     {
+        $price = max(0, $price);
+        
         $entry = (new ProductPrice())
             ->setProduct($product)
             ->setPrice($price)
@@ -146,7 +149,15 @@ class CronController extends AbstractController
             $product->getId(),
             $product->getPrice(),
             $price,
-            (($price - $product->getPrice()) / $product->getPrice()) * 100
+            (($price - $product->getPrice()) / ($product->getPrice() ?: 1)) * 100
         ));
+    }
+
+    private function getGaussianRandom(float $mean, float $stdDev): float 
+    {
+        $u1 = mt_rand() / mt_getrandmax();
+        $u2 = mt_rand() / mt_getrandmax();
+        $z = sqrt(-2 * log($u1)) * cos(2 * M_PI * $u2);
+        return $mean + $z * $stdDev;
     }
 }

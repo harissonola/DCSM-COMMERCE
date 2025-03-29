@@ -39,12 +39,12 @@ class PaymentController extends AbstractController
         $amountUsd = (float)$request->request->get('amount');
         $recipient = trim($request->request->get('recipient'));
         $currency = strtoupper(trim($request->request->get('currency')));
-        dd($currency);
+
         // Récupération des paramètres
         $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
         $exchangeRate = $this->exchangeRates[$currency];
         $minWithdrawal = $this->getMinWithdrawalAmount($currency);
-        dd($exchangeRate);
+        dd($exchangeRate, $currency);
         // Validation des données
         if (
             $amountUsd <= 0 ||

@@ -106,7 +106,7 @@ class PaymentController extends AbstractController
             $response = $this->coinPaymentsApiCall('rates', ['shortcuts' => 1]);
             return array_keys($response['result']);
         } catch (\Exception $e) {
-            return ['BTC', 'ETH', 'USDT', 'TRX']; // Défaut sécurisé
+            return ['BTC', 'ETH', 'USDT', 'TRX', 'DOGE', 'BNB']; // Défaut sécurisé
         }
     }
 

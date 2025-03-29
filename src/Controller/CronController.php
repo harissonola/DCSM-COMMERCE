@@ -18,7 +18,7 @@ class CronController extends AbstractController
 
     public function __construct(EntityManagerInterface $em, LoggerInterface $logger)
     {
-        $this->em = $em;
+        $this->em     = $em;
         $this->logger = $logger;
     }
 
@@ -42,19 +42,20 @@ class CronController extends AbstractController
             foreach ($products as $product) {
                 $newPrice = $this->processProduct($product);
                 $updatedPrices[] = [
-                    'product_id'   => $product->getId(),
-                    'new_price'    => $newPrice,
-                    'updated_at'   => (new \DateTime())->format('Y-m-d H:i:s')
+                    'product_id'  => $product->getId(),
+                    'new_price'   => $newPrice,
+                    'updated_at'  => (new \DateTime())->format('Y-m-d H:i:s')
                 ];
             }
 
+            // Flush global pour enregistrer toutes les modifications (mise à jour de Product et ProductPrice)
             $this->em->flush();
             
             return new JsonResponse([
-                'status'          => 'success',
-                'count'           => count($products),
-                'updated_prices'  => $updatedPrices,
-                'execution_time'  => (new \DateTime())->format('Y-m-d H:i:s')
+                'status'         => 'success',
+                'count'          => count($products),
+                'updated_prices' => $updatedPrices,
+                'execution_time' => (new \DateTime())->format('Y-m-d H:i:s')
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Erreur : ' . $e->getMessage());
@@ -68,7 +69,7 @@ class CronController extends AbstractController
 
     private function processProduct(Product $product): float
     {
-        // On récupère les 10 dernières entrées de ProductPrice pour ce produit
+        // Récupère les 10 dernières entrées de ProductPrice pour ce produit
         $prices = $this->em->getRepository(ProductPrice::class)
             ->findBy(['product' => $product], ['timestamp' => 'DESC'], 10);
 
@@ -76,12 +77,13 @@ class CronController extends AbstractController
         $basePrice = $product->getPrice() ?? 100.00;
         
         if (empty($prices)) {
+            // Applique une variation aléatoire pour amorcer le mouvement
             $newPrice = $this->generateRandomPrice($basePrice, 0.30);
             $this->createPriceEntry($product, $newPrice);
             return $newPrice;
         }
 
-        // Par la suite, on se base sur le dernier prix enregistré dans ProductPrice
+        // Ensuite, on se base sur le dernier prix enregistré dans ProductPrice (qui est mis à jour dans Product)
         $currentPrice = $prices[0]->getPrice();
         $newPrice = $this->calculateDynamicPrice($currentPrice, $prices);
         $this->createPriceEntry($product, $newPrice);
@@ -91,19 +93,24 @@ class CronController extends AbstractController
 
     private function calculateDynamicPrice(float $currentPrice, array $priceHistory): float
     {
-        $maxDailyVariation = 0.40;
-        $volatilityFactor = 2.5;
-        
+        // Paramètres ajustables
+        $maxDailyVariation = 0.40; // Variation maximale quotidienne
+        $volatilityFactor  = 2.5;  // Amplificateur de volatilité
+
+        // Calcul de la tendance pondérée basée sur l'historique
         $trend = $this->calculateWeightedTrend($priceHistory);
-        // Génération d'une variation aléatoire avec distribution normale
+        // Génération d'un facteur aléatoire (distribution normale)
         $randomFactor = $this->getGaussianRandom(1, 0.3) * $volatilityFactor;
-        
-        // Application des facteurs et limitation de la variation
+
+        // Calcul de la variation pour cette mise à jour
+        // On divise la variation quotidienne par 24 pour obtenir une variation par update
         $variation = $trend * $randomFactor * ($maxDailyVariation / 24);
+        // On limite la baisse à -50% maximum par update pour éviter des chutes brutales
         $variation = max($variation, -0.50);
-        
+
         $newPrice = $currentPrice * (1 + $variation);
-        
+
+        // Arrondi à 2 décimales; le prix peut atteindre zéro progressivement
         return max(round($newPrice, 2), 0);
     }
 
@@ -113,15 +120,16 @@ class CronController extends AbstractController
             return 0;
         }
 
-        $total = 0;
+        $total       = 0;
         $totalWeight = 0;
-        $count = count($prices);
+        $count       = count($prices);
         
         for ($i = 1; $i < $count; $i++) {
-            // Pondération exponentielle inverse (les données récentes ont plus de poids)
+            // Pondération exponentielle inverse (les prix récents ont plus de poids)
             $weight = pow(3, $count - $i);
+            // Calcul du pourcentage de variation entre deux entrées
             $change = ($prices[$i - 1]->getPrice() - $prices[$i]->getPrice()) / $prices[$i]->getPrice();
-            $total += $change * $weight;
+            $total       += $change * $weight;
             $totalWeight += $weight;
         }
         
@@ -130,14 +138,18 @@ class CronController extends AbstractController
 
     private function generateRandomPrice(float $basePrice, float $variationPercent): float
     {
+        // Génère une variation aléatoire dans l'intervalle [-variationPercent, +variationPercent]
         $variation = mt_rand(-$variationPercent * 100, $variationPercent * 100) / 100;
         return round($basePrice * (1 + $variation), 2);
     }
 
     private function createPriceEntry(Product $product, float $price): void
     {
-        // On s'assure que le prix ne soit pas négatif
-        $price = max(0, $price);
+        // On s'assure que le prix ne soit pas négatif (même si on veut aller vers zéro, pas de négatif)
+        $price = max($price, 0);
+        
+        // Mise à jour de l'entité Product avec le nouveau prix
+        $product->setPrice($price);
         
         // Création de l'entrée d'historique dans ProductPrice
         $entry = (new ProductPrice())
@@ -147,7 +159,6 @@ class CronController extends AbstractController
         
         $this->em->persist($entry);
 
-        // Log simple : on ne met plus à jour Product, on se base uniquement sur ProductPrice
         $this->logger->info(sprintf(
             'Produit %d - Nouveau prix enregistré : %.2f',
             $product->getId(),

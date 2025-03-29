@@ -1,8 +1,10 @@
 <?php
 namespace App\Controller;
+
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,6 +18,9 @@ use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 
 class PaymentController extends AbstractController
 {
+    /**
+     * Retrait en crypto : vérifie le solde, convertit, lance le transfert via CoinPayments
+     */
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
     public function withdraw(Request $request, EntityManagerInterface $em): Response
     {
@@ -28,12 +33,13 @@ class PaymentController extends AbstractController
         $recipient = trim($request->request->get('recipient'));
         $currency = strtoupper(trim($request->request->get('currency')));
         
-        // Récupération des paramètres dynamiques
+        // Récupération des paramètres dynamiques depuis CoinPayments
         $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
         $exchangeRate = $this->getExchangeRate($currency);
         $minWithdrawal = $this->getMinWithdrawalAmount($currency);
 
-        dd($exchangeRate);
+        // Pour débugger la valeur du taux de change
+        // dd($exchangeRate);
         
         // Validation des données
         if (
@@ -57,7 +63,7 @@ class PaymentController extends AbstractController
         // Conversion USD -> Crypto
         $amountCrypto = $amountUsd / $exchangeRate;
 
-        // Enregistrement de la transaction
+        // Enregistrement de la transaction en attente
         $transaction = new Transactions();
         $transaction
             ->setUser($user)
@@ -74,7 +80,7 @@ class PaymentController extends AbstractController
                 throw new \Exception('Échec du transfert');
             }
 
-            // Mise à jour du solde et statut
+            // Mise à jour immédiate du solde et du statut de la transaction
             $user->setBalance($user->getBalance() - $amountUsd);
             $transaction->setStatus('completed');
 
@@ -102,6 +108,7 @@ class PaymentController extends AbstractController
     }
 
     // --- Gestion des cryptos ---
+
     private function getSupportedCurrenciesFromCoinPayments(): array
     {
         try {
@@ -150,6 +157,9 @@ class PaymentController extends AbstractController
         }
     }
 
+    /**
+     * Lance le retrait en crypto via CoinPayments
+     */
     private function processCryptoWithdrawal(
         string $address, 
         float $amount, 
@@ -157,9 +167,9 @@ class PaymentController extends AbstractController
     ): bool {
         try {
             $params = [
-                'amount'      => $amount,
-                'currency'    => $currency,
-                'address'     => $address,
+                'amount'       => $amount,
+                'currency'     => $currency,
+                'address'      => $address,
                 'auto_confirm' => 1
             ];
             
@@ -175,11 +185,11 @@ class PaymentController extends AbstractController
         }
     }
 
-    // --- API CoinPayments ---
+    // --- Appel API vers CoinPayments ---
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
-        $publicKey = $_ENV['COINPAYMENTS_API_KEY'];
+        $publicKey  = $_ENV['COINPAYMENTS_API_KEY'];
         
         $params += [
             'version' => 1,
@@ -212,7 +222,8 @@ class PaymentController extends AbstractController
         return $result;
     }
 
-    // --- Méthodes de dépôt inchangées ---
+    // --- Dépôt via différentes méthodes ---
+
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {
@@ -251,6 +262,9 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
+    /**
+     * Redirection vers la page de dépôt en crypto
+     */
     #[Route('/crypto/redirect', name: 'app_crypto_redirect', methods: ['GET', 'POST'])]
     public function cryptoRedirect(Request $request): Response
     {
@@ -292,6 +306,10 @@ class PaymentController extends AbstractController
         ]);
     }
 
+    /**
+     * Traitement de la notification IPN de CoinPayments
+     * Dès qu'une transaction est confirmée (status == 100), le solde du client est crédité et la transaction enregistrée.
+     */
     #[Route('/coinpayments/ipn', name: 'coinpayments_ipn', methods: ['POST'])]
     public function coinpaymentsIpn(Request $request, EntityManagerInterface $em): Response
     {
@@ -305,11 +323,13 @@ class PaymentController extends AbstractController
         if (!$data) {
             return new Response('Invalid JSON', 400);
         }
-        if (isset($data['status']) && $data['status'] == 100) {
+        // On ne traite que les transactions confirmées (status == 100)
+        if (isset($data['status']) && (int)$data['status'] === 100) {
             $txnId = $data['txn_id'] ?? null;
             if (!$txnId) {
                 return new Response('Transaction ID missing', 400);
             }
+            // Vérifier que la transaction n'a pas déjà été enregistrée
             $existingTransaction = $em->getRepository(Transactions::class)->findOneBy(['externalId' => $txnId]);
             if ($existingTransaction) {
                 return new Response('Transaction already processed', 200);
@@ -322,6 +342,7 @@ class PaymentController extends AbstractController
             if (!$user) {
                 return new Response('User not found', 400);
             }
+            // Enregistrer la transaction et créditer le solde
             $transaction = new Transactions();
             $transaction->setUser($user);
             $transaction->setAmount((float)$data['amount1']);
@@ -329,6 +350,7 @@ class PaymentController extends AbstractController
             $transaction->setCreatedAt(new \DateTimeImmutable());
             $transaction->setExternalId($txnId);
             $em->persist($transaction);
+            
             $user->setBalance($user->getBalance() + (float)$data['amount1']);
             $em->persist($user);
             $em->flush();
@@ -338,6 +360,7 @@ class PaymentController extends AbstractController
     }
 
     // --- PayPal ---
+
     #[Route('/paypal/redirect', name: 'app_paypal_redirect', methods: ['GET'])]
     public function paypalRedirect(Request $request): Response
     {
@@ -457,16 +480,19 @@ class PaymentController extends AbstractController
 
     private function processCardPayment(User $user, float $amount): bool
     {
+        // Implémenter le traitement du paiement par carte
         return false;
     }
 
     private function processMobileMoney(User $user, float $amount): bool
     {
+        // Implémenter le traitement du paiement par Mobile Money
         return false;
     }
 
     private function executeCryptoTransfer(string $sourceWallet, string $destinationWallet, float $amountTRX, string $cryptoType): bool
     {
+        // Implémenter le transfert crypto (si besoin)
         return true;
     }
 }

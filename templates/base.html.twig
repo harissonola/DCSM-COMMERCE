@@ -65,7 +65,7 @@
     </head>
 
     <body data-bs-theme="dark">
-        {% if app.current_route != 'app_dashboard' and app.current_route != 'app_login' and app.current_route != 'app_register' %}
+        {% if and app.current_route != 'app_login' and app.current_route != 'app_register' %}
             {% include '_partials/_nav.html.twig' %}
         {% endif %}
 

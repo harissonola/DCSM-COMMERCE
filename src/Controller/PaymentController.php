@@ -20,12 +20,12 @@ class PaymentController extends AbstractController
 {
     // Taux de change manuels (à modifier selon vos besoins)
     private $exchangeRates = [
-        'BTC' => 30000.0, // 1 USD = 1/30000 BTC
-        'ETH' => 2000.0,  // 1 USD = 1/2000 ETH
+        'BTC' => 0,000012, // 1 USD = 1/30000 BTC
+        'ETH' => 0,00053,  // 1 USD = 1/2000 ETH
         'USDT' => 1.0,    // 1 USD = 1 USDT
-        'TRX' => 4.268,   // 1 USD = 4.268 TRX
-        'DOGE' => 130.0,  // 1 USD = 130 DOGE
-        'BNB' => 300.0,   // 1 USD = 1/300 BNB
+        'TRX' => 4,31,   // 1 USD = 4.268 TRX
+        'DOGE' => 5,54,  // 1 USD = 130 DOGE
+        'BNB' => 0,0016,   // 1 USD = 1/300 BNB
     ];
 
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]

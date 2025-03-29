@@ -19,7 +19,8 @@ use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 class PaymentController extends AbstractController
 {
     /**
-     * Retrait en crypto : vérifie le solde, convertit, lance le transfert via CoinPayments
+     * Retrait en crypto : vérifie le solde, convertit le montant en USD dans la crypto choisie,
+     * puis lance le transfert via CoinPayments.
      */
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
     public function withdraw(Request $request, EntityManagerInterface $em): Response
@@ -29,8 +30,10 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_login');
         }
         
+        // Montant entré par l'utilisateur en USD
         $amountUsd = (float)$request->request->get('amount');
         $recipient = trim($request->request->get('recipient'));
+        // La crypto choisie (par exemple BTC, ETH, USDT, etc.)
         $currency = strtoupper(trim($request->request->get('currency')));
         
         // Récupération des paramètres dynamiques depuis CoinPayments
@@ -38,9 +41,6 @@ class PaymentController extends AbstractController
         $exchangeRate = $this->getExchangeRate($currency);
         $minWithdrawal = $this->getMinWithdrawalAmount($currency);
 
-        // Pour débugger la valeur du taux de change
-        // dd($exchangeRate);
-        
         // Validation des données
         if (
             $amountUsd <= 0 || 
@@ -61,6 +61,8 @@ class PaymentController extends AbstractController
         }
 
         // Conversion USD -> Crypto
+        // Exemple : si l'utilisateur demande 5 USD et que le taux de conversion est 50000 USD par BTC,
+        // alors le montant en BTC sera : 5 / 50000 = 0.0001 BTC.
         $amountCrypto = $amountUsd / $exchangeRate;
 
         // Enregistrement de la transaction en attente
@@ -75,12 +77,12 @@ class PaymentController extends AbstractController
         $em->flush();
 
         try {
-            // Envoi via CoinPayments
+            // Appel à l'API CoinPayments pour effectuer le retrait
             if (!$this->processCryptoWithdrawal($recipient, $amountCrypto, $currency)) {
                 throw new \Exception('Échec du transfert');
             }
 
-            // Mise à jour immédiate du solde et du statut de la transaction
+            // Mise à jour immédiate du solde de l'utilisateur et du statut de la transaction
             $user->setBalance($user->getBalance() - $amountUsd);
             $transaction->setStatus('completed');
 
@@ -90,18 +92,14 @@ class PaymentController extends AbstractController
 
             $this->addFlash('success', 
                 "Retrait de $amountUsd USD (" .
-                number_format($amountCrypto, 8) . 
-                " $currency) effectué avec succès."
+                number_format($amountCrypto, 8) . " $currency) effectué avec succès."
             );
         } catch (\Exception $e) {
             $transaction->setStatus('failed');
             $em->persist($transaction);
             $em->flush();
             
-            $this->addFlash('danger', 
-                "Échec du retrait : " . $e->getMessage() .
-                " (Code erreur : " . $e->getCode() . ")"
-            );
+            $this->addFlash('danger', "Échec du retrait : " . $e->getMessage() . " (Code erreur : " . $e->getCode() . ")");
         }
 
         return $this->redirectToRoute('app_profile');
@@ -137,9 +135,14 @@ class PaymentController extends AbstractController
         return preg_match($pattern, $address) === 1;
     }
 
+    /**
+     * Récupère le taux de conversion pour la crypto choisie.
+     * Par exemple, pour BTC, on récupère le montant en USD correspondant à 1 BTC.
+     */
     private function getExchangeRate(string $currency): float
     {
         try {
+            // Ici, on demande le taux pour convertir 1 unité de crypto en USD
             $response = $this->coinPaymentsApiCall('get_rates', ['currency' => 'USD']);
             return (float)($response['result'][$currency]['rate'] ?? 1.0);
         } catch (\Exception $e) {
@@ -158,18 +161,16 @@ class PaymentController extends AbstractController
     }
 
     /**
-     * Lance le retrait en crypto via CoinPayments
+     * Effectue le retrait en crypto via CoinPayments.
+     * On envoie à CoinPayments le montant converti en crypto.
      */
-    private function processCryptoWithdrawal(
-        string $address, 
-        float $amount, 
-        string $currency
-    ): bool {
+    private function processCryptoWithdrawal(string $address, float $amount, string $currency): bool
+    {
         try {
             $params = [
-                'amount'       => $amount,
-                'currency'     => $currency,
-                'address'      => $address,
+                'amount'       => $amount,       // Montant converti en crypto
+                'currency'     => $currency,     // Crypto choisie par l'utilisateur
+                'address'      => $address,      // Adresse de destination (portefeuille de l'utilisateur)
                 'auto_confirm' => 1
             ];
             
@@ -185,7 +186,9 @@ class PaymentController extends AbstractController
         }
     }
 
-    // --- Appel API vers CoinPayments ---
+    /**
+     * Appel à l'API CoinPayments.
+     */
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
@@ -223,7 +226,7 @@ class PaymentController extends AbstractController
     }
 
     // --- Dépôt via différentes méthodes ---
-
+    
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {
@@ -263,7 +266,7 @@ class PaymentController extends AbstractController
     }
 
     /**
-     * Redirection vers la page de dépôt en crypto
+     * Redirection vers la page de dépôt en crypto.
      */
     #[Route('/crypto/redirect', name: 'app_crypto_redirect', methods: ['GET', 'POST'])]
     public function cryptoRedirect(Request $request): Response
@@ -307,7 +310,7 @@ class PaymentController extends AbstractController
     }
 
     /**
-     * Traitement de la notification IPN de CoinPayments
+     * Traitement de la notification IPN de CoinPayments.
      * Dès qu'une transaction est confirmée (status == 100), le solde du client est crédité et la transaction enregistrée.
      */
     #[Route('/coinpayments/ipn', name: 'coinpayments_ipn', methods: ['POST'])]

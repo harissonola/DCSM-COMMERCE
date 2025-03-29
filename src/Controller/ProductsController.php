@@ -135,7 +135,7 @@ class ProductsController extends AbstractController
     {
         return sprintf(
             'Accès refusé. <a href="%s" class="alert-link">Acheter le produit</a> pour accéder au dashboard.',
-            $this->generateUrl('app_buy_product', ['slug' => $slug], UrlGeneratorInterface::ABSOLUTE_URL)
+            $this->generateUrl('sell_product', ['slug' => $slug], UrlGeneratorInterface::ABSOLUTE_URL)
         );
     }
 

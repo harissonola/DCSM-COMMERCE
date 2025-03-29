@@ -16,12 +16,8 @@ class DashboardController extends AbstractController
     {
         $user = $this->getUser();
 
-        if ($user) {
-            // if ($user->getRoles()[0] == "ROLE_ADMIN") {
-            //     return $this->redirectToRoute("app_dashboard"); //je dois changer ceci en la route admin
-            // }
-        } else {
-            return $this->redirectToRoute("app_main");
+        if (!$user) {
+            return $this->redirectToRoute("app_login");
         }
 
         $shops = $shopRepository->findAll(
@@ -44,7 +40,7 @@ class DashboardController extends AbstractController
             //     return $this->redirectToRoute("app_dashboard"); //je dois changer ceci en la route admin
             // }
         } else {
-            return $this->redirectToRoute("app_main");
+            return $this->redirectToRoute("app_dashboard");
         }
 
         $shops = $shopRepository->findAll(
@@ -71,7 +67,7 @@ class DashboardController extends AbstractController
             //     return $this->redirectToRoute("app_dashboard"); //je dois changer ceci en la route admin
             // }
         } else {
-            return $this->redirectToRoute("app_main");
+            return $this->redirectToRoute("app_dashboard");
         }
 
         $shop = $shopRepository->findOneBy(['slug' => $slug]);

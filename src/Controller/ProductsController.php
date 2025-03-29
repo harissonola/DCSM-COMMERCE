@@ -23,7 +23,7 @@ class ProductsController extends AbstractController
     public function index(): Response
     {
         if (!$this->getUser()) {
-            return $this->redirectToRoute("app_main");
+            return $this->redirectToRoute("app_dashboard");
         }
         return $this->render('products/index.html.twig');
     }
@@ -38,7 +38,7 @@ class ProductsController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
         if (!$user) {
-            return $this->redirectToRoute("app_main");
+            return $this->redirectToRoute("app_dashboard");
         }
 
         $product = $productRepository->findOneBy(['slug' => $slug]);
@@ -48,7 +48,7 @@ class ProductsController extends AbstractController
 
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$product->getUsers()->contains($user)) {
             $this->addFlash('danger', $this->generateAccessMessage($slug));
-            return $this->redirectToRoute('app_main');
+            return $this->redirectToRoute('app_dashboard');
         }
 
         // Nouveau système : on parcourt les produits possédés par l'utilisateur
@@ -184,7 +184,7 @@ class ProductsController extends AbstractController
                 ? 'Paiement accepté !'
                 : 'Échec du paiement'
         );
-        return $this->redirectToRoute('app_main');
+        return $this->redirectToRoute('app_dashboard');
     }
 
     #[Route('/paydunya-callback', name: 'paydunya_callback')]
@@ -197,7 +197,7 @@ class ProductsController extends AbstractController
                 ? 'Paiement réussi avec PayDunya'
                 : 'Échec du paiement PayDunya'
         );
-        return $this->redirectToRoute('app_main');
+        return $this->redirectToRoute('app_dashboard');
     }
 
     #[Route('/payment/success', name: 'payment_success')]

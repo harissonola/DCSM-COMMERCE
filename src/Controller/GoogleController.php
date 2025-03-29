@@ -107,7 +107,7 @@ class GoogleController extends AbstractController
         file_put_contents($filePath, $qrResult->getString());
 
         // Construire l'URL publique absolue
-        $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
+        $publicQrCodeUrl = $this->generateUrl('app_dashboard', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
         $user->setQrCodePath($publicQrCodeUrl);
         $entityManager->flush();
 

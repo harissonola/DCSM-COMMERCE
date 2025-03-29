@@ -119,6 +119,9 @@ class PaymentController extends AbstractController
             'TRX' => '/^[a-zA-Z0-9]{34}$/',
             'DOGE' => '/^D[5-9a-zA-HJ-NP-Z1][^IOl]{32,34}$/',
             'BNB' => '/^[a-zA-Z1-9]{12,}/',
+            'LTC' => '/^[a-km-zA-HJ-NP-Z1-9]{26,35}$/',
+            'XRP' => '/^[r][a-zA-Z0-9]{27,34}$/',
+            'XMR' => '/^[48][0-9ABCMNPQRSTUVWXYZ]{94,105}$/',
         ];
         
         $pattern = $patterns[$currency] ?? '/^[a-zA-Z0-9]{25,35}$/';

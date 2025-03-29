@@ -66,7 +66,7 @@ class PaymentController extends AbstractController
 
         // Conversion USD -> Crypto
         $amountCrypto = $amountUsd / $exchangeRate;
-        dd($exchangeRate, $currency, $amountCrypto);
+        dd($exchangeRate, $currency, $amountUsd, $amountCrypto);
 
         // Enregistrement de la transaction
         $transaction = new Transactions();

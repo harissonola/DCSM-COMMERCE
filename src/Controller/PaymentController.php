@@ -488,17 +488,4 @@ class PaymentController extends AbstractController
     {
         return false;
     }
-
-    // --- Route de profil ---
-    #[Route('/profile', name: 'app_profile')]
-    public function profile(EntityManagerInterface $em): Response
-    {
-        $user = $this->getUser();
-        $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
-
-        return $this->render('profile.html.twig', [
-            'user' => $user,
-            'supportedCurrencies' => $supportedCurrencies
-        ]);
-    }
 }

@@ -205,7 +205,7 @@
                   {% endif %}
                 </td>
                 <td>
-                  <span class="badge rounded-pill bg-{{ transaction.status === 'pending' ? 'warning' : transaction.status === 'failed' ? 'danger' : 'success' }}">
+                  <span class="badge rounded-pill bg-{{ transaction.status == 'pending' ? 'warning' : transaction.status == 'failed' ? 'danger' : 'success' }}">
                     {{ transaction.status }}
                   </span>
                 </td>

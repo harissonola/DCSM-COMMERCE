@@ -44,7 +44,7 @@ class PaymentController extends AbstractController
         $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
         $exchangeRate = $this->exchangeRates[$currency];
         $minWithdrawal = $this->getMinWithdrawalAmount($currency);
-        dd($exchangeRate, $currency);
+        
         // Validation des données
         if (
             $amountUsd <= 0 ||
@@ -66,6 +66,7 @@ class PaymentController extends AbstractController
 
         // Conversion USD -> Crypto
         $amountCrypto = $amountUsd / $exchangeRate;
+        dd($exchangeRate, $currency, $amountCrypto);
 
         // Enregistrement de la transaction
         $transaction = new Transactions();

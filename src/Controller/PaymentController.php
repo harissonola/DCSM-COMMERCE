@@ -51,14 +51,14 @@ class PaymentController extends AbstractController
             !$this->validateCryptoAddress($recipient, $currency) ||
             !in_array($currency, $supportedCurrencies) ||
             $user->getBalance() < $amountUsd ||
-            ($amountUsd / $exchangeRate) < $minWithdrawal
+            ($amountUsd * $exchangeRate) < $minWithdrawal
         ) {
             $errors = [];
             if ($amountUsd <= 0) $errors[] = "Montant invalide";
             if (!$this->validateCryptoAddress($recipient, $currency)) $errors[] = "Adresse invalide";
             if (!in_array($currency, $supportedCurrencies)) $errors[] = "Crypto non supportée";
             if ($user->getBalance() < $amountUsd) $errors[] = "Solde insuffisant";
-            if (($amountUsd / $exchangeRate) < $minWithdrawal) $errors[] = "Montant trop faible (min " . $minWithdrawal . " " . $currency . ")";
+            if (($amountUsd * $exchangeRate) < $minWithdrawal) $errors[] = "Montant trop faible (min " . $minWithdrawal . " " . $currency . ")";
 
             $this->addFlash('danger', "Erreur : " . implode(', ', $errors));
             return $this->redirectToRoute('app_profile');

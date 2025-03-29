@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Controller;
-
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,47 +23,51 @@ class PaymentController extends AbstractController
         if (!$user) {
             return $this->redirectToRoute('app_login');
         }
-
+        
         $amountUsd = (float)$request->request->get('amount');
         $recipient = trim($request->request->get('recipient'));
         $currency = strtoupper(trim($request->request->get('currency')));
-
+        
         // Validation des données
-        if ($amountUsd <= 0 || !$this->validateCryptoAddress($recipient) || $currency !== 'USDT') {
-            $this->addFlash('danger', 'Données invalides ou crypto non supportée.');
+        $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
+        if (
+            $amountUsd <= 0 || 
+            !$this->validateCryptoAddress($recipient, $currency) || 
+            !in_array($currency, $supportedCurrencies) || 
+            $user->getBalance() < $amountUsd
+        ) {
+            $this->addFlash('danger', 
+                "Erreur : " .
+                ($amountUsd <= 0 ? "Montant invalide" : "") .
+                (!$this->validateCryptoAddress($recipient, $currency) ? "Adresse invalide" : "") .
+                (!in_array($currency, $supportedCurrencies) ? "Crypto non supportée" : "") .
+                ($user->getBalance() < $amountUsd ? "Solde insuffisant" : "")
+            );
             return $this->redirectToRoute('app_profile');
         }
 
-        if ($user->getBalance() < $amountUsd) {
-            $this->addFlash('danger', 'Solde insuffisant.');
-            return $this->redirectToRoute('app_profile');
-        }
-
-        // Conversion USD -> USDT
-        $exchangeRate = $this->getUsdtExchangeRate();
-        $usdtAmount = $amountUsd * $exchangeRate;
+        // Conversion USD -> Crypto
+        $exchangeRate = $this->getExchangeRate($currency);
+        $amountCrypto = $amountUsd / $exchangeRate;
 
         // Enregistrement de la transaction
         $transaction = new Transactions();
-        $transaction->setUser($user)
-            ->setAmount(-$amountUsd) // Montant débité en USD
-            ->setMethod('Crypto (USDT)')
+        $transaction
+            ->setUser($user)
+            ->setAmount(-$amountUsd)
+            ->setMethod("Crypto ($currency)")
             ->setStatus('pending')
             ->setCreatedAt(new \DateTimeImmutable());
-
         $em->persist($transaction);
         $em->flush();
 
         try {
-            // Envoi du montant converti en USDT
-            if (!$this->processCryptoWithdrawal($recipient, $usdtAmount)) {
-                $transaction->setStatus('failed');
-                $em->persist($transaction);
-                $em->flush();
-                throw new \Exception('Échec du transfert via CoinPayments.');
+            // Envoi via CoinPayments
+            if (!$this->processCryptoWithdrawal($recipient, $amountCrypto, $currency)) {
+                throw new \Exception('Échec du transfert');
             }
 
-            // Mise à jour du solde et de la transaction
+            // Mise à jour du solde et statut
             $user->setBalance($user->getBalance() - $amountUsd);
             $transaction->setStatus('completed');
 
@@ -73,76 +75,124 @@ class PaymentController extends AbstractController
             $em->persist($transaction);
             $em->flush();
 
-            $this->addFlash('success', "Retrait de {$amountUsd} USD ({$usdtAmount} USDT) effectué avec succès.");
+            $this->addFlash('success', 
+                "Retrait de $amountUsd USD (" .
+                number_format($amountCrypto, 8) . 
+                " $currency) effectué avec succès."
+            );
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur lors du retrait : ' . $e->getMessage());
+            $transaction->setStatus('failed');
+            $em->persist($transaction);
+            $em->flush();
+            
+            $this->addFlash('danger', 
+                "Échec du retrait : " . $e->getMessage() . 
+                " (Code erreur : " . $e->getCode() . ")"
+            );
         }
 
         return $this->redirectToRoute('app_profile');
     }
 
-    private function getUsdtExchangeRate(): float
+    // --- NOUVELLES MÉTHODES ---
+
+    private function getSupportedCurrenciesFromCoinPayments(): array
     {
         try {
-            $params = [
-                'cmd' => 'get_rates',
-                'currency' => 'USD'
-            ];
-            $response = $this->coinPaymentsApiCall('get_rates', $params);
-            return (float)($response['result']['USDT']['rate'] ?? 1.0);
+            $response = $this->coinPaymentsApiCall('rates', ['shortcuts' => 1]);
+            return array_keys($response['result']);
+        } catch (\Exception $e) {
+            return ['BTC', 'ETH', 'USDT']; // Défaut sécurisé
+        }
+    }
+
+    private function validateCryptoAddress(string $address, string $currency): bool
+    {
+        $patterns = [
+            'BTC' => '/^([13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/',
+            'ETH' => '/^0x[a-fA-F0-9]{40}$/',
+            'USDT' => '/^[a-zA-Z0-9]{25,35}$/',
+            'BNB' => '/^[a-zA-Z1-9]{12,}/',
+            'DOGE' => '/^D[5-9a-zA-HJ-NP-Z1][^IOl]{32,34}$/'
+        ];
+        
+        $pattern = $patterns[$currency] ?? '/^[a-zA-Z0-9]{25,35}$/';
+        return preg_match($pattern, $address) === 1;
+    }
+
+    private function getExchangeRate(string $currency): float
+    {
+        try {
+            $response = $this->coinPaymentsApiCall('get_rates', ['currency' => 'USD']);
+            return (float)($response['result'][$currency]['rate'] ?? 1.0);
         } catch (\Exception $e) {
             return 1.0;
         }
     }
 
-    private function processCryptoWithdrawal(string $address, float $amount): bool
-    {
+    private function processCryptoWithdrawal(
+        string $address, 
+        float $amount, 
+        string $currency
+    ): bool {
         try {
             $params = [
                 'amount'   => $amount,
-                'currency' => 'USDT', // Forcé en USDT
+                'currency' => $currency,
                 'address'  => $address,
+                'auto_confirm' => 1
             ];
+            
             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
-            return $response['error'] === 'ok';
+            
+            if ($response['error'] === 'ok' && $response['result']['status'] === 'confirmed') {
+                return true;
+            } else {
+                throw new \Exception("CoinPayments Error: " . $response['error']);
+            }
         } catch (\Exception $e) {
-            return false;
+            throw new \Exception("Échec du transfert : " . $e->getMessage(), 500);
         }
     }
 
-    private function validateCryptoAddress(string $address): bool
-    {
-        return preg_match('/^[a-zA-Z0-9]{25,35}$/', $address) === 1;
-    }
-
+    // --- MODIFICATIONS À LA MÉTHODE API ---
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
         $publicKey = $_ENV['COINPAYMENTS_API_KEY'];
-        $params['version'] = 1;
-        $params['cmd']     = $cmd;
-        $params['key']     = $publicKey;
-        $params['format']  = 'json';
+        
+        $params += [
+            'version' => 1,
+            'cmd'     => $cmd,
+            'key'     => $publicKey,
+            'format'  => 'json'
+        ];
+        
         $postData = http_build_query($params, '', '&');
         $hmac = hash_hmac('sha512', $postData, $privateKey);
+        
         $ch = curl_init('https://www.coinpayments.net/api.php');
-        curl_setopt($ch, CURLOPT_FAILONERROR, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['hmac: ' . $hmac]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER => ["hmac: $hmac"],
+            CURLOPT_POSTFIELDS => $postData
+        ]);
+        
         $data = curl_exec($ch);
         if ($data === false) {
-            throw new \Exception('Erreur cURL : ' . curl_error($ch));
+            throw new \Exception("cURL Error: " . curl_error($ch));
         }
-        curl_close($ch);
+        
         $result = json_decode($data, true);
         if ($result['error'] !== 'ok') {
-            throw new \Exception('Erreur CoinPayments : ' . $result['error']);
+            throw new \Exception("CoinPayments Error: " . $result['error']);
         }
+        
         return $result;
     }
 
+    // --- AUTRES MÉTHODES (INCHANGÉES) ---
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {

@@ -28,26 +28,31 @@ class PaymentController extends AbstractController
         $recipient = trim($request->request->get('recipient'));
         $currency = strtoupper(trim($request->request->get('currency')));
         
-        // Validation des données
+        // Récupération des paramètres dynamiques
         $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
+        $exchangeRate = $this->getExchangeRate($currency);
+        $minWithdrawal = $this->getMinWithdrawalAmount($currency);
+        
+        // Validation des données
         if (
             $amountUsd <= 0 || 
             !$this->validateCryptoAddress($recipient, $currency) || 
             !in_array($currency, $supportedCurrencies) || 
-            $user->getBalance() < $amountUsd
+            $user->getBalance() < $amountUsd || 
+            ($amountUsd / $exchangeRate) < $minWithdrawal
         ) {
-            $this->addFlash('danger', 
-                "Erreur : " .
-                ($amountUsd <= 0 ? "Montant invalide" : "") .
-                (!$this->validateCryptoAddress($recipient, $currency) ? "Adresse invalide" : "") .
-                (!in_array($currency, $supportedCurrencies) ? "Crypto non supportée" : "") .
-                ($user->getBalance() < $amountUsd ? "Solde insuffisant" : "")
-            );
+            $errors = [];
+            if ($amountUsd <= 0) $errors[] = "Montant invalide";
+            if (!$this->validateCryptoAddress($recipient, $currency)) $errors[] = "Adresse invalide";
+            if (!in_array($currency, $supportedCurrencies)) $errors[] = "Crypto non supportée";
+            if ($user->getBalance() < $amountUsd) $errors[] = "Solde insuffisant";
+            if (($amountUsd / $exchangeRate) < $minWithdrawal) $errors[] = "Montant trop faible (min ".$minWithdrawal." ".$currency.")";
+            
+            $this->addFlash('danger', "Erreur : " . implode(', ', $errors));
             return $this->redirectToRoute('app_profile');
         }
 
         // Conversion USD -> Crypto
-        $exchangeRate = $this->getExchangeRate($currency);
         $amountCrypto = $amountUsd / $exchangeRate;
 
         // Enregistrement de la transaction
@@ -86,7 +91,7 @@ class PaymentController extends AbstractController
             $em->flush();
             
             $this->addFlash('danger', 
-                "Échec du retrait : " . $e->getMessage() . 
+                "Échec du retrait : " . $e->getMessage() .
                 " (Code erreur : " . $e->getCode() . ")"
             );
         }
@@ -94,15 +99,14 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
-    // --- NOUVELLES MÉTHODES ---
-
+    // --- Gestion des cryptos ---
     private function getSupportedCurrenciesFromCoinPayments(): array
     {
         try {
             $response = $this->coinPaymentsApiCall('rates', ['shortcuts' => 1]);
             return array_keys($response['result']);
         } catch (\Exception $e) {
-            return ['BTC', 'ETH', 'USDT']; // Défaut sécurisé
+            return ['BTC', 'ETH', 'USDT', 'TRX']; // Défaut sécurisé
         }
     }
 
@@ -112,8 +116,9 @@ class PaymentController extends AbstractController
             'BTC' => '/^([13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/',
             'ETH' => '/^0x[a-fA-F0-9]{40}$/',
             'USDT' => '/^[a-zA-Z0-9]{25,35}$/',
+            'TRX' => '/^[a-zA-Z0-9]{34}$/',
+            'DOGE' => '/^D[5-9a-zA-HJ-NP-Z1][^IOl]{32,34}$/',
             'BNB' => '/^[a-zA-Z1-9]{12,}/',
-            'DOGE' => '/^D[5-9a-zA-HJ-NP-Z1][^IOl]{32,34}$/'
         ];
         
         $pattern = $patterns[$currency] ?? '/^[a-zA-Z0-9]{25,35}$/';
@@ -130,6 +135,16 @@ class PaymentController extends AbstractController
         }
     }
 
+    private function getMinWithdrawalAmount(string $currency): float
+    {
+        try {
+            $response = $this->coinPaymentsApiCall('get_withdrawal_info', ['currency' => $currency]);
+            return (float)($response['result']['min_limit'] ?? 0.0);
+        } catch (\Exception $e) {
+            return 0.0;
+        }
+    }
+
     private function processCryptoWithdrawal(
         string $address, 
         float $amount, 
@@ -137,9 +152,9 @@ class PaymentController extends AbstractController
     ): bool {
         try {
             $params = [
-                'amount'   => $amount,
-                'currency' => $currency,
-                'address'  => $address,
+                'amount'      => $amount,
+                'currency'    => $currency,
+                'address'     => $address,
                 'auto_confirm' => 1
             ];
             
@@ -155,7 +170,7 @@ class PaymentController extends AbstractController
         }
     }
 
-    // --- MODIFICATIONS À LA MÉTHODE API ---
+    // --- API CoinPayments ---
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
@@ -192,7 +207,7 @@ class PaymentController extends AbstractController
         return $result;
     }
 
-    // --- AUTRES MÉTHODES (INCHANGÉES) ---
+    // --- Méthodes de dépôt inchangées ---
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
     public function deposit(Request $request, EntityManagerInterface $em): Response
     {
@@ -317,6 +332,7 @@ class PaymentController extends AbstractController
         return new Response('IPN received', 200);
     }
 
+    // --- PayPal ---
     #[Route('/paypal/redirect', name: 'app_paypal_redirect', methods: ['GET'])]
     public function paypalRedirect(Request $request): Response
     {

@@ -71,6 +71,7 @@ class PaymentController extends AbstractController
         $transaction = new Transactions();
         $transaction
             ->setUser($user)
+            ->setType("withdrawal")
             ->setAmount(-$amountUsd)
             ->setMethod("Crypto ($currency)")
             ->setStatus('pending')
@@ -99,7 +100,9 @@ class PaymentController extends AbstractController
                     " $currency) effectué avec succès."
             );
         } catch (\Exception $e) {
-            $transaction->setStatus('failed');
+            $transaction->setStatus('failed')
+                        ->setType("withdrawal")
+            ;
             $em->persist($transaction);
             $em->flush();
             $this->addFlash(

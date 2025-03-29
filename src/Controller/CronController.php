@@ -48,9 +48,8 @@ class CronController extends AbstractController
                 ];
             }
 
-            // Flush global pour enregistrer toutes les modifications (mise à jour de Product et ProductPrice)
             $this->em->flush();
-            
+
             return new JsonResponse([
                 'status'         => 'success',
                 'count'          => count($products),
@@ -69,49 +68,69 @@ class CronController extends AbstractController
 
     private function processProduct(Product $product): float
     {
-        // Récupère les 10 dernières entrées de ProductPrice pour ce produit
+        // Récupère les 5 dernières entrées pour plus de réactivité
         $prices = $this->em->getRepository(ProductPrice::class)
-            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 10);
+            ->findBy(['product' => $product], ['timestamp' => 'DESC'], 5);
 
-        // Pour la première mise à jour, on part du prix initial de l'entité Product
         $basePrice = $product->getPrice() ?? 100.00;
-        
+
         if (empty($prices)) {
-            // Applique une variation aléatoire pour amorcer le mouvement
             $newPrice = $this->generateRandomPrice($basePrice, 0.30);
             $this->createPriceEntry($product, $newPrice);
             return $newPrice;
         }
 
-        // Ensuite, on se base sur le dernier prix enregistré dans ProductPrice (qui est mis à jour dans Product)
         $currentPrice = $prices[0]->getPrice();
         $newPrice = $this->calculateDynamicPrice($currentPrice, $prices);
         $this->createPriceEntry($product, $newPrice);
-        
+
         return $newPrice;
     }
 
     private function calculateDynamicPrice(float $currentPrice, array $priceHistory): float
     {
-        // Paramètres ajustables
-        $maxDailyVariation = 0.40; // Variation maximale quotidienne
+        $maxDailyVariation = 0.40; // 40% de variation maximale par jour
         $volatilityFactor  = 2.5;  // Amplificateur de volatilité
+        $momentumFactor    = 0.5;  // Facteur de momentum (50% de la variation max par heure)
 
-        // Calcul de la tendance pondérée basée sur l'historique
+        // Calcul de la tendance pondérée
         $trend = $this->calculateWeightedTrend($priceHistory);
-        // Génération d'un facteur aléatoire (distribution normale)
-        $randomFactor = $this->getGaussianRandom(1, 0.3) * $volatilityFactor;
 
-        // Calcul de la variation pour cette mise à jour
-        // On divise la variation quotidienne par 24 pour obtenir une variation par update
-        $variation = $trend * $randomFactor * ($maxDailyVariation / 24);
-        // On limite la baisse à -50% maximum par update pour éviter des chutes brutales
-        $variation = max($variation, -0.50);
+        // Composante principale (tendance + momentum)
+        $baseVariation = $trend * $volatilityFactor * ($maxDailyVariation / 24);
 
+        if ($trend > 0) {
+            $baseVariation += $momentumFactor * ($maxDailyVariation / 24);
+        } elseif ($trend < 0) {
+            $baseVariation -= $momentumFactor * ($maxDailyVariation / 24);
+        }
+
+        // Composante aléatoire avec volatilité accrue
+        $randomComponent = $this->getGaussianRandom(0, 3) * ($maxDailyVariation / 24);
+
+        // Variation totale
+        $variation = $baseVariation + $randomComponent;
+
+        // Pression baissière accrue vers 0
+        if ($currentPrice < 20) {
+            $variation *= 1.5; // Augmente la volatilité de 50%
+            $variation = max($variation, -0.4); // Limite la baisse à -40% par heure
+        }
+
+        // Limites de sécurité
+        $variation = max($variation, -0.50); // Baisse max 50% par heure
+        $variation = min($variation, 0.50);  // Montée max 50% par heure
+
+        // Calcul du nouveau prix
         $newPrice = $currentPrice * (1 + $variation);
+        $newPrice = max(round($newPrice, 2), 0);
 
-        // Arrondi à 2 décimales; le prix peut atteindre zéro progressivement
-        return max(round($newPrice, 2), 0);
+        // Éviter le statisme (forcer une variation minimale)
+        if ($newPrice == $currentPrice) {
+            $newPrice += ($variation > 0 ? 0.01 : -0.01);
+        }
+
+        return $newPrice;
     }
 
     private function calculateWeightedTrend(array $prices): float
@@ -120,53 +139,42 @@ class CronController extends AbstractController
             return 0;
         }
 
-        $total       = 0;
+        $total = 0;
         $totalWeight = 0;
-        $count       = count($prices);
-        
+        $count = count($prices);
+
         for ($i = 1; $i < $count; $i++) {
-            // Pondération exponentielle inverse (les prix récents ont plus de poids)
-            $weight = pow(3, $count - $i);
-            // Calcul du pourcentage de variation entre deux entrées
+            $weight = pow(3, $count - $i); // Pondération exponentielle récente
             $change = ($prices[$i - 1]->getPrice() - $prices[$i]->getPrice()) / $prices[$i]->getPrice();
-            $total       += $change * $weight;
+            $total += $change * $weight;
             $totalWeight += $weight;
         }
-        
+
         return $totalWeight ? $total / $totalWeight : 0;
     }
 
     private function generateRandomPrice(float $basePrice, float $variationPercent): float
     {
-        // Génère une variation aléatoire dans l'intervalle [-variationPercent, +variationPercent]
-        $variation = mt_rand(-$variationPercent * 100, $variationPercent * 100) / 100;
+        $variation = $this->getGaussianRandom(0, $variationPercent);
         return round($basePrice * (1 + $variation), 2);
     }
 
     private function createPriceEntry(Product $product, float $price): void
     {
-        // On s'assure que le prix ne soit pas négatif (même si on veut aller vers zéro, pas de négatif)
         $price = max($price, 0);
-        
-        // Mise à jour de l'entité Product avec le nouveau prix
+
         $product->setPrice($price);
-        
-        // Création de l'entrée d'historique dans ProductPrice
+
         $entry = (new ProductPrice())
             ->setProduct($product)
             ->setPrice($price)
             ->setTimestamp(new \DateTimeImmutable());
-        
-        $this->em->persist($entry);
 
-        $this->logger->info(sprintf(
-            'Produit %d - Nouveau prix enregistré : %.2f',
-            $product->getId(),
-            $price
-        ));
+        $this->em->persist($entry);
+        $this->logger->info("Produit {$product->getId()} : Nouveau prix → {$price}€");
     }
 
-    private function getGaussianRandom(float $mean, float $stdDev): float 
+    private function getGaussianRandom(float $mean = 0, float $stdDev = 1): float
     {
         $u1 = mt_rand() / mt_getrandmax();
         $u2 = mt_rand() / mt_getrandmax();

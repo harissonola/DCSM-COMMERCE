@@ -129,7 +129,7 @@ class RegistrationController extends AbstractController
                 $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
                 file_put_contents($filePath, $qrResult->getString());
 
-                $publicQrCodeUrl = $this->generateUrl('app_main', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
+                $publicQrCodeUrl = $this->generateUrl('app_dashboard', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
                 $user->setQrCodePath($publicQrCodeUrl);
                 $entityManager->flush();
 
@@ -163,7 +163,7 @@ class RegistrationController extends AbstractController
         $user = $this->getUser();
 
         if (!$user) {
-            return $this->redirectToRoute('app_main');
+            return $this->redirectToRoute('app_dashboard');
         }
 
         try {
@@ -172,7 +172,7 @@ class RegistrationController extends AbstractController
             return $this->redirectToRoute('app_dashboard');
         } catch (VerifyEmailExceptionInterface $exception) {
             $this->addFlash('error', 'L\'adresse email n\'est pas valide.');
-            return $this->redirectToRoute('app_main');
+            return $this->redirectToRoute('app_dashboard');
         }
     }
 
@@ -182,7 +182,7 @@ class RegistrationController extends AbstractController
         $user = $this->getUser();
 
         if (!$user) {
-            return $this->redirectToRoute('app_main');
+            return $this->redirectToRoute('app_dashboard');
         }
 
         if ($user->isVerified()) {

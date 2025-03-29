@@ -32,6 +32,8 @@ class PaymentController extends AbstractController
         $supportedCurrencies = $this->getSupportedCurrenciesFromCoinPayments();
         $exchangeRate = $this->getExchangeRate($currency);
         $minWithdrawal = $this->getMinWithdrawalAmount($currency);
+
+        dd($exchangeRate);
         
         // Validation des données
         if (

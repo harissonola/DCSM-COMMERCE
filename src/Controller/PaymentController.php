@@ -20,12 +20,12 @@ class PaymentController extends AbstractController
 {
     // Taux de change manuels (à modifier selon vos besoins)
     private $exchangeRates = [
-        'BTC' => 0,000012, // 1 USD = 1/30000 BTC
-        'ETH' => 0,00053,  // 1 USD = 1/2000 ETH
-        'USDT' => 1.0,    // 1 USD = 1 USDT
-        'TRX' => 4,31,   // 1 USD = 4.268 TRX
-        'DOGE' => 5,54,  // 1 USD = 130 DOGE
-        'BNB' => 0,0016,   // 1 USD = 1/300 BNB
+        'BTC' => 82209.33, // 1 USD = 1/30000 BTC
+        'ETH' => 1815.33,  // 1 USD = 1/2000 ETH
+        'USDT' => 1.00,    // 1 USD = 1 USDT
+        'TRX' => 0.23,   // 1 USD = 4.268 TRX
+        'DOGE' => 0.17,  // 1 USD = 130 DOGE
+        'BNB' => 602,90,   // 1 USD = 1/300 BNB
     ];
 
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
@@ -51,21 +51,21 @@ class PaymentController extends AbstractController
             !$this->validateCryptoAddress($recipient, $currency) ||
             !in_array($currency, $supportedCurrencies) ||
             $user->getBalance() < $amountUsd ||
-            ($amountUsd * $exchangeRate) < $minWithdrawal
+            ($amountUsd / $exchangeRate) < $minWithdrawal
         ) {
             $errors = [];
             if ($amountUsd <= 0) $errors[] = "Montant invalide";
             if (!$this->validateCryptoAddress($recipient, $currency)) $errors[] = "Adresse invalide";
             if (!in_array($currency, $supportedCurrencies)) $errors[] = "Crypto non supportée";
             if ($user->getBalance() < $amountUsd) $errors[] = "Solde insuffisant";
-            if (($amountUsd * $exchangeRate) < $minWithdrawal) $errors[] = "Montant trop faible (min " . $minWithdrawal . " " . $currency . ")";
+            if (($amountUsd / $exchangeRate) < $minWithdrawal) $errors[] = "Montant trop faible (min " . $minWithdrawal . " " . $currency . ")";
 
             $this->addFlash('danger', "Erreur : " . implode(', ', $errors));
             return $this->redirectToRoute('app_profile');
         }
 
         // Conversion USD -> Crypto
-        $amountCrypto = $amountUsd * $exchangeRate;
+        $amountCrypto = $amountUsd / $exchangeRate;
         dd($exchangeRate, $currency, $amountUsd, $amountCrypto);
 
         // Enregistrement de la transaction

@@ -2,44 +2,46 @@
 namespace App\Service;
 
 use Github\Client;
-use Github\Exception\ExceptionInterface;
+use Github\Exception\RuntimeException;
 
 class GitHubUploader
 {
-    private $client;
-    private $repoOwner;
-    private $repoName;
+    private Client $client;
+    private string $repoOwner;
+    private string $repoName;
 
     public function __construct(string $token, string $repoOwner, string $repoName)
     {
-        if (empty($token)) {
-            throw new \InvalidArgumentException("Le token GitHub est requis.");
-        }
-        if (empty($repoOwner) || empty($repoName)) {
-            throw new \InvalidArgumentException("Le propriétaire et le nom du dépôt GitHub sont requis.");
+        if (empty($token) || empty($repoOwner) || empty($repoName)) {
+            throw new \InvalidArgumentException("Le token, le propriétaire et le nom du dépôt GitHub sont requis.");
         }
 
         $this->client = new Client();
-        $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
+        // Ajout manuel du header d'authentification
+        $this->client->addHeader('Authorization', 'token ' . $token);
         $this->repoOwner = $repoOwner;
         $this->repoName = $repoName;
     }
 
-    public function uploadFile($fileContent, string $filePath, string $commitMessage = 'Upload file'): string
+    public function uploadFile(string $fileContent, string $filePath, string $commitMessage = 'Upload file'): string
     {
         try {
-            $this->ensureDirectoryExists(dirname($filePath));
+            $filePath = ltrim($filePath, '/'); // Assurer un chemin correct
 
-            // Vérifie si le fichier existe
+            /** @var \Github\Api\Repository\Contents $contentsApi */
+            $contentsApi = $this->client->repo()->contents();
+
+            // Vérifie si le fichier existe déjà
             try {
-                $existingFile = $this->client->api('repo')->contents()->show(
+                $existingFile = $contentsApi->show(
                     $this->repoOwner,
                     $this->repoName,
                     $filePath,
                     'main'
                 );
+
                 // Mise à jour du fichier existant
-                $response = $this->client->api('repo')->contents()->update(
+                $response = $contentsApi->update(
                     $this->repoOwner,
                     $this->repoName,
                     $filePath,
@@ -48,9 +50,9 @@ class GitHubUploader
                     $existingFile['sha'],
                     'main'
                 );
-            } catch (ExceptionInterface $e) {
+            } catch (RuntimeException $e) {
                 // Création du fichier s'il n'existe pas
-                $response = $this->client->api('repo')->contents()->create(
+                $response = $contentsApi->create(
                     $this->repoOwner,
                     $this->repoName,
                     $filePath,
@@ -61,37 +63,15 @@ class GitHubUploader
             }
 
             return $this->generateCdnUrl($filePath);
-        } catch (ExceptionInterface $e) {
-            throw new \Exception("Échec de l'upload GitHub : " . $e->getMessage());
-        }
-    }
-
-    private function ensureDirectoryExists(string $directoryPath): void
-    {
-        $parts = array_filter(explode('/', $directoryPath));
-        $currentPath = '';
-
-        foreach ($parts as $part) {
-            $currentPath .= "{$part}/";
-            try {
-                $this->client->api('repo')->contents()->create(
-                    $this->repoOwner,
-                    $this->repoName,
-                    rtrim($currentPath, '/'),
-                    '',
-                    "Création du répertoire {$part}",
-                    'main'
-                );
-            } catch (ExceptionInterface $e) {
-                continue;
-            }
+        } catch (RuntimeException $e) {
+            throw new \Exception("Erreur lors de l'upload GitHub : " . $e->getMessage());
         }
     }
 
     private function generateCdnUrl(string $filePath): string
     {
         return sprintf(
-            'https://cdn.jsdelivr.net/gh/%s/%s@main/%s',
+            'https://raw.githubusercontent.com/%s/%s/main/%s',
             $this->repoOwner,
             $this->repoName,
             ltrim($filePath, '/')

@@ -2,7 +2,7 @@
 
 namespace App\Controller;
 
-use App\Service\FtpService;
+use App\Entity\User;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -12,21 +12,21 @@ use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 use App\Security\AppAuthenticator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use App\Entity\User;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Github\Client;
 
 class GoogleController extends AbstractController
 {
-    private $ftpService;
+    private Client $githubClient;
 
-    public function __construct(FtpService $ftpService)
+    public function __construct(Client $githubClient)
     {
-        $this->ftpService = $ftpService;
+        $this->githubClient = $githubClient;
     }
 
     #[Route('/connect/google', name: 'connect_google_start')]
@@ -49,21 +49,16 @@ class GoogleController extends AbstractController
         $client = $clientRegistry->getClient('google');
         $userData = $client->fetchUser();
 
-        $email    = $userData->getEmail();
+        $email = $userData->getEmail();
         $googleId = $userData->getId();
-
         $fname = $userData->getFirstName() ?? $userData->getName();
         $lname = $userData->getLastName() ?? '';
-        $firstLetter = substr($lname, 0, 1);
-        $username = strtolower($firstLetter . $fname);
-        if (empty(trim($username))) {
-            $username = strtolower($email);
-        }
+        $username = strtolower(substr($lname, 0, 1) . $fname);
+        if (empty(trim($username))) $username = strtolower($email);
 
-        $existingUser = $entityManager->getRepository(User::class)->findOneBy(['googleId' => $googleId]);
-        if (!$existingUser) {
-            $existingUser = $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
-        }
+        $existingUser = $entityManager->getRepository(User::class)
+            ->findOneBy(['googleId' => $googleId])
+            ?? $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
         if ($existingUser) {
             if (!$existingUser->getGoogleId()) {
@@ -75,45 +70,68 @@ class GoogleController extends AbstractController
 
         $user = new User();
         $user->setGoogleId($googleId)
-             ->setEmail($email)
-             ->setUsername($username)
-             ->setFname($fname)
-             ->setLname($lname)
-             ->setPassword($passwordHasher->hashPassword($user, uniqid()))
-             ->setPhoto($userData->getAvatar())
-             ->setCountry('BJ')
-             ->setCreatedAt(new \DateTimeImmutable())
-             ->setMiningBotActive(false)
-             ->setVerified(true);
+            ->setEmail($email)
+            ->setUsername($username)
+            ->setFname($fname)
+            ->setLname($lname)
+            ->setPassword($passwordHasher->hashPassword($user, uniqid()))
+            ->setPhoto($userData->getAvatar())
+            ->setCountry('BJ')
+            ->setCreatedAt(new \DateTimeImmutable())
+            ->setMiningBotActive(false)
+            ->setVerified(true);
 
         $referralCode = uniqid('ref_');
         $user->setReferralCode($referralCode);
-        $entityManager->persist($user);
-        $entityManager->flush();
 
-        // Générer le lien d'affiliation et le QR Code
-        $referralLink = $urlGenerator->generate('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL);
+        // Generate QR Code
+        $referralLink = $urlGenerator->generate(
+            'app_register',
+            ['ref' => $referralCode],
+            UrlGeneratorInterface::ABSOLUTE_URL
+        );
+
         $qrCode = new QrCode($referralLink);
         $writer = new PngWriter();
         $qrResult = $writer->write($qrCode);
 
-        // Stockage local dans le dossier public (par exemple "public/uploads/user/")
-        $uploadDir = $this->getParameter('qr_code_directory');
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+        // Upload to GitHub
         $qrCodeFileName = $referralCode . '.png';
-        $filePath = $uploadDir ."/". $qrCodeFileName;
-        file_put_contents($filePath, $qrResult->getString());
+        $filePath = "uploads/qrcodes/$qrCodeFileName";
+        try {
+            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
+            $user->setQrCodePath($cdnUrl);
+        } catch (\Exception $e) {
+            $this->addFlash('error', "QR Upload Failed: " . $e->getMessage());
+        }
 
-        // Construire l'URL publique absolue
-        $publicQrCodeUrl = $this->generateUrl('app_dashboard', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
-        $user->setQrCodePath($publicQrCodeUrl);
+        $entityManager->persist($user);
         $entityManager->flush();
 
-        $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
+        $this->sendReferralEmail($user, $referralLink, $user->getQrCodePath(), $mailer);
 
         return $authenticator->authenticateUser($user, $appAuthenticator, $request);
+    }
+
+    private function uploadToGitHub(string $filePath, string $content, string $message): string
+    {
+        $repoOwner = 'harissonola';
+        $repoName = 'my-cdn';
+        $branch = 'main';
+
+        $this->githubClient->authenticate('YOUR_GITHUB_TOKEN', null, Client::AUTH_ACCESS_TOKEN);
+
+        $contentsApi = $this->githubClient->api('repo')->contents();
+        $response = $contentsApi->create(
+            $repoOwner,
+            $repoName,
+            $filePath,
+            base64_encode($content),
+            $message,
+            $branch
+        );
+
+        return $response['content']['download_url'];
     }
 
     private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void

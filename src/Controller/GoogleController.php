@@ -74,7 +74,8 @@ class GoogleController extends AbstractController
 
         // Créer un nouvel utilisateur
         $user = new User();
-        $referralCode = uniqid('ref_', true);
+        // Génération d'un referralCode sans point (pour éviter les problèmes de nom de fichier)
+        $referralCode = uniqid('ref_', false); // Supprime le paramètre "true" pour éviter les points
 
         try {
             // Configuration de l'utilisateur
@@ -105,10 +106,10 @@ class GoogleController extends AbstractController
             $writer = new PngWriter();
             $qrResult = $writer->write($qrCode);
 
-            // Récupérer le contenu binaire directement
+            // Récupération du contenu binaire
             $fileContent = $qrResult->getString();
 
-            // Upload sur GitHub
+            // Chemin de stockage GitHub (avec un nom de fichier valide)
             $filePath = "uploads/qrcodes/{$referralCode}.png";
             $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
@@ -149,15 +150,18 @@ class GoogleController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification GitHub
+            // Authentification via variable d'environnement
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
-            $contentsApi = $this->githubClient->api('repo')->contents();
-            $response = $contentsApi->create(
+            // Encodage base64 obligatoire pour GitHub
+            $encodedContent = base64_encode($content);
+
+            // Vérification du chemin (ex: "uploads/qrcodes/ref_67e96a20467113.png")
+            $response = $this->githubClient->api('repo')->contents()->create(
                 $repoOwner,
                 $repoName,
                 $filePath,
-                base64_encode($content), // Encodage requis par GitHub
+                $encodedContent,
                 $message,
                 $branch
             );

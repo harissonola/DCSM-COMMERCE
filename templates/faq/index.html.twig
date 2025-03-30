@@ -1,0 +1,449 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}DCSM-COMMERCE - Foire Aux Questions{% endblock %}
+
+{% block body %}
+
+    <!-- Hero Section -->
+    <section class="hero-section bg-dark text-white py-5">
+        <div class="container py-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8 mx-auto text-center">
+                    <h1 class="display-4 fw-bold mb-4">Foire Aux Questions</h1>
+                    <p class="lead mb-4">Trouvez les réponses à vos questions sur notre plateforme d'investissement.</p>
+                    <div class="search-box mx-auto" style="max-width: 500px;">
+                        <form class="d-flex">
+                            <input class="form-control bg-gray-800 text-white border-gray-700" type="search" placeholder="Rechercher dans les questions..." aria-label="Search">
+                            <button class="btn btn-primary ms-2" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Content -->
+    <section class="py-5 bg-gray-900">
+        <div class="container py-4">
+            <div class="row">
+                <div class="col-lg-3 d-none d-lg-block">
+                    <div class="sticky-top" style="top: 100px;">
+                        <div class="card bg-gray-800 border-gray-700 mb-4">
+                            <div class="card-header bg-gray-700 text-white">
+                                <h5 class="mb-0">Catégories</h5>
+                            </div>
+                            <div class="list-group list-group-flush">
+                                <a href="#investissement" class="list-group-item list-group-item-action bg-gray-800 text-white border-gray-700 active">
+                                    <i class="fas fa-chart-line me-2"></i>Investissement
+                                </a>
+                                <a href="#retraits" class="list-group-item list-group-item-action bg-gray-800 text-white border-gray-700">
+                                    <i class="fas fa-money-bill-wave me-2"></i>Retraits
+                                </a>
+                                <a href="#securite" class="list-group-item list-group-item-action bg-gray-800 text-white border-gray-700">
+                                    <i class="fas fa-shield-alt me-2"></i>Sécurité
+                                </a>
+                                <a href="#compte" class="list-group-item list-group-item-action bg-gray-800 text-white border-gray-700">
+                                    <i class="fas fa-user-circle me-2"></i>Compte
+                                </a>
+                                <a href="#autres" class="list-group-item list-group-item-action bg-gray-800 text-white border-gray-700">
+                                    <i class="fas fa-question-circle me-2"></i>Autres questions
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card bg-gray-800 border-gray-700">
+                            <div class="card-body text-center">
+                                <p class="text-muted">Vous ne trouvez pas de réponse ?</p>
+                                <a href="#" class="btn btn-primary">
+                                    <i class="fas fa-envelope me-2"></i>Contactez-nous
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-9">
+                    <!-- Investissement Section -->
+                    <div id="investissement" class="mb-5">
+                        <h2 class="fw-bold text-white mb-4 pb-2 border-bottom border-gray-700">
+                            <i class="fas fa-chart-line text-primary me-2"></i>Investissement
+                        </h2>
+                        
+                        <div class="accordion" id="investissementAccordion">
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingOne">
+                                    <button class="accordion-button bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                        Comment fonctionne le rendement de 4% quotidien ?
+                                    </button>
+                                </h3>
+                                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#investissementAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>Nos produits d'investissement génèrent un rendement fixe de 4% chaque jour sur le montant investi. Ce rendement est calculé sur la valeur actuelle de votre investissement et crédité quotidiennement sur votre solde disponible.</p>
+                                        <p class="mb-0">Exemple : Pour un investissement de 100€, vous gagnerez 4€ le premier jour, puis 4% de 104€ le deuxième jour, et ainsi de suite.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingTwo">
+                                    <button class="accordion-button collapsed bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        Quels sont les risques associés à ces investissements ?
+                                    </button>
+                                </h3>
+                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#investissementAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>Tout investissement comporte des risques. Bien que nos produits offrent des rendements attractifs, nous recommandons :</p>
+                                        <ul>
+                                            <li>De diversifier vos investissements</li>
+                                            <li>De n'investir que ce que vous pouvez vous permettre de perdre</li>
+                                            <li>De bien comprendre le mécanisme des rendements quotidiens</li>
+                                        </ul>
+                                        <p class="mb-0">Nos produits sont conçus pour minimiser les risques grâce à une gestion professionnelle des actifs cryptographiques sous-jacents.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingThree">
+                                    <button class="accordion-button collapsed bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                        Puis-je retirer mon capital investi à tout moment ?
+                                    </button>
+                                </h3>
+                                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#investissementAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>Oui, notre politique permet le retrait du capital à tout moment. Cependant :</p>
+                                        <ul>
+                                            <li>Les retraits sont traités sous 24 à 48 heures</li>
+                                            <li>Un retrait anticipé avant 30 jours peut entraîner des frais de 5%</li>
+                                            <li>Les gains quotidiens continuent de s'accumuler jusqu'au traitement du retrait</li>
+                                        </ul>
+                                        <p class="mb-0">Nous encourageons les investissements à moyen/long terme pour maximiser les bénéfices grâce à l'effet de composition des intérêts.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Retraits Section -->
+                    <div id="retraits" class="mb-5">
+                        <h2 class="fw-bold text-white mb-4 pb-2 border-bottom border-gray-700">
+                            <i class="fas fa-money-bill-wave text-primary me-2"></i>Retraits
+                        </h2>
+                        
+                        <div class="accordion" id="retraitsAccordion">
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingFour">
+                                    <button class="accordion-button bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="true" aria-controls="collapseFour">
+                                        Comment effectuer un retrait ?
+                                    </button>
+                                </h3>
+                                <div id="collapseFour" class="accordion-collapse collapse show" aria-labelledby="headingFour" data-bs-parent="#retraitsAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <ol>
+                                            <li>Connectez-vous à votre compte</li>
+                                            <li>Accédez à la section "Mon Portefeuille"</li>
+                                            <li>Sélectionnez "Effectuer un retrait"</li>
+                                            <li>Choisissez le montant et la méthode de retrait</li>
+                                            <li>Confirmez la demande</li>
+                                        </ol>
+                                        <p class="mb-0">Les retraits sont traités sous 24 à 48 heures ouvrées. Vous recevrez une notification par email une fois le retrait effectué.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingFive">
+                                    <button class="accordion-button collapsed bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                        Quels sont les frais et limites de retrait ?
+                                    </button>
+                                </h3>
+                                <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#retraitsAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>Nos conditions de retrait :</p>
+                                        <table class="table table-dark table-borderless">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Frais de retrait standard</td>
+                                                    <td>1% (min. 1€)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Retrait anticipé (<30j)</td>
+                                                    <td>5%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Minimum de retrait</td>
+                                                    <td>10€</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Maximum quotidien</td>
+                                                    <td>10,000€</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <p class="mb-0">Les membres VIP bénéficient de frais réduits et de limites plus élevées.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sécurité Section -->
+                    <div id="securite" class="mb-5">
+                        <h2 class="fw-bold text-white mb-4 pb-2 border-bottom border-gray-700">
+                            <i class="fas fa-shield-alt text-primary me-2"></i>Sécurité
+                        </h2>
+                        
+                        <div class="accordion" id="securiteAccordion">
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingSix">
+                                    <button class="accordion-button bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSix" aria-expanded="true" aria-controls="collapseSix">
+                                        Comment protégez-vous mes fonds et données ?
+                                    </button>
+                                </h3>
+                                <div id="collapseSix" class="accordion-collapse collapse show" aria-labelledby="headingSix" data-bs-parent="#securiteAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>Nous utilisons plusieurs couches de sécurité :</p>
+                                        <ul>
+                                            <li>Cryptage SSL 256-bit pour toutes les transactions</li>
+                                            <li>Authentification à deux facteurs (2FA) obligatoire</li>
+                                            <li>95% des fonds en stockage hors ligne (cold storage)</li>
+                                            <li>Audits de sécurité réguliers</li>
+                                            <li>Protection contre les attaques DDoS</li>
+                                        </ul>
+                                        <p class="mb-0">Nous ne stockons jamais vos informations bancaires sensibles sur nos serveurs.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Compte Section -->
+                    <div id="compte" class="mb-5">
+                        <h2 class="fw-bold text-white mb-4 pb-2 border-bottom border-gray-700">
+                            <i class="fas fa-user-circle text-primary me-2"></i>Compte
+                        </h2>
+                        
+                        <div class="accordion" id="compteAccordion">
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingSeven">
+                                    <button class="accordion-button bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeven" aria-expanded="true" aria-controls="collapseSeven">
+                                        Comment vérifier mon compte ?
+                                    </button>
+                                </h3>
+                                <div id="collapseSeven" class="accordion-collapse collapse show" aria-labelledby="headingSeven" data-bs-parent="#compteAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>La vérification KYC (Know Your Customer) est obligatoire pour :</p>
+                                        <ul>
+                                            <li>Effectuer des retraits</li>
+                                            <li>Investir plus de 500€</li>
+                                            <li>Bénéficier de tous les avantages</li>
+                                        </ul>
+                                        <p>Processus de vérification :</p>
+                                        <ol>
+                                            <li>Fournir une pièce d'identité valide (passeport, permis de conduire)</li>
+                                            <li>Preuve de résidence récente (moins de 3 mois)</li>
+                                            <li>Selfie avec pièce d'identité</li>
+                                        </ol>
+                                        <p class="mb-0">Le traitement prend généralement 1 à 2 jours ouvrés.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Autres Questions -->
+                    <div id="autres">
+                        <h2 class="fw-bold text-white mb-4 pb-2 border-bottom border-gray-700">
+                            <i class="fas fa-question-circle text-primary me-2"></i>Autres questions
+                        </h2>
+                        
+                        <div class="accordion" id="autresAccordion">
+                            <div class="accordion-item bg-gray-800 border-gray-700 mb-3 rounded">
+                                <h3 class="accordion-header" id="headingEight">
+                                    <button class="accordion-button bg-gray-700 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEight" aria-expanded="true" aria-controls="collapseEight">
+                                        Comment contacter le support ?
+                                    </button>
+                                </h3>
+                                <div id="collapseEight" class="accordion-collapse collapse show" aria-labelledby="headingEight" data-bs-parent="#autresAccordion">
+                                    <div class="accordion-body text-muted">
+                                        <p>Notre support est disponible :</p>
+                                        <ul>
+                                            <li>Par email : support@dcsm-commerce.com (réponse sous 24h)</li>
+                                            <li>Via le chat en ligne (9h-18h du lundi au vendredi)</li>
+                                            <li>Par téléphone : +33 1 23 45 67 89 (10h-16h)</li>
+                                        </ul>
+                                        <p class="mb-0">Avant de nous contacter, merci de consulter cette FAQ où vous trouverez peut-être une réponse immédiate à votre question.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-5 bg-dark text-white">
+        <div class="container py-4 text-center">
+            <h2 class="fw-bold mb-4">Vous avez d'autres questions ?</h2>
+            <p class="lead mb-5">Notre équipe support est là pour vous aider.</p>
+            <a href="#" class="btn btn-primary btn-lg px-5 me-3">
+                <i class="fas fa-envelope me-2"></i>Contactez-nous
+            </a>
+            <a href="{{ path('app_register') }}" class="btn btn-outline-light btn-lg px-5">
+                <i class="fas fa-user-plus me-2"></i>Créer un compte
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <h5 class="mb-4">
+                        <i class="fas fa-coins me-2"></i>DCSM-COMMERCE
+                    </h5>
+                    <p class="text-muted">La plateforme qui vous paye 4% sur vos investissements crypto quotidiennement.</p>
+                    <div class="social-icons mt-4">
+                        <a href="#" class="text-white me-3">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="text-white me-3">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-white me-3">
+                            <i class="fab fa-telegram"></i>
+                        </a>
+                        <a href="#" class="text-white">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
+                    <h5 class="mb-4 text-white">Navigation</h5>
+                    <a href="{{ path('app_dashboard') }}" class="text-muted d-block mb-2">Accueil</a>
+                    <a href="{{ path('app_products_index') }}" class="text-muted d-block mb-2">Produits</a>
+                    <a href="{{ path('app_faq') }}" class="text-muted d-block mb-2">FAQ</a>
+                    <a href="{{ path('app_profile') }}" class="text-muted d-block mb-2">Mon compte</a>
+                </div>
+                <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
+                    <h5 class="mb-4 text-white">Légal</h5>
+                    <a href="#" class="text-muted d-block mb-2">CGU</a>
+                    <a href="#" class="text-muted d-block mb-2">Confidentialité</a>
+                    <a href="#" class="text-muted d-block mb-2">Cookies</a>
+                </div>
+                <div class="col-lg-4">
+                    <h5 class="mb-4 text-white">Newsletter</h5>
+                    <p class="text-muted">Abonnez-vous pour recevoir nos conseils et offres spéciales.</p>
+                    <form class="mt-3">
+                        <div class="input-group mb-3">
+                            <input type="email" class="form-control bg-gray-800 border-gray-700 text-white" placeholder="Votre email">
+                            <button class="btn btn-primary" type="submit">S'abonner</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <hr class="my-4 bg-gray-700">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="small mb-0 text-muted">© {{ "now"|date("Y") }} DCSM-COMMERCE. Tous droits réservés.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="small mb-0 text-muted">
+                        <span>Paiements acceptés:</span>
+                        <span class="text-warning">Carte</span>,
+                        <span class="text-info">PayPal</span>,
+                        <span class="text-success">Crypto</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .bg-gray-800 {
+            background-color: #1e1e1e;
+        }
+        
+        .bg-gray-900 {
+            background-color: #121212;
+        }
+        
+        .border-gray-700 {
+            border-color: #444;
+        }
+        
+        .accordion-button:not(.collapsed) {
+            color: #0d6efd;
+            background-color: #2d2d2d;
+        }
+        
+        .accordion-button:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .table-dark {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+        }
+        
+        .sticky-top {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Highlight active category when scrolling
+            const sections = document.querySelectorAll('div[id^="investissement"], div[id^="retraits"], div[id^="securite"], div[id^="compte"], div[id^="autres"]');
+            const navLinks = document.querySelectorAll('.list-group-item');
+            
+            window.addEventListener('scroll', function() {
+                let current = '';
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    
+                    if (pageYOffset >= (sectionTop - 200)) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+            
+            // Smooth scroll for category links
+            document.querySelectorAll('.list-group-item').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+{% endblock %}

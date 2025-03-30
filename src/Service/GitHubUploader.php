@@ -1,10 +1,8 @@
 <?php
-
 namespace App\Service;
 
 use Github\Client;
-use Github\Exception\ErrorException;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Github\Exception\ExceptionInterface;
 
 class GitHubUploader
 {
@@ -14,15 +12,19 @@ class GitHubUploader
 
     public function __construct(string $token, string $repoOwner, string $repoName)
     {
+        if (empty($token)) {
+            throw new \InvalidArgumentException("Le token GitHub est requis.");
+        }
+        if (empty($repoOwner) || empty($repoName)) {
+            throw new \InvalidArgumentException("Le propriétaire et le nom du dépôt GitHub sont requis.");
+        }
+
         $this->client = new Client();
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
         $this->repoOwner = $repoOwner;
         $this->repoName = $repoName;
     }
 
-    /**
-     * Upload un fichier vers GitHub.
-     */
     public function uploadFile($fileContent, string $filePath, string $commitMessage = 'Upload file'): string
     {
         try {
@@ -47,7 +49,7 @@ class GitHubUploader
                     $existingFile['sha'],
                     'main'
                 );
-            } catch (ErrorException $e) {
+            } catch (ExceptionInterface $e) {
                 // Création du fichier s'il n'existe pas
                 $response = $this->client->api('repo')->contents()->create(
                     $this->repoOwner,
@@ -60,14 +62,11 @@ class GitHubUploader
             }
 
             return $this->generateCdnUrl($filePath);
-        } catch (ErrorException $e) {
-            throw new \Exception("GitHub upload failed: " . $e->getMessage());
+        } catch (ExceptionInterface $e) {
+            throw new \Exception("Échec de l'upload GitHub : " . $e->getMessage());
         }
     }
 
-    /**
-     * Assure que les répertoires nécessaires existent.
-     */
     private function ensureDirectoryExists(string $directoryPath): void
     {
         $parts = array_filter(explode('/', $directoryPath));
@@ -77,24 +76,22 @@ class GitHubUploader
             $currentPath .= "{$part}/";
 
             try {
+                // Tente de créer le répertoire
                 $this->client->api('repo')->contents()->create(
                     $this->repoOwner,
                     $this->repoName,
                     rtrim($currentPath, '/'),
                     '',
-                    "Create directory {$part}",
+                    "Création du répertoire {$part}",
                     'main'
                 );
-            } catch (ErrorException $e) {
+            } catch (ExceptionInterface $e) {
                 // Le répertoire existe probablement déjà
                 continue;
             }
         }
     }
 
-    /**
-     * Génère une URL CDN pour le fichier.
-     */
     private function generateCdnUrl(string $filePath): string
     {
         return sprintf(

@@ -15,7 +15,8 @@ class DashboardController extends AbstractController
     public function index(
         ShopRepository $shopRepository,
         ProductRepository $productRepository
-    ): Response {
+    ): Response
+    {
         $user = $this->getUser();
 
         if (!$user) {
@@ -27,8 +28,8 @@ class DashboardController extends AbstractController
             ['name' => 'ASC']
         );
 
-        // Récupérer les produits phares (limité à 6 pour la page d'accueil)
-        $products = $productRepository->findFeaturedProducts(6);
+        // Récupération de tous les produits triés par nom
+        $products = $productRepository->findBy([], ['name' => 'ASC']);
 
         return $this->render('dashboard/home.html.twig', [
             'controller_name' => 'DashboardController',
@@ -65,7 +66,8 @@ class DashboardController extends AbstractController
         $slug,
         ShopRepository $shopRepository,
         ProductRepository $productRepository,
-    ): Response {
+    ): Response
+    {
         $user = $this->getUser();
 
         if ($user) {

@@ -101,7 +101,9 @@ class GoogleController extends AbstractController
             );
 
             $qrCode = new QrCode($referralLink);
-            $writer = new PngWriter(['eccLevel' => QrCode::ECC_LOW]);
+            $writer = new PngWriter([
+                'eccLevel' => QrCode::ERROR_CORRECTION_LOW // <--- CORRECTION ICI
+            ]);
             $qrResult = $writer->write($qrCode);
 
             // Upload du QR Code
@@ -144,7 +146,7 @@ class GoogleController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification
+            // Authentification via variable d'environnement
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
             // Upload avec chemin complet

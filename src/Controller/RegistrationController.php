@@ -21,22 +21,26 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
-use Exception;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Github\Client;
 use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 class RegistrationController extends AbstractController
 {
     private EmailVerifier $emailVerifier;
     private Client $githubClient;
+    private Filesystem $filesystem;
 
-    public function __construct(EmailVerifier $emailVerifier, Client $githubClient)
-    {
+    public function __construct(
+        EmailVerifier $emailVerifier, 
+        Client $githubClient, 
+        Filesystem $filesystem
+    ) {
         $this->emailVerifier = $emailVerifier;
         $this->githubClient = $githubClient;
+        $this->filesystem = $filesystem;
     }
 
     #[Route('/register', name: 'app_register')]
@@ -119,7 +123,7 @@ class RegistrationController extends AbstractController
         // Gestion du système de parrainage
         $this->handleReferralSystem($user, $form, $entityManager);
 
-        // Sauvegarde en base de données
+        // Sauvegarde en base
         $entityManager->persist($user);
         $entityManager->flush();
 
@@ -129,6 +133,80 @@ class RegistrationController extends AbstractController
         // Envoi des emails
         $this->sendConfirmationEmail($user);
         $this->sendReferralEmail($user, $urlGenerator, $mailer);
+    }
+
+    private function generateAndSaveQrCode(
+        User $user,
+        UrlGeneratorInterface $urlGenerator,
+        EntityManagerInterface $entityManager
+    ): void {
+        try {
+            // Génération du lien d'affiliation
+            $referralLink = $urlGenerator->generate(
+                'app_register',
+                ['ref' => $user->getReferralCode()],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            // Génération locale du QR Code
+            $tempDir = $this->getParameter('kernel.project_dir') . '/var/tmp/';
+            if (!$this->filesystem->exists($tempDir)) {
+                $this->filesystem->mkdir($tempDir, 0755);
+            }
+
+            $tempFilePath = $tempDir . $user->getReferralCode() . '.png';
+
+            // Configuration du QR Code
+            $qrCode = new QrCode($referralLink);
+            $writer = new PngWriter([
+                'errorCorrectionLevel' => 'L', // Niveau de correction 'Low'
+                'size' => 300 // Taille 300x300 pixels
+            ]);
+            $qrResult = $writer->write($qrCode);
+            $qrResult->save($tempFilePath);
+
+            // Lecture du contenu du fichier temporaire
+            $fileContent = file_get_contents($tempFilePath);
+
+            // Upload sur GitHub
+            $githubPath = "uploads/qrcodes/{$user->getReferralCode()}.png";
+            $cdnUrl = $this->uploadToGitHub($githubPath, $fileContent, 'QR Code via Registration');
+
+            // Suppression du fichier temporaire
+            $this->filesystem->remove($tempFilePath);
+
+            // Enregistrement de l'URL dans l'entité
+            $user->setQrCodePath($cdnUrl);
+            $entityManager->flush();
+        } catch (\Exception $e) {
+            $this->addFlash('warning', "Échec de génération du QR Code : " . $e->getMessage());
+        }
+    }
+
+    private function uploadToGitHub(string $filePath, string $content, string $message): string
+    {
+        $repoOwner = 'harissonola';
+        $repoName = 'my-cdn';
+        $branch = 'main';
+
+        try {
+            // Authentification via variable d'environnement
+            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+
+            // Upload avec le chemin complet (ex: "uploads/qrcodes/ref_123.png")
+            $response = $this->githubClient->api('repo')->contents()->create(
+                $repoOwner,
+                $repoName,
+                $filePath,
+                base64_encode($content),
+                $message,
+                $branch
+            );
+
+            return $response['content']['download_url'] ?? '';
+        } catch (Exception $e) {
+            throw new \Exception("Échec de l'upload sur GitHub : " . $e->getMessage());
+        }
     }
 
     private function handleReferralSystem(User $user, $form, EntityManagerInterface $entityManager): void
@@ -151,10 +229,24 @@ class RegistrationController extends AbstractController
         try {
             $image = $form->get('photo')->getData();
             if ($image instanceof UploadedFile) {
-                $fileContent = file_get_contents($image->getPathname());
+                // Gestion de l'image de profil
+                $tempDir = $this->getParameter('kernel.project_dir') . '/var/tmp/';
+                if (!$this->filesystem->exists($tempDir)) {
+                    $this->filesystem->mkdir($tempDir, 0755);
+                }
+
                 $fileName = uniqid() . '.' . $image->guessExtension();
-                $filePath = "uploads/profile/{$fileName}";
-                $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'Upload photo de profil');
+                $tempFilePath = $tempDir . $fileName;
+                $image->move($tempDir, $fileName);
+
+                // Upload sur GitHub
+                $fileContent = file_get_contents($tempFilePath);
+                $githubPath = "uploads/profile/{$fileName}";
+                $cdnUrl = $this->uploadToGitHub($githubPath, $fileContent, 'Upload photo profil');
+
+                // Suppression du fichier temporaire
+                $this->filesystem->remove($tempFilePath);
+
                 $user->setPhoto($cdnUrl);
             } else {
                 $user->setPhoto($this->getDefaultProfileImage());
@@ -162,64 +254,6 @@ class RegistrationController extends AbstractController
         } catch (\Exception $e) {
             $this->addFlash('warning', "Erreur d'upload : " . $e->getMessage());
             $user->setPhoto($this->getDefaultProfileImage());
-        }
-    }
-
-    private function uploadToGitHub(string $filePath, string $content, string $message): string
-    {
-        $repoOwner = 'harissonola';
-        $repoName = 'my-cdn';
-        $branch = 'main';
-
-        try {
-            // Authentification via variable d'environnement
-            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
-
-            // Upload avec chemin complet (ex: "uploads/qrcodes/ref_123.png")
-            $response = $this->githubClient->api('repo')->contents()->create(
-                $repoOwner,
-                $repoName,
-                $filePath,
-                base64_encode($content),
-                $message,
-                $branch
-            );
-
-            return $response['content']['download_url'] ?? '';
-        } catch (Exception $e) {
-            throw new \Exception("Échec de l'upload sur GitHub : " . $e->getMessage());
-        }
-    }
-
-    private function generateAndSaveQrCode(
-        User $user,
-        UrlGeneratorInterface $urlGenerator,
-        EntityManagerInterface $entityManager
-    ): void {
-        try {
-            // Génération du lien d'affiliation
-            $referralLink = $urlGenerator->generate(
-                'app_register',
-                ['ref' => $user->getReferralCode()],
-                UrlGeneratorInterface::ABSOLUTE_URL
-            );
-
-            // Génération du QR Code avec des paramètres valides
-            $qrCode = new QrCode($referralLink);
-            $writer = new PngWriter([
-                'errorCorrectionLevel' => 'L', // Niveau de correction 'Low'
-                'size' => 300 // Taille de l'image (300x300 pixels)
-            ]);
-            $qrResult = $writer->write($qrCode);
-
-            // Chemin complet pour GitHub
-            $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
-            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Registration');
-            $user->setQrCodePath($cdnUrl);
-
-            $entityManager->flush();
-        } catch (\Exception $e) {
-            $this->addFlash('warning', "Échec de génération du QR Code : " . $e->getMessage());
         }
     }
 

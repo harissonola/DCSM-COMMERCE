@@ -99,6 +99,20 @@ class RegistrationController extends AbstractController
         ]);
     }
 
+    #[Route('/verify/email', name: 'app_verify_email')]
+    public function verifyUserEmail(Request $request, EmailVerifier $emailVerifier, EntityManagerInterface $entityManager): Response
+    {
+        $user = $this->getUser();
+        try {
+            $emailVerifier->handleEmailConfirmation($request, $user);
+            $this->addFlash('success', 'Votre email a été vérifié avec succès.');
+        } catch (VerifyEmailExceptionInterface $exception) {
+            $this->addFlash('error', $exception->getReason());
+            return $this->redirectToRoute('app_register');
+        }
+        return $this->redirectToRoute('app_dashboard');
+    }
+
     private function processRegistration(
         User $user,
         $form,

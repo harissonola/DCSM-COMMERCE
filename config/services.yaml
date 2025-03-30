@@ -7,6 +7,9 @@ parameters:
     users_img_directory: '%kernel.project_dir%/public/users/img'
     qr_code_directory: '%kernel.project_dir%/public/uploads/user'
     app.site_name: 'DCSM COMMERCE'
+    github.token: '%env(GITHUB_TOKEN)%'
+    github.repo_owner: 'harissonola'
+    github.repo_name: 'my-cdn'
 
 services:
     # Configuration pour les services
@@ -23,6 +26,12 @@ services:
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }
+    
+    App\Service\GitHubUploader:
+        arguments:
+            $token: '%github.token%'
+            $repoOwner: '%github.repo_owner%'
+            $repoName: '%github.repo_name%'
 
     # Autres services
     App\:

@@ -19,6 +19,7 @@ use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Github\Client;
+use Exception;
 
 class GoogleController extends AbstractController
 {
@@ -76,6 +77,7 @@ class GoogleController extends AbstractController
         $referralCode = uniqid('ref_', true);
 
         try {
+            // Configuration de l'utilisateur
             $user->setGoogleId($googleId)
                 ->setEmail($email)
                 ->setUsername($username)
@@ -92,7 +94,7 @@ class GoogleController extends AbstractController
             // Gestion du parrainage
             $this->handleReferralSystem($user, $request, $entityManager);
 
-            // Upload du QR Code sur GitHub
+            // Génération et upload du QR Code
             $referralLink = $urlGenerator->generate(
                 'app_register',
                 ['ref' => $referralCode],
@@ -103,17 +105,18 @@ class GoogleController extends AbstractController
             $writer = new PngWriter();
             $qrResult = $writer->write($qrCode);
 
+            // Upload sur GitHub
             $filePath = "uploads/qrcodes/{$referralCode}.png";
             $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
-            // Sauvegarde en base de données
+            // Sauvegarde en base
             $entityManager->persist($user);
             $entityManager->flush();
 
-            // Envoi de l'email de parrainage
+            // Envoi de l'email
             $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
             $entityManager->clear();
             return $this->redirectToRoute('app_register');
@@ -142,11 +145,11 @@ class GoogleController extends AbstractController
         $repoName = 'my-cdn';
         $branch = 'main';
 
-        // Authentification GitHub via variable d'environnement
-        $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
-
-        $contentsApi = $this->githubClient->repo()->contents();
         try {
+            // Authentification via variable d'environnement
+            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+
+            $contentsApi = $this->githubClient->repo()->contents();
             $response = $contentsApi->create(
                 $repoOwner,
                 $repoName,
@@ -155,35 +158,19 @@ class GoogleController extends AbstractController
                 $message,
                 $branch
             );
-            return $response['content']['download_url'];
-        } catch (\Exception $e) {
-            throw new \Exception("Erreur lors de l'upload GitHub : " . $e->getMessage());
+
+            return $response['content']['download_url'] ?? '';
+        } catch (Exception $e) {
+            throw new Exception("Échec de l'upload GitHub : " . $e->getMessage());
         }
     }
 
-    private function generateAndSaveQrCode(User $user, UrlGeneratorInterface $urlGenerator): void
-    {
-        try {
-            $referralLink = $urlGenerator->generate(
-                'app_register',
-                ['ref' => $user->getReferralCode()],
-                UrlGeneratorInterface::ABSOLUTE_URL
-            );
-
-            $qrCode = new QrCode($referralLink);
-            $writer = new PngWriter();
-            $qrResult = $writer->write($qrCode);
-
-            $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
-            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'Upload QR Code');
-            $user->setQrCodePath($cdnUrl);
-        } catch (\Exception $e) {
-            $this->addFlash('warning', 'Échec de génération du QR Code : ' . $e->getMessage());
-        }
-    }
-
-    private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
-    {
+    private function sendReferralEmail(
+        User $user,
+        string $referralLink,
+        string $qrCodePath,
+        MailerInterface $mailer
+    ): void {
         $email = (new TemplatedEmail())
             ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
             ->to($user->getEmail())
@@ -195,7 +182,11 @@ class GoogleController extends AbstractController
                 'qrCodePath' => $qrCodePath,
             ]);
 
-        $mailer->send($email);
+        try {
+            $mailer->send($email);
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
+        }
     }
 
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void

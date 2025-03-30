@@ -6,7 +6,7 @@
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
     <div class="container">
-      <a class="navbar-brand" href="{{ path('app_home') }}">
+      <a class="navbar-brand" href="{{ path('app_dashboard') }}">
         <i class="fas fa-coins me-2"></i>DCSM-COMMERCE
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -15,23 +15,20 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link active" href="{{ path('app_home') }}">Accueil</a>
+            <a class="nav-link active" href="{{ path('app_dashboard') }}">Accueil</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ path('app_products') }}">Produits</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ path('app_earnings') }}">Mes gains</a>
+            <a class="nav-link" href="{{ path('app_products_index') }}">Produits</a>
           </li>
           {% if app.user %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ path('app_referral') }}">Parrainage</a>
+              <a class="nav-link" href="{{ path('app_profile') }}">Mon Profil</a>
             </li>
           {% endif %}
         </ul>
         <div class="ms-lg-3 mt-3 mt-lg-0">
           {% if app.user %}
-            <a href="{{ path('app_account') }}" class="btn btn-outline-light me-2">Mon compte</a>
+            <a href="{{ path('app_profile') }}" class="btn btn-outline-light me-2">Mon compte</a>
             <a href="{{ path('app_logout') }}" class="btn btn-primary">Déconnexion</a>
           {% else %}
             <a href="{{ path('app_login') }}" class="btn btn-outline-light me-2">Connexion</a>
@@ -51,7 +48,7 @@
           <p class="lead mb-4">Chaque produit acheté vous rapporte automatiquement 4% de sa valeur actuelle quotidiennement.</p>
           <div class="d-flex flex-wrap gap-3">
             {% if app.user %}
-              <a href="{{ path('app_products') }}" class="btn btn-light btn-lg px-4">Voir les produits</a>
+              <a href="{{ path('app_products_index') }}" class="btn btn-light btn-lg px-4">Voir les produits</a>
             {% else %}
               <a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4">Commencer à 4%</a>
             {% endif %}
@@ -75,28 +72,34 @@
           <div class="col-md-3">
             <div class="stats-card bg-white p-3 rounded text-center">
               <i class="fas fa-boxes text-primary mb-2 fs-4"></i>
-              <div class="stats-number fs-3 fw-bold">{{ app.user.products|length }}</div>
+              <div class="stats-number fs-3 fw-bold">
+                {{ app.user.userProducts|length }}
+              </div>
               <div class="stats-label text-muted">Produits achetés</div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="stats-card bg-white p-3 rounded text-center">
               <i class="fas fa-coins text-primary mb-2 fs-4"></i>
-              <div class="stats-number fs-3 fw-bold">{{ total_value|format_currency('EUR') }}</div>
-              <div class="stats-label text-muted">Valeur totale</div>
+              <div class="stats-number fs-3 fw-bold">
+                {{ app.user.balance|default(0)|format_currency('USD') }}
+              </div>
+              <div class="stats-label text-muted">Solde actuel</div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="stats-card bg-white p-3 rounded text-center">
               <i class="fas fa-percentage text-primary mb-2 fs-4"></i>
-              <div class="stats-number fs-3 fw-bold">{{ app.user.earningRate }}%</div>
+              <div class="stats-number fs-3 fw-bold">4%</div>
               <div class="stats-label text-muted">Taux actuel</div>
             </div>
           </div>
           <div class="col-md-3">
             <div class="stats-card bg-white p-3 rounded text-center">
               <i class="fas fa-money-bill-wave text-primary mb-2 fs-4"></i>
-              <div class="stats-number fs-3 fw-bold">{{ daily_earnings|format_currency('EUR') }}</div>
+              <div class="stats-number fs-3 fw-bold">
+                {{ (app.user.balance|default(0) * 0.04)|format_currency('USD') }}
+              </div>
               <div class="stats-label text-muted">Gains quotidiens</div>
             </div>
           </div>
@@ -134,10 +137,10 @@
         <div class="col-md-4">
           <div class="feature-card bg-white p-4 rounded shadow-sm h-100">
             <div class="feature-icon text-primary mb-3 fs-2">
-              <i class="fas fa-users"></i>
+              <i class="fas fa-wallet"></i>
             </div>
-            <h3 class="fw-bold">3. Augmentez votre taux</h3>
-            <p>Parrainez des amis pour augmenter votre taux jusqu'à 10%.</p>
+            <h3 class="fw-bold">3. Retirez vos gains</h3>
+            <p>Retirez vos gains à tout moment sur votre compte bancaire ou portefeuille crypto.</p>
           </div>
         </div>
       </div>
@@ -155,12 +158,12 @@
         {% for product in products|slice(0, 6) %}
           <div class="col-lg-4 col-md-6">
             <div class="card h-100 product-card shadow-sm">
-              {% if product.isNew %}
+              {% if date(product.created_at) > date('-30days') %}
                 <span class="badge bg-success position-absolute top-0 start-0 m-2">Nouveau</span>
               {% endif %}
               
               <div class="product-img-container" style="height: 200px;">
-                <img src="{{ asset('uploads/products/' ~ product.image) }}" 
+                <img src="{{ asset('uploads/' ~ product.image) }}" 
                      class="card-img-top h-100 w-100 object-fit-cover" 
                      alt="{{ product.name }}"
                      loading="lazy">
@@ -169,20 +172,20 @@
               <div class="card-body">
                 <h3 class="card-title fw-bold">{{ product.name }}</h3>
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                  <span class="h4 text-primary">{{ product.currentPrice|format_currency('EUR') }}</span>
+                  <span class="h4 text-primary">{{ product.price|format_currency('USD') }}</span>
                   <span class="badge bg-warning text-dark">4% quotidien</span>
                 </div>
-                <p class="card-text text-muted">{{ product.shortDescription }}</p>
+                <p class="card-text text-muted">{{ product.description|slice(0, 100) ~ '...' }}</p>
               </div>
               
               <div class="card-footer bg-white border-top-0">
                 <div class="d-grid gap-2">
-                  <a href="{{ path('app_product_show', {id: product.id}) }}" 
+                  <a href="{{ path('app_shop', {slug: product.shop.slug}) }}" 
                      class="btn btn-primary">
                     <i class="fas fa-info-circle me-2"></i>Détails
                   </a>
                   {% if app.user %}
-                    <a href="{{ path('app_product_buy', {id: product.id}) }}" 
+                    <a href="{{ path('app_products_index') }}" 
                        class="btn btn-success">
                       <i class="fas fa-shopping-cart me-2"></i>Acheter
                     </a>
@@ -201,7 +204,7 @@
       </div>
       
       <div class="text-center mt-5">
-        <a href="{{ path('app_products') }}" class="btn btn-outline-primary btn-lg px-5">
+        <a href="{{ path('app_products_index') }}" class="btn btn-outline-primary btn-lg px-5">
           Voir tous les produits
         </a>
       </div>
@@ -216,30 +219,27 @@
           <h2 class="fw-bold mb-4">Simulez vos gains</h2>
           <div class="calculator bg-white p-4 rounded shadow-sm">
             <div class="mb-3">
-              <label for="investmentAmount" class="form-label">Montant investi (€)</label>
+              <label for="investmentAmount" class="form-label">Montant investi ($)</label>
               <input type="number" class="form-control" id="investmentAmount" value="1000" min="100">
             </div>
             <div class="mb-3">
               <label for="earningRate" class="form-label">Votre taux de gains</label>
               <select class="form-select" id="earningRate">
                 <option value="4">4% (par défaut)</option>
-                <option value="6">6% (5 filleuls)</option>
-                <option value="7">7% (10 filleuls)</option>
-                <option value="10">10% (20 filleuls)</option>
               </select>
             </div>
             <div class="results bg-light p-3 rounded mb-3">
               <div class="d-flex justify-content-between">
                 <span>Gains quotidiens:</span>
-                <span class="fw-bold" id="dailyEarnings">€40.00</span>
+                <span class="fw-bold" id="dailyEarnings">$40.00</span>
               </div>
               <div class="d-flex justify-content-between">
                 <span>Gains mensuels:</span>
-                <span class="fw-bold" id="monthlyEarnings">€1,200.00</span>
+                <span class="fw-bold" id="monthlyEarnings">$1,200.00</span>
               </div>
               <div class="d-flex justify-content-between">
                 <span>Gains annuels:</span>
-                <span class="fw-bold" id="yearlyEarnings">€14,400.00</span>
+                <span class="fw-bold" id="yearlyEarnings">$14,400.00</span>
               </div>
             </div>
             <button class="btn btn-primary w-100" id="calculateBtn">
@@ -249,35 +249,35 @@
         </div>
         <div class="col-lg-6">
           <div class="p-4">
-            <h3 class="fw-bold mb-3">Augmentez vos gains avec le parrainage</h3>
-            <p class="mb-4">En parrainant des amis, vous augmentez votre taux de gains sur tous vos produits :</p>
+            <h3 class="fw-bold mb-3">Pourquoi investir avec nous ?</h3>
+            <p class="mb-4">Notre plateforme offre des avantages uniques :</p>
             
             <ul class="list-group mb-4">
               <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>5 filleuls actifs</span>
-                <span class="badge bg-primary rounded-pill">6%</span>
+                <span>Rendements quotidiens garantis</span>
+                <span class="badge bg-primary rounded-pill">4%</span>
               </li>
               <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>10 filleuls actifs</span>
-                <span class="badge bg-primary rounded-pill">7%</span>
+                <span>Produits diversifiés</span>
+                <span class="badge bg-primary rounded-pill">10+</span>
               </li>
               <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>20 filleuls actifs</span>
-                <span class="badge bg-primary rounded-pill">10%</span>
+                <span>Retraits rapides</span>
+                <span class="badge bg-primary rounded-pill">24h</span>
               </li>
               <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>40 filleuls actifs</span>
-                <span class="badge bg-success rounded-pill">10% + €10 bonus</span>
+                <span>Support 24/7</span>
+                <span class="badge bg-success rounded-pill">Disponible</span>
               </li>
             </ul>
             
             {% if app.user %}
-              <a href="{{ path('app_referral') }}" class="btn btn-primary w-100">
-                <i class="fas fa-user-plus me-2"></i>Inviter des amis
+              <a href="{{ path('app_products_index') }}" class="btn btn-primary w-100">
+                <i class="fas fa-box-open me-2"></i>Investir maintenant
               </a>
             {% else %}
               <a href="{{ path('app_register') }}" class="btn btn-primary w-100">
-                <i class="fas fa-user-plus me-2"></i>S'inscrire pour parrainer
+                <i class="fas fa-user-plus me-2"></i>S'inscrire pour commencer
               </a>
             {% endif %}
           </div>
@@ -294,14 +294,20 @@
         <p class="lead text-muted">Ce que nos utilisateurs disent de nous</p>
       </div>
       <div class="row g-4">
+        {% set testimonials = [
+          {name: 'Daniel W.', avatar: 'default1.jpg', content: 'Je gagne environ $200 par jour grâce à mes investissements. La plateforme est fiable et les retraits sont rapides.', rating: 5},
+          {name: 'Chris L.', avatar: 'default2.jpg', content: 'Excellent service client. J\'ai pu multiplier mon capital initial par 5 en quelques mois.', rating: 4},
+          {name: 'Fabrice G.', avatar: 'default3.jpg', content: 'Simple d\'utilisation et très rentable. Je recommande à tous ceux qui veulent des revenus passifs.', rating: 5}
+        ] %}
+        
         {% for testimonial in testimonials %}
           <div class="col-md-4">
             <div class="testimonial-card bg-white p-4 rounded shadow-sm h-100">
               <div class="d-flex align-items-center mb-3">
-                <img src="{{ asset('uploads/avatars/' ~ testimonial.avatar) }}" class="rounded-circle me-3" width="50" alt="{{ testimonial.name }}">
+                <img src="{{ asset('users/img/' ~ testimonial.avatar) }}" class="rounded-circle me-3" width="50" alt="{{ testimonial.name }}">
                 <div>
                   <h5 class="mb-0">{{ testimonial.name }}</h5>
-                  <small class="text-muted">{{ testimonial.position }}</small>
+                  <small class="text-muted">Utilisateur vérifié</small>
                 </div>
               </div>
               <p class="mb-0">"{{ testimonial.content }}"</p>
@@ -325,17 +331,17 @@
   <section class="py-5 bg-primary text-white">
     <div class="container py-4 text-center">
       <h2 class="fw-bold mb-4">Prêt à générer des revenus passifs ?</h2>
-      <p class="lead mb-5">Commencez avec 4% et augmentez jusqu'à 10% grâce au parrainage.</p>
+      <p class="lead mb-5">Commencez avec 4% de rendement quotidien sur vos investissements.</p>
       {% if app.user %}
-        <a href="{{ path('app_products') }}" class="btn btn-light btn-lg px-5 me-3">
-          <i class="fas fa-box-open me-2"></i>Voir les produits
+        <a href="{{ path('app_products_index') }}" class="btn btn-light btn-lg px-5 me-3">
+          <i class="fas fa-box-open me-2"></i>Investir maintenant
         </a>
       {% else %}
         <a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-5 me-3">
           <i class="fas fa-user-plus me-2"></i>S'inscrire gratuitement
         </a>
       {% endif %}
-      <a href="{{ path('app_contact') }}" class="btn btn-outline-light btn-lg px-5">
+      <a href="{{ path('app_profile') }}" class="btn btn-outline-light btn-lg px-5">
         <i class="fas fa-question-circle me-2"></i>Questions ?
       </a>
     </div>
@@ -349,7 +355,7 @@
           <h5 class="mb-4">
             <i class="fas fa-coins me-2"></i>DCSM-COMMERCE
           </h5>
-          <p>La plateforme qui vous paye 4% sur vos investissements crypto, et jusqu'à 10% avec parrainage.</p>
+          <p>La plateforme qui vous paye 4% sur vos investissements crypto quotidiennement.</p>
           <div class="social-icons mt-4">
             <a href="#" class="text-white me-3"><i class="fab fa-facebook-f"></i></a>
             <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
@@ -359,16 +365,15 @@
         </div>
         <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
           <h5 class="mb-4">Navigation</h5>
-          <a href="{{ path('app_home') }}" class="text-white-50 d-block mb-2">Accueil</a>
-          <a href="{{ path('app_products') }}" class="text-white-50 d-block mb-2">Produits</a>
-          <a href="{{ path('app_earnings') }}" class="text-white-50 d-block mb-2">Gains</a>
-          <a href="{{ path('app_referral') }}" class="text-white-50 d-block mb-2">Parrainage</a>
+          <a href="{{ path('app_dashboard') }}" class="text-white-50 d-block mb-2">Accueil</a>
+          <a href="{{ path('app_products_index') }}" class="text-white-50 d-block mb-2">Produits</a>
+          <a href="{{ path('app_profile') }}" class="text-white-50 d-block mb-2">Mon compte</a>
         </div>
         <div class="col-lg-2 col-md-4 mb-4 mb-md-0">
           <h5 class="mb-4">Légal</h5>
-          <a href="{{ path('app_terms') }}" class="text-white-50 d-block mb-2">CGU</a>
-          <a href="{{ path('app_privacy') }}" class="text-white-50 d-block mb-2">Confidentialité</a>
-          <a href="{{ path('app_cookies') }}" class="text-white-50 d-block mb-2">Cookies</a>
+          <a href="#" class="text-white-50 d-block mb-2">CGU</a>
+          <a href="#" class="text-white-50 d-block mb-2">Confidentialité</a>
+          <a href="#" class="text-white-50 d-block mb-2">Cookies</a>
         </div>
         <div class="col-lg-4">
           <h5 class="mb-4">Newsletter</h5>
@@ -388,11 +393,10 @@
         </div>
         <div class="col-md-6 text-center text-md-end">
           <p class="small mb-0">
-            <span class="text-muted">Cryptos supportées:</span>
-            <span class="text-warning">BTC</span>,
-            <span class="text-info">ETH</span>,
-            <span class="text-success">USDT</span>,
-            <span class="text-primary">+15 autres</span>
+            <span class="text-muted">Paiements acceptés:</span>
+            <span class="text-warning">Carte</span>,
+            <span class="text-info">PayPal</span>,
+            <span class="text-success">Crypto</span>
           </p>
         </div>
       </div>
@@ -425,34 +429,22 @@
 </style>
 {% endblock %}
 
-{% block customScript %}
+{% block javascripts %}
+{{ parent() }}
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    // Animation des cartes produit
-    const productCards = document.querySelectorAll('.product-card');
-    productCards.forEach(card => {
-      card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-5px)';
-        this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.15)';
-      });
-      card.addEventListener('mouseleave', function() {
-        this.style.transform = '';
-        this.style.boxShadow = '';
-      });
-    });
-
     // Calculateur de gains
     const calculateEarnings = () => {
-      const amount = parseFloat(document.getElementById('investmentAmount').value);
+      const amount = parseFloat(document.getElementById('investmentAmount').value) || 0;
       const rate = parseFloat(document.getElementById('earningRate').value);
       
       const daily = (amount * rate / 100).toFixed(2);
       const monthly = (daily * 30).toFixed(2);
       const yearly = (daily * 365).toFixed(2);
       
-      document.getElementById('dailyEarnings').textContent = '€' + daily;
-      document.getElementById('monthlyEarnings').textContent = '€' + monthly;
-      document.getElementById('yearlyEarnings').textContent = '€' + yearly;
+      document.getElementById('dailyEarnings').textContent = '$' + daily;
+      document.getElementById('monthlyEarnings').textContent = '$' + monthly;
+      document.getElementById('yearlyEarnings').textContent = '$' + yearly;
     };
     
     if(document.getElementById('calculateBtn')) {

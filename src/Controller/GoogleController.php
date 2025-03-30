@@ -20,14 +20,17 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Github\Client;
 use Exception;
+use Symfony\Component\Filesystem\Filesystem;
 
 class GoogleController extends AbstractController
 {
     private Client $githubClient;
+    private Filesystem $filesystem;
 
-    public function __construct(Client $githubClient)
+    public function __construct(Client $githubClient, Filesystem $filesystem)
     {
         $this->githubClient = $githubClient;
+        $this->filesystem = $filesystem;
     }
 
     #[Route('/connect/google', name: 'connect_google_start')]
@@ -95,31 +98,14 @@ class GoogleController extends AbstractController
             $this->handleReferralSystem($user, $request, $entityManager);
 
             // Génération et upload du QR Code
-            $referralLink = $urlGenerator->generate(
-                'app_register',
-                ['ref' => $user->getReferralCode()],
-                UrlGeneratorInterface::ABSOLUTE_URL
-            );
-
-            // Génération du QR Code avec des paramètres valides
-            $qrCode = new QrCode($referralLink);
-            $writer = new PngWriter([
-                'errorCorrectionLevel' => 'L', // Niveau de correction 'Low'
-                'size' => 300 // Taille de l'image (300x300 pixels)
-            ]);
-            $qrResult = $writer->write($qrCode);
-
-            // Upload sur GitHub avec le chemin complet
-            $filePath = "uploads/qrcodes/{$referralCode}.png";
-            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
-            $user->setQrCodePath($cdnUrl);
+            $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
 
             // Sauvegarde en base
             $entityManager->persist($user);
             $entityManager->flush();
 
-            // Envoi de l'email avec l'image
-            $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
+            // Envoi de l'email
+            $this->sendReferralEmail($user, $user->getReferralCode(), $user->getQrCodePath(), $mailer);
 
             return $authenticator->authenticateUser($user, $appAuthenticator, $request);
         } catch (Exception $e) {
@@ -139,8 +125,51 @@ class GoogleController extends AbstractController
                 $referrer->setReferralCount($referrer->getReferralCount() + 1);
                 $this->updateReferrerRewards($referrer, $entityManager);
                 $entityManager->persist($referrer);
-                $entityManager->flush(); // Sauvegarde obligatoire pour le parrain
+                $entityManager->flush();
             }
+        }
+    }
+
+    private function generateAndSaveQrCode(
+        User $user,
+        UrlGeneratorInterface $urlGenerator,
+        EntityManagerInterface $entityManager
+    ): void {
+        try {
+            $referralLink = $urlGenerator->generate(
+                'app_register',
+                ['ref' => $user->getReferralCode()],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            // Génération du QR Code avec des paramètres valides
+            $qrCode = new QrCode($referralLink);
+            $writer = new PngWriter([
+                'errorCorrectionLevel' => 'L', // Niveau de correction 'Low'
+                'size' => 300 // Taille de l'image (300x300 pixels)
+            ]);
+            $qrResult = $writer->write($qrCode);
+
+            // Génération d'un fichier temporaire pour éviter les erreurs de lecture
+            $tempDir = $this->getParameter('kernel.project_dir') . '/var/tmp/';
+            if (!$this->filesystem->exists($tempDir)) {
+                $this->filesystem->mkdir($tempDir, 0755);
+            }
+            $tempFilePath = $tempDir . $user->getReferralCode() . '.png';
+            $qrResult->save($tempFilePath);
+            $fileContent = file_get_contents($tempFilePath);
+
+            // Upload sur GitHub avec le chemin complet
+            $filePath = "uploads/qrcodes/{$user->getReferralCode()}.png";
+            $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
+
+            // Suppression du fichier temporaire
+            $this->filesystem->remove($tempFilePath);
+
+            $user->setQrCodePath($cdnUrl);
+            $entityManager->flush();
+        } catch (\Exception $e) {
+            $this->addFlash('warning', "Échec de génération du QR Code : " . $e->getMessage());
         }
     }
 
@@ -172,10 +201,12 @@ class GoogleController extends AbstractController
 
     private function sendReferralEmail(
         User $user,
-        string $referralLink,
+        string $referralCode,
         string $qrCodePath,
         MailerInterface $mailer
     ): void {
+        $referralLink = $this->generateUrl('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL);
+
         $email = (new TemplatedEmail())
             ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
             ->to($user->getEmail())

@@ -12,21 +12,28 @@ use Symfony\Component\Routing\Attribute\Route;
 class DashboardController extends AbstractController
 {
     #[Route('/', name: 'app_dashboard')]
-    public function index(ShopRepository $shopRepository): Response
-    {
+    public function index(
+        ShopRepository $shopRepository,
+        ProductRepository $productRepository
+    ): Response {
         $user = $this->getUser();
 
         if (!$user) {
             return $this->redirectToRoute("app_login");
         }
 
+        //categories des produits
         $shops = $shopRepository->findAll(
             ['name' => 'ASC']
         );
 
-        return $this->render('dashboard/index.html.twig', [
+        // Récupérer les produits phares (limité à 6 pour la page d'accueil)
+        $products = $productRepository->findFeaturedProducts(6);
+
+        return $this->render('dashboard/home.html.twig', [
             'controller_name' => 'DashboardController',
             'shops' => $shops,
+            'products' => $products,
         ]);
     }
 
@@ -58,8 +65,7 @@ class DashboardController extends AbstractController
         $slug,
         ShopRepository $shopRepository,
         ProductRepository $productRepository,
-    ): Response
-    {
+    ): Response {
         $user = $this->getUser();
 
         if ($user) {

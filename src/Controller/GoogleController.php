@@ -146,16 +146,40 @@ class GoogleController extends AbstractController
         $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
         $contentsApi = $this->githubClient->repo()->contents();
-        $response = $contentsApi->create(
-            $repoOwner,
-            $repoName,
-            $filePath,
-            base64_encode($content),
-            $message,
-            $branch
-        );
+        try {
+            $response = $contentsApi->create(
+                $repoOwner,
+                $repoName,
+                $filePath,
+                base64_encode($content),
+                $message,
+                $branch
+            );
+            return $response['content']['download_url'];
+        } catch (\Exception $e) {
+            throw new \Exception("Erreur lors de l'upload GitHub : " . $e->getMessage());
+        }
+    }
 
-        return $response['content']['download_url'];
+    private function generateAndSaveQrCode(User $user, UrlGeneratorInterface $urlGenerator): void
+    {
+        try {
+            $referralLink = $urlGenerator->generate(
+                'app_register',
+                ['ref' => $user->getReferralCode()],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            $qrCode = new QrCode($referralLink);
+            $writer = new PngWriter();
+            $qrResult = $writer->write($qrCode);
+
+            $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
+            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'Upload QR Code');
+            $user->setQrCodePath($cdnUrl);
+        } catch (\Exception $e) {
+            $this->addFlash('warning', 'Échec de génération du QR Code : ' . $e->getMessage());
+        }
     }
 
     private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
@@ -179,7 +203,7 @@ class GoogleController extends AbstractController
         $count = $referrer->getReferralCount();
         if ($count >= 40) {
             $referrer->setReferralRewardRate(13.0)
-                     ->setBalance($referrer->getBalance() + 10);
+                ->setBalance($referrer->getBalance() + 10);
         } elseif ($count >= 20) {
             $referrer->setReferralRewardRate(10.0);
         } elseif ($count >= 10) {

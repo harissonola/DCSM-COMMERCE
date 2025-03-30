@@ -163,7 +163,7 @@ class RegistrationController extends AbstractController
                 'size' => 300 // Taille 300x300 pixels
             ]);
             $qrResult = $writer->write($qrCode);
-            $qrResult->save($tempFilePath);
+            $qrResult->saveToFile($tempFilePath);
 
             // Lecture du contenu du fichier temporaire
             $fileContent = file_get_contents($tempFilePath);

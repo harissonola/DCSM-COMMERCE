@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\User;
@@ -50,6 +51,7 @@ class RegistrationController extends AbstractController
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
 
+        // Gestion du paramètre de parrainage (ref)
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
             $form->get('referredBy')->setData($referredBy);
@@ -235,3 +237,4 @@ class RegistrationController extends AbstractController
         $entityManager->flush();
     }
 }
+// src/Controller/RegistrationController.php

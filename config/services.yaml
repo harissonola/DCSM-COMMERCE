@@ -6,13 +6,6 @@ services:
         autowire: true
         autoconfigure: true
 
-    App\Service\GitHubUploader:
-        public: true
-        arguments:
-            $token: '%env(resolve:GITHUB_TOKEN)%'
-            $repoOwner: '%env(resolve:GITHUB_REPO_OWNER)%'
-            $repoName: '%env(resolve:GITHUB_REPO_NAME)%'
-
     App\Service\CryptoService:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'

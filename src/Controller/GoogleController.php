@@ -77,6 +77,7 @@ class GoogleController extends AbstractController
         $referralCode = uniqid('ref_', false); // Sans point
 
         try {
+            // Configuration de l'utilisateur
             $user->setGoogleId($googleId)
                 ->setEmail($email)
                 ->setUsername($username)
@@ -100,9 +101,11 @@ class GoogleController extends AbstractController
                 UrlGeneratorInterface::ABSOLUTE_URL
             );
 
+            // Génération du QR Code avec paramètres valides
             $qrCode = new QrCode($referralLink);
             $writer = new PngWriter([
-                'eccLevel' => QrCode::ERROR_CORRECTION_LOW // <--- CORRECTION ICI
+                'errorCorrectionLevel' => 'L', // Niveau de correction d'erreur 'Low' sous forme de chaîne
+                'size' => 300 // Taille de l'image (optionnel)
             ]);
             $qrResult = $writer->write($qrCode);
 
@@ -111,6 +114,7 @@ class GoogleController extends AbstractController
             $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
+            // Sauvegarde en base
             $entityManager->persist($user);
             $entityManager->flush();
 
@@ -135,6 +139,7 @@ class GoogleController extends AbstractController
                 $referrer->setReferralCount($referrer->getReferralCount() + 1);
                 $this->updateReferrerRewards($referrer, $entityManager);
                 $entityManager->persist($referrer);
+                $entityManager->flush(); // Ajout de flush après la persistance
             }
         }
     }
@@ -182,7 +187,11 @@ class GoogleController extends AbstractController
                 'qrCodePath' => $qrCodePath,
             ]);
 
-        $mailer->send($email);
+        try {
+            $mailer->send($email);
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Échec de l\'envoi : ' . $e->getMessage());
+        }
     }
 
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void

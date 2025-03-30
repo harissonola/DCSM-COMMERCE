@@ -52,19 +52,15 @@ class RegistrationController extends AbstractController
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
 
-        // Gestion du paramètre de parrainage (ref)
+        // Gestion du parrainage
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
             $form->get('referredBy')->setData($referredBy);
         }
 
         $form->handleRequest($request);
-        if ($form->isSubmitted()) {
+        if ($form->isSubmitted() && $form->isValid()) {
             try {
-                if (!$form->isValid()) {
-                    throw new \Exception("Le formulaire contient des erreurs. Veuillez vérifier les champs.");
-                }
-
                 $plainPassword = $form->get('plainPassword')->getData();
                 $confirmPassword = $form->get('confirmPassword')->getData();
                 if ($plainPassword !== $confirmPassword) {
@@ -100,27 +96,32 @@ class RegistrationController extends AbstractController
         UrlGeneratorInterface $urlGenerator,
         MailerInterface $mailer
     ): void {
-        $referralCode = uniqid('ref_', true);
+        // Génération d'un referralCode sans point
+        $referralCode = uniqid('ref_', false);
         $user->setReferralCode($referralCode);
 
-        $this->handleReferralSystem($user, $form, $entityManager);
-
+        // Configuration de l'utilisateur
         $user->setPassword($passwordHasher->hashPassword($user, $form->get('plainPassword')->getData()))
             ->setCreatedAt(new \DateTimeImmutable())
             ->setMiningBotActive(0)
             ->setBalance(0);
 
+        // Upload de l'image de profil
         $this->handleProfileImageUpload($user, $form);
+
+        // Gestion du parrainage
+        $this->handleReferralSystem($user, $form, $entityManager);
+
+        // Sauvegarde en base
         $entityManager->persist($user);
         $entityManager->flush();
 
+        // Génération et upload du QR Code
         $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
+
+        // Envoi des emails
         $this->sendConfirmationEmail($user);
-        $this->sendReferralEmail(
-            $user,
-            $urlGenerator->generate('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL),
-            $mailer
-        );
+        $this->sendReferralEmail($user, $urlGenerator, $mailer);
     }
 
     private function handleReferralSystem(User $user, $form, EntityManagerInterface $entityManager): void
@@ -143,14 +144,14 @@ class RegistrationController extends AbstractController
             $image = $form->get('photo')->getData();
             if ($image instanceof UploadedFile) {
                 $fileContent = file_get_contents($image->getPathname());
-                $filePath = sprintf('uploads/profile/%s.%s', uniqid('', true), $image->guessExtension());
+                $filePath = sprintf('uploads/profile/%s.%s', uniqid(), $image->guessExtension()); // Nom sans point
                 $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'Upload photo profil');
                 $user->setPhoto($cdnUrl);
             } else {
                 $user->setPhoto($this->getDefaultProfileImage());
             }
         } catch (\Exception $e) {
-            $this->addFlash('warning', 'Erreur lors de l\'upload de l\'image : ' . $e->getMessage());
+            $this->addFlash('warning', "Erreur d'upload : " . $e->getMessage());
             $user->setPhoto($this->getDefaultProfileImage());
         }
     }
@@ -160,27 +161,21 @@ class RegistrationController extends AbstractController
         $repoOwner = 'harissonola';
         $repoName = 'my-cdn';
         $branch = 'main';
-        $path = "uploads/" . basename($filePath);
 
-        // Authentification GitHub
-        $this->githubClient->authenticate('YOUR_GITHUB_TOKEN', null, Client::AUTH_ACCESS_TOKEN);
+        // Authentification via variable d'environnement
+        $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
-        $contentsApi = $this->githubClient->api('repo')->contents();
-        $response = $contentsApi->create(
+        // Upload avec chemin complet (ex: "uploads/qrcodes/ref_123.png")
+        $response = $this->githubClient->api('repo')->contents()->create(
             $repoOwner,
             $repoName,
-            $path,
+            $filePath,
             base64_encode($content),
             $message,
             $branch
         );
 
-        return $response['content']['download_url'];
-    }
-
-    private function getDefaultProfileImage(): string
-    {
-        return sprintf('https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default%d.jpg', rand(1, 7));
+        return $response['content']['download_url'] ?? '';
     }
 
     private function generateAndSaveQrCode(
@@ -195,16 +190,19 @@ class RegistrationController extends AbstractController
                 UrlGeneratorInterface::ABSOLUTE_URL
             );
 
+            // Génération du QR Code avec paramètres corrects
             $qrCode = new QrCode($referralLink);
-            $writer = new PngWriter();
+            $writer = new PngWriter(['errorCorrectionLevel' => 'L']); // Utilisez 'L' pour le niveau de correction
             $qrResult = $writer->write($qrCode);
 
+            // Chemin complet vers le dossier qrcodes
             $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
-            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'Upload QR Code');
+            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Registration');
             $user->setQrCodePath($cdnUrl);
+
             $entityManager->flush();
         } catch (\Exception $e) {
-            $this->addFlash('warning', 'Échec de génération du QR Code : ' . $e->getMessage());
+            $this->addFlash('warning', "Échec de génération du QR Code : " . $e->getMessage());
         }
     }
 
@@ -216,13 +214,16 @@ class RegistrationController extends AbstractController
             (new TemplatedEmail())
                 ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
                 ->to((string) $user->getEmail())
-                ->subject('Confirmer votre adresse mail')
+                ->subject('Confirmation email')
                 ->htmlTemplate('registration/confirmation_email.html.twig')
         );
     }
 
-    private function sendReferralEmail(User $user, string $referralLink, MailerInterface $mailer): void
-    {
+    private function sendReferralEmail(
+        User $user,
+        UrlGeneratorInterface $urlGenerator,
+        MailerInterface $mailer
+    ): void {
         try {
             $email = (new TemplatedEmail())
                 ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
@@ -231,12 +232,16 @@ class RegistrationController extends AbstractController
                 ->htmlTemplate('emails/referral_email.html.twig')
                 ->context([
                     'user' => $user,
-                    'referralLink' => $referralLink,
+                    'referralLink' => $urlGenerator->generate(
+                        'app_register',
+                        ['ref' => $user->getReferralCode()],
+                        UrlGeneratorInterface::ABSOLUTE_URL
+                    ),
                     'qrCodePath' => $user->getQrCodePath(),
                 ]);
             $mailer->send($email);
-        } catch (TransportExceptionInterface $e) {
-            $this->addFlash('warning', 'Échec de l\'envoi de l\'email de parrainage.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Erreur d\'envoi : ' . $e->getMessage());
         }
     }
 
@@ -270,20 +275,24 @@ class RegistrationController extends AbstractController
 
         try {
             $emailVerifier->sendEmailConfirmation(
-                'app_verify_email', // Nom de la route de vérification
+                'app_verify_email',
                 $user,
                 (new TemplatedEmail())
                     ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
                     ->to((string) $user->getEmail())
-                    ->subject('Nouvelle confirmation de votre adresse mail')
+                    ->subject('Nouvelle confirmation')
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
-
-            $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé à votre email !');
+            $this->addFlash('success', 'Email renvoyé !');
         } catch (\Exception $e) {
-            $this->addFlash('error', 'Impossible d\'envoyer le lien de confirmation. Réessayez plus tard.');
+            $this->addFlash('error', 'Erreur : ' . $e->getMessage());
         }
 
-        return $this->redirectToRoute('app_register'); // Ou vers la page d'accueil
+        return $this->redirectToRoute('app_register');
+    }
+
+    private function getDefaultProfileImage(): string
+    {
+        return sprintf('https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default%d.jpg', rand(1, 7));
     }
 }

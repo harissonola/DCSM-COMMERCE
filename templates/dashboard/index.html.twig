@@ -120,7 +120,7 @@
               {% for shop in shops %}
                 <div class="col-md-4">
                   <div class="card price-card">
-                    <img src="{{ asset('img/' ~ shop.image) }}" class="card-img-top" alt="..." />
+                    <img src="{{ asset(shop.image) }}" class="card-img-top" alt="..." />
                     <div class="card-body">
                       <h5 class="card-title">
                         <a class="text-decoration-none" href="{{ path('app_shop', { slug: shop.slug }) }}">{{ shop.name }}</a>

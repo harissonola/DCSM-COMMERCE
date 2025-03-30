@@ -16,6 +16,18 @@ class ProductRepository extends ServiceEntityRepository
         parent::__construct($registry, Product::class);
     }
 
+    // Dans ProductRepository
+    public function findFeaturedProducts(int $maxResults = 6)
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.isFeatured = true')
+            ->andWhere('p.stock > 0') // Seulement les produits en stock
+            ->orderBy('p.createdAt', 'DESC')
+            ->setMaxResults($maxResults)
+            ->getQuery()
+            ->getResult();
+    }
+
     //    /**
     //     * @return Product[] Returns an array of Product objects
     //     */

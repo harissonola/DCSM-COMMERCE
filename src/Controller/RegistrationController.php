@@ -273,7 +273,7 @@ class RegistrationController extends AbstractController
 
     /**
      * Gestion de l'upload de l'image de profil.
-     * Si une image est sélectionnée, elle est uploadée sur GitHub dans le dossier "user/img/".
+     * Si une image est sélectionnée, elle est uploadée sur GitHub dans le dossier "users/img/".
      * Sinon, on attribue à l'utilisateur une image par défaut.
      */
     private function handleProfileImageUpload(User $user, $form): void
@@ -294,8 +294,8 @@ class RegistrationController extends AbstractController
                 // Lecture du contenu du fichier temporaire
                 $fileContent = file_get_contents($tempFilePath);
 
-                // Upload sur GitHub dans le dossier "user/img/"
-                $githubPath = "user/img/{$fileName}";
+                // Upload sur GitHub dans le dossier "users/img/"
+                $githubPath = "users/img/{$fileName}";
                 $cdnUrl = $this->uploadToGitHub($githubPath, $fileContent, 'Upload photo profil');
 
                 // Suppression du fichier temporaire
@@ -374,7 +374,7 @@ class RegistrationController extends AbstractController
     private function getDefaultProfileImage(): string
     {
         $defaultNumber = rand(1, 7);
-        return "https://raw.githubusercontent.com/harissonola/my-cdn/main/user/img/default{$defaultNumber}.jpg";
+        return "https://raw.githubusercontent.com/harissonola/my-cdn/main/users/img/default{$defaultNumber}.jpg";
     }
 
     #[Route('/resend-verification-email', name: 'app_verify_email_send')]

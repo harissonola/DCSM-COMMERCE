@@ -3,201 +3,98 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Form\RegistrationFormType;
-use App\Security\AppAuthenticator;
-use App\Security\EmailVerifier;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Form\FormError;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Mime\Address;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use SymfonyCasts\Bundle\VerifyEmail\Exception\VerifyEmailExceptionInterface;
+use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
+use App\Security\AppAuthenticator;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Address;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
-use Exception;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Github\Client;
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
+use Exception;
 
-class RegistrationController extends AbstractController
+class GoogleController extends AbstractController
 {
-    private EmailVerifier $emailVerifier;
     private Client $githubClient;
 
-    public function __construct(EmailVerifier $emailVerifier, Client $githubClient)
+    public function __construct(Client $githubClient)
     {
-        $this->emailVerifier = $emailVerifier;
         $this->githubClient = $githubClient;
     }
 
-    #[Route('/register', name: 'app_register')]
-    public function register(
-        Request $request,
-        UserPasswordHasherInterface $userPasswordHasher,
-        Security $security,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer
-    ): Response {
-        if ($this->getUser()) {
-            return $this->redirectToRoute('app_dashboard');
-        }
-
-        $user = new User();
-        $form = $this->createForm(RegistrationFormType::class, $user);
-
-        // Gestion du parrainage via le paramètre 'ref'
-        $referredBy = $request->query->get('ref');
-        if ($referredBy) {
-            $form->get('referredBy')->setData($referredBy);
-        }
-
-        $form->handleRequest($request);
-        if ($form->isSubmitted()) {
-            try {
-                if (!$form->isValid()) {
-                    throw new \Exception("Le formulaire contient des erreurs. Veuillez vérifier les champs.");
-                }
-
-                $plainPassword = $form->get('plainPassword')->getData();
-                $confirmPassword = $form->get('confirmPassword')->getData();
-                if ($plainPassword !== $confirmPassword) {
-                    throw new \Exception("Les mots de passe ne correspondent pas.");
-                }
-
-                $this->processRegistration(
-                    $user,
-                    $form,
-                    $userPasswordHasher,
-                    $entityManager,
-                    $urlGenerator,
-                    $mailer
-                );
-
-                return $security->login($user, AppAuthenticator::class, 'main');
-            } catch (\Exception $e) {
-                $this->addFlash('error', $e->getMessage());
-                $entityManager->clear();
-            }
-        }
-
-        return $this->render('registration/register.html.twig', [
-            'registrationForm' => $form->createView(),
-        ]);
-    }
-
-    private function processRegistration(
-        User $user,
-        $form,
-        UserPasswordHasherInterface $passwordHasher,
-        EntityManagerInterface $entityManager,
-        UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer
-    ): void {
-        // Génération d'un referralCode sans point
-        $referralCode = uniqid('ref_', false);
-        $user->setReferralCode($referralCode);
-
-        // Configuration de l'utilisateur
-        $user->setPassword($passwordHasher->hashPassword($user, $form->get('plainPassword')->getData()))
-            ->setCreatedAt(new \DateTimeImmutable())
-            ->setMiningBotActive(false)
-            ->setBalance(0);
-
-        // Upload de l'image de profil
-        $this->handleProfileImageUpload($user, $form);
-
-        // Gestion du système de parrainage
-        $this->handleReferralSystem($user, $form, $entityManager);
-
-        // Sauvegarde en base de données
-        $entityManager->persist($user);
-        $entityManager->flush();
-
-        // Génération et upload du QR Code
-        $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
-
-        // Envoi des emails
-        $this->sendConfirmationEmail($user);
-        $this->sendReferralEmail($user, $urlGenerator, $mailer);
-    }
-
-    private function handleReferralSystem(User $user, $form, EntityManagerInterface $entityManager): void
+    #[Route('/connect/google', name: 'connect_google_start')]
+    public function connectGoogle(ClientRegistry $clientRegistry): Response
     {
-        $referredBy = $form->get('referredBy')->getData();
-        if ($referredBy) {
-            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
-            if ($referrer) {
-                $user->setReferredBy($referredBy);
-                $referrer->setReferralCount($referrer->getReferralCount() + 1);
-                $this->updateReferrerRewards($referrer, $entityManager);
-                $entityManager->persist($referrer);
+        return $clientRegistry->getClient('google')->redirect(['profile', 'email']);
+    }
+
+    #[Route('/connect/google/check', name: 'connect_google_check')]
+    public function connectGoogleCheck(
+        Request $request,
+        ClientRegistry $clientRegistry,
+        EntityManagerInterface $entityManager,
+        UserAuthenticatorInterface $authenticator,
+        AppAuthenticator $appAuthenticator,
+        UserPasswordHasherInterface $passwordHasher,
+        MailerInterface $mailer,
+        UrlGeneratorInterface $urlGenerator
+    ): Response {
+        $client = $clientRegistry->getClient('google');
+        $userData = $client->fetchUser();
+
+        $email = $userData->getEmail();
+        $googleId = $userData->getId();
+        $fname = $userData->getFirstName() ?? $userData->getName();
+        $lname = $userData->getLastName() ?? '';
+        $username = strtolower(substr($lname, 0, 1) . $fname);
+        if (empty(trim($username))) {
+            $username = strtolower($email);
+        }
+
+        // Vérification de l'existence
+        $existingUser = $entityManager->getRepository(User::class)
+            ->findOneBy(['googleId' => $googleId])
+            ?? $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+
+        if ($existingUser) {
+            if (!$existingUser->getGoogleId()) {
+                $existingUser->setGoogleId($googleId);
                 $entityManager->flush();
             }
+            return $authenticator->authenticateUser($existingUser, $appAuthenticator, $request);
         }
-    }
 
-    private function handleProfileImageUpload(User $user, $form): void
-    {
-        try {
-            $image = $form->get('photo')->getData();
-            if ($image instanceof UploadedFile) {
-                $fileContent = file_get_contents($image->getPathname());
-                $fileName = uniqid() . '.' . $image->guessExtension();
-                $filePath = "uploads/profile/{$fileName}";
-                $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'Upload photo de profil');
-                $user->setPhoto($cdnUrl);
-            } else {
-                $user->setPhoto($this->getDefaultProfileImage());
-            }
-        } catch (\Exception $e) {
-            $this->addFlash('warning', "Erreur d'upload : " . $e->getMessage());
-            $user->setPhoto($this->getDefaultProfileImage());
-        }
-    }
-
-    private function uploadToGitHub(string $filePath, string $content, string $message): string
-    {
-        $repoOwner = 'harissonola';
-        $repoName = 'my-cdn';
-        $branch = 'main';
+        // Création de l'utilisateur
+        $user = new User();
+        $referralCode = uniqid('ref_', false); // Sans point pour éviter les erreurs de nommage
 
         try {
-            // Authentification via variable d'environnement
-            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+            // Configuration de l'utilisateur
+            $user->setGoogleId($googleId)
+                ->setEmail($email)
+                ->setUsername($username)
+                ->setFname($fname)
+                ->setLname($lname)
+                ->setPassword($passwordHasher->hashPassword($user, bin2hex(random_bytes(16))))
+                ->setPhoto($userData->getAvatar())
+                ->setCountry('BJ')
+                ->setCreatedAt(new \DateTimeImmutable())
+                ->setMiningBotActive(false)
+                ->setVerified(true)
+                ->setReferralCode($referralCode);
 
-            // Upload avec chemin complet (ex: "uploads/qrcodes/ref_123.png")
-            $response = $this->githubClient->api('repo')->contents()->create(
-                $repoOwner,
-                $repoName,
-                $filePath,
-                base64_encode($content),
-                $message,
-                $branch
-            );
+            // Gestion du parrainage
+            $this->handleReferralSystem($user, $request, $entityManager);
 
-            return $response['content']['download_url'] ?? '';
-        } catch (Exception $e) {
-            throw new \Exception("Échec de l'upload sur GitHub : " . $e->getMessage());
-        }
-    }
-
-    private function generateAndSaveQrCode(
-        User $user,
-        UrlGeneratorInterface $urlGenerator,
-        EntityManagerInterface $entityManager
-    ): void {
-        try {
-            // Génération du lien d'affiliation
+            // Génération et upload du QR Code
             $referralLink = $urlGenerator->generate(
                 'app_register',
                 ['ref' => $user->getReferralCode()],
@@ -212,53 +109,88 @@ class RegistrationController extends AbstractController
             ]);
             $qrResult = $writer->write($qrCode);
 
-            // Chemin complet pour GitHub
-            $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
-            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Registration');
+            // Upload sur GitHub avec le chemin complet
+            $filePath = "uploads/qrcodes/{$referralCode}.png";
+            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
+            // Sauvegarde en base
+            $entityManager->persist($user);
             $entityManager->flush();
-        } catch (\Exception $e) {
-            $this->addFlash('warning', "Échec de génération du QR Code : " . $e->getMessage());
+
+            // Envoi de l'email avec l'image
+            $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
+
+            return $authenticator->authenticateUser($user, $appAuthenticator, $request);
+        } catch (Exception $e) {
+            $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
+            $entityManager->clear();
+            return $this->redirectToRoute('app_register');
         }
     }
 
-    private function sendConfirmationEmail(User $user): void
+    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
     {
-        $this->emailVerifier->sendEmailConfirmation(
-            'app_verify_email',
-            $user,
-            (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                ->to((string) $user->getEmail())
-                ->subject('Confirmation de votre adresse email')
-                ->htmlTemplate('registration/confirmation_email.html.twig')
-        );
+        $referredBy = $request->query->get('ref');
+        if ($referredBy) {
+            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
+            if ($referrer) {
+                $user->setReferredBy($referredBy);
+                $referrer->setReferralCount($referrer->getReferralCount() + 1);
+                $this->updateReferrerRewards($referrer, $entityManager);
+                $entityManager->persist($referrer);
+                $entityManager->flush(); // Sauvegarde obligatoire pour le parrain
+            }
+        }
+    }
+
+    private function uploadToGitHub(string $filePath, string $content, string $message): string
+    {
+        $repoOwner = 'harissonola';
+        $repoName = 'my-cdn';
+        $branch = 'main';
+
+        try {
+            // Authentification via la variable d'environnement
+            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+
+            // Upload avec le chemin complet (ex: "uploads/qrcodes/ref_123456.png")
+            $response = $this->githubClient->api('repo')->contents()->create(
+                $repoOwner,
+                $repoName,
+                $filePath,
+                base64_encode($content),
+                $message,
+                $branch
+            );
+
+            return $response['content']['download_url'] ?? '';
+        } catch (Exception $e) {
+            throw new Exception("Échec de l'upload sur GitHub : " . $e->getMessage());
+        }
     }
 
     private function sendReferralEmail(
         User $user,
-        UrlGeneratorInterface $urlGenerator,
+        string $referralLink,
+        string $qrCodePath,
         MailerInterface $mailer
     ): void {
+        $email = (new TemplatedEmail())
+            ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+            ->to($user->getEmail())
+            ->subject('Votre QR Code et lien d\'affiliation')
+            ->htmlTemplate('emails/referral_email.html.twig')
+            ->context([
+                'user' => $user,
+                'referralLink' => $referralLink,
+                'qrCodePath' => $qrCodePath,
+            ]);
+
         try {
-            $email = (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                ->to($user->getEmail())
-                ->subject('Votre QR Code et lien d\'affiliation')
-                ->htmlTemplate('emails/referral_email.html.twig')
-                ->context([
-                    'user' => $user,
-                    'referralLink' => $urlGenerator->generate(
-                        'app_register',
-                        ['ref' => $user->getReferralCode()],
-                        UrlGeneratorInterface::ABSOLUTE_URL
-                    ),
-                    'qrCodePath' => $user->getQrCodePath(),
-                ]);
             $mailer->send($email);
-        } catch (TransportExceptionInterface $e) {
-            $this->addFlash('error', 'Échec de l\'envoi de l\'email de parrainage.');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
         }
     }
 
@@ -277,39 +209,5 @@ class RegistrationController extends AbstractController
         }
         $entityManager->persist($referrer);
         $entityManager->flush();
-    }
-
-    private function getDefaultProfileImage(): string
-    {
-        return sprintf('https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default%d.jpg', rand(1, 7));
-    }
-
-    #[Route('/resend-verification-email', name: 'app_verify_email_send')]
-    public function resendVerificationEmail(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        EmailVerifier $emailVerifier
-    ): Response {
-        $user = $this->getUser();
-        if (!$user || $user->isVerified()) {
-            return $this->redirectToRoute('app_register');
-        }
-
-        try {
-            $emailVerifier->sendEmailConfirmation(
-                'app_verify_email',
-                $user,
-                (new TemplatedEmail())
-                    ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                    ->to((string) $user->getEmail())
-                    ->subject('Nouvelle confirmation de votre email')
-                    ->htmlTemplate('registration/confirmation_email.html.twig')
-            );
-            $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé !');
-        } catch (\Exception $e) {
-            $this->addFlash('error', 'Erreur lors de l\'envoi : ' . $e->getMessage());
-        }
-
-        return $this->redirectToRoute('app_register');
     }
 }

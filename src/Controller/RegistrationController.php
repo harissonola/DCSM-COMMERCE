@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\User;
@@ -44,7 +43,7 @@ class RegistrationController extends AbstractController
         MailerInterface $mailer,
         GitHubUploader $githubUploader
     ): Response {
-        // Redirection si l'utilisateur est déjà connecté
+        // Si l'utilisateur est déjà connecté, redirige vers le tableau de bord
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
@@ -100,51 +99,6 @@ class RegistrationController extends AbstractController
         return $this->render('registration/register.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
-    }
-
-    #[Route('/verify/email', name: 'app_verify_email')]
-    public function verifyEmail(Request $request): Response
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->redirectToRoute('app_dashboard');
-        }
-
-        try {
-            $this->emailVerifier->handleEmailConfirmation($request, $user);
-            $this->addFlash('success', 'Votre adresse email a été confirmée avec succès.');
-            return $this->redirectToRoute('app_dashboard');
-        } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('error', 'L\'adresse email n\'est pas valide.');
-            return $this->redirectToRoute('app_dashboard');
-        }
-    }
-
-    #[Route('/verify/email/resend', name: 'app_verify_email_send')]
-    public function resendEmailConfirmation(MailerInterface $mailer): Response
-    {
-        $user = $this->getUser();
-        if (!$user) {
-            return $this->redirectToRoute('app_dashboard');
-        }
-
-        if ($user->isVerified()) {
-            $this->addFlash('info', 'Votre email est déjà confirmé.');
-            return $this->redirectToRoute('app_dashboard');
-        }
-
-        $this->emailVerifier->sendEmailConfirmation(
-            'app_verify_email',
-            $user,
-            (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
-                ->to((string) $user->getEmail())
-                ->subject('Confirmer votre adresse mail')
-                ->htmlTemplate('registration/confirmation_email.html.twig')
-        );
-
-        $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé à votre adresse email.');
-        return $this->redirectToRoute('app_dashboard');
     }
 
     /**

@@ -20,8 +20,8 @@
             </a>
 
             <!-- Support -->
-            <a class="nav-link d-flex flex-column align-items-center" 
-               href="#">
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_faq' ? 'active' }}" 
+               href="{{ path("app_faq") }}">
                 <div class="nav-icon-wrapper">
                     <i class="bx bxs-chat fs-5"></i>
                 </div>

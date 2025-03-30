@@ -1,9 +1,7 @@
 # config/services.yaml
 
 parameters:
-    users_img_directory: '%kernel.project_dir%/public/users/img'
-    qr_code_directory: '%kernel.project_dir%/public/uploads/user'
-    app.site_name: 'DCSM COMMERCE'
+    # Supprimez les paramètres intermédiaires (pas nécessaires ici)
 
 services:
     _defaults:
@@ -12,15 +10,17 @@ services:
 
     # Configuration explicite pour GitHubUploader
     App\Service\GitHubUploader:
+        public: true
         arguments:
-            $token: '%env(resolve:GITHUB_TOKEN)%'
-            $repoOwner: '%env(resolve:GITHUB_REPO_OWNER)%'
-            $repoName: '%env(resolve:GITHUB_REPO_NAME)%'
+            $token: '%env(GITHUB_TOKEN)%'
+            $repoOwner: '%env(GITHUB_REPO_OWNER)%'
+            $repoName: '%env(GITHUB_REPO_NAME)%'
 
+    # Autres services
     App\Service\CryptoService:
         arguments:
-            $apiKey: '%env(resolve:COINPAYMENTS_API_KEY)%'
-            $merchantId: '%env(resolve:COINPAYMENTS_MERCHANT_ID)%'
+            $apiKey: '%env(COINPAYMENTS_API_KEY)%'
+            $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
 
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:

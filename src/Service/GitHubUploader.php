@@ -30,7 +30,7 @@ class GitHubUploader
         try {
             $this->ensureDirectoryExists(dirname($filePath));
 
-            // Vérifie si le fichier existe déjà
+            // Vérifie si le fichier existe
             try {
                 $existingFile = $this->client->api('repo')->contents()->show(
                     $this->repoOwner,
@@ -38,7 +38,6 @@ class GitHubUploader
                     $filePath,
                     'main'
                 );
-
                 // Mise à jour du fichier existant
                 $response = $this->client->api('repo')->contents()->update(
                     $this->repoOwner,
@@ -74,9 +73,7 @@ class GitHubUploader
 
         foreach ($parts as $part) {
             $currentPath .= "{$part}/";
-
             try {
-                // Tente de créer le répertoire
                 $this->client->api('repo')->contents()->create(
                     $this->repoOwner,
                     $this->repoName,
@@ -86,7 +83,6 @@ class GitHubUploader
                     'main'
                 );
             } catch (ExceptionInterface $e) {
-                // Le répertoire existe probablement déjà
                 continue;
             }
         }

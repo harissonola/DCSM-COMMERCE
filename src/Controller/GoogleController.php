@@ -156,7 +156,7 @@ class GoogleController extends AbstractController
                 $this->filesystem->mkdir($tempDir, 0755);
             }
             $tempFilePath = $tempDir . $user->getReferralCode() . '.png';
-            $qrResult->save($tempFilePath);
+            $qrResult->saveToFile($tempFilePath);
             $fileContent = file_get_contents($tempFilePath);
 
             // Upload sur GitHub avec le chemin complet

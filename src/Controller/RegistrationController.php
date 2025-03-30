@@ -44,7 +44,7 @@ class RegistrationController extends AbstractController
         MailerInterface $mailer,
         GitHubUploader $githubUploader
     ): Response {
-        // Si l'utilisateur est déjà connecté, redirige vers le tableau de bord
+        // Redirection si l'utilisateur est déjà connecté
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
@@ -63,7 +63,7 @@ class RegistrationController extends AbstractController
         $form->handleRequest($request);
         if ($form->isSubmitted()) {
             try {
-                // Vérification de la validité du formulaire
+                // Validation du formulaire
                 if (!$form->isValid()) {
                     throw new \Exception("Le formulaire contient des erreurs. Veuillez vérifier les champs.");
                 }
@@ -71,11 +71,12 @@ class RegistrationController extends AbstractController
                 // Validation des mots de passe
                 $plainPassword = $form->get('plainPassword')->getData();
                 $confirmPassword = $form->get('confirmPassword')->getData();
+
                 if ($plainPassword !== $confirmPassword) {
                     throw new \Exception("Les mots de passe ne correspondent pas.");
                 }
 
-                // Début du processus d'inscription
+                // Processus d'inscription
                 $this->processRegistration(
                     $user,
                     $form,

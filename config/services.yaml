@@ -1,40 +1,43 @@
-# Ce fichier est le point d'entrée pour configurer vos propres services.
-# Les fichiers dans le sous-répertoire packages/ configurent vos dépendances.
+# services.yaml
 
-# Définissez ici les paramètres qui ne changent pas selon la machine où l'application est déployée
-# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # Chemins des répertoires
     users_img_directory: '%kernel.project_dir%/public/users/img'
     qr_code_directory: '%kernel.project_dir%/public/uploads/user'
+
+    # Paramètres globaux de l'application
     app.site_name: 'DCSM COMMERCE'
+
+    # Paramètres GitHub
     github.token: '%env(GITHUB_TOKEN)%'
-    github.repo_owner: 'harissonola'
-    github.repo_name: 'my-cdn'
+    github.repo_owner: '%env(GITHUB_REPO_OWNER)%'
+    github.repo_name: '%env(GITHUB_REPO_NAME)%'
 
 services:
-    # Configuration pour les services
+    # Configuration par défaut pour tous les services
     _defaults:
-        autowire: true
-        autoconfigure: true
+        autowire: true      # Active l'injection automatique des dépendances
+        autoconfigure: true # Configure automatiquement les tags (ex: event listeners)
 
+    # Service CryptoService
     App\Service\CryptoService:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
-            $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%' # Ensure you set this in your .env file
-    
+            $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
+
+    # Service GitHubUploader
     App\Service\GitHubUploader:
         arguments:
             $token: '%env(GITHUB_TOKEN)%'
             $repoOwner: '%env(GITHUB_REPO_OWNER)%'
             $repoName: '%env(GITHUB_REPO_NAME)%'
 
+    # Middleware personnalisé
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }
-    
-   
 
-    # Autres services
+    # Autres services dans le répertoire src/
     App\:
         resource: '../src/'
         exclude:

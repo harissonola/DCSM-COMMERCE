@@ -1,22 +1,18 @@
-# config/services.yaml
-
 parameters:
-    # Supprimez les paramètres intermédiaires (pas nécessaires ici)
+    # Paramètres éventuels
 
 services:
     _defaults:
         autowire: true
         autoconfigure: true
 
-    # Configuration explicite pour GitHubUploader
     App\Service\GitHubUploader:
         public: true
         arguments:
-            $token: '%env(GITHUB_TOKEN)%'
-            $repoOwner: '%env(GITHUB_REPO_OWNER)%'
-            $repoName: '%env(GITHUB_REPO_NAME)%'
+            $token: '%env(resolve:GITHUB_TOKEN)%'
+            $repoOwner: '%env(resolve:GITHUB_REPO_OWNER)%'
+            $repoName: '%env(resolve:GITHUB_REPO_NAME)%'
 
-    # Autres services
     App\Service\CryptoService:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'

@@ -11,6 +11,7 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mime\Address;
@@ -22,7 +23,6 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class RegistrationController extends AbstractController
 {
@@ -43,39 +43,31 @@ class RegistrationController extends AbstractController
         MailerInterface $mailer,
         GitHubUploader $githubUploader
     ): Response {
-        // Si l'utilisateur est déjà connecté, redirige vers le tableau de bord
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
 
-        // Initialisation de l'utilisateur et du formulaire
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
 
-        // Gestion du paramètre de parrainage (ref)
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
             $form->get('referredBy')->setData($referredBy);
         }
 
-        // Traitement de la soumission du formulaire
         $form->handleRequest($request);
         if ($form->isSubmitted()) {
             try {
-                // Validation du formulaire
                 if (!$form->isValid()) {
                     throw new \Exception("Le formulaire contient des erreurs. Veuillez vérifier les champs.");
                 }
 
-                // Validation des mots de passe
                 $plainPassword = $form->get('plainPassword')->getData();
                 $confirmPassword = $form->get('confirmPassword')->getData();
-
                 if ($plainPassword !== $confirmPassword) {
                     throw new \Exception("Les mots de passe ne correspondent pas.");
                 }
 
-                // Processus d'inscription
                 $this->processRegistration(
                     $user,
                     $form,
@@ -86,24 +78,18 @@ class RegistrationController extends AbstractController
                     $githubUploader
                 );
 
-                // Connexion automatique après inscription
                 return $security->login($user, AppAuthenticator::class, 'main');
             } catch (\Exception $e) {
-                // Gestion des erreurs globales
                 $this->addFlash('error', $e->getMessage());
-                $entityManager->clear(); // Annule les opérations en cours
+                $entityManager->clear();
             }
         }
 
-        // Affichage du formulaire
         return $this->render('registration/register.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
     }
 
-    /**
-     * Processus principal d'inscription.
-     */
     private function processRegistration(
         User $user,
         $form,
@@ -113,45 +99,31 @@ class RegistrationController extends AbstractController
         MailerInterface $mailer,
         GitHubUploader $githubUploader
     ): void {
-        // Génération du code de parrainage
         $referralCode = uniqid('ref_', true);
         $user->setReferralCode($referralCode);
 
-        // Gestion du système de parrainage
         $this->handleReferralSystem($user, $form, $entityManager);
 
-        // Hachage du mot de passe et initialisation des propriétés
         $user->setPassword($passwordHasher->hashPassword($user, $form->get('plainPassword')->getData()))
             ->setCreatedAt(new \DateTimeImmutable())
             ->setMiningBotActive(0)
             ->setBalance(0);
 
-        // Upload de l'image de profil
         $this->handleProfileImageUpload($user, $form, $githubUploader);
 
-        // Persistance de l'utilisateur
         $entityManager->persist($user);
         $entityManager->flush();
 
-        // Génération et upload du QR Code
         $this->generateAndSaveQrCode($user, $urlGenerator, $githubUploader, $entityManager);
 
-        // Envoi des emails de confirmation et de parrainage
         $this->sendConfirmationEmail($user);
         $this->sendReferralEmail(
             $user,
-            $urlGenerator->generate(
-                'app_register',
-                ['ref' => $referralCode],
-                UrlGeneratorInterface::ABSOLUTE_URL
-            ),
+            $urlGenerator->generate('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL),
             $mailer
         );
     }
 
-    /**
-     * Gère le système de parrainage.
-     */
     private function handleReferralSystem(User $user, $form, EntityManagerInterface $entityManager): void
     {
         $referredBy = $form->get('referredBy')->getData();
@@ -166,20 +138,13 @@ class RegistrationController extends AbstractController
         }
     }
 
-    /**
-     * Gère l'upload de l'image de profil.
-     */
     private function handleProfileImageUpload(User $user, $form, GitHubUploader $uploader): void
     {
         try {
             $image = $form->get('photo')->getData();
             if ($image instanceof UploadedFile) {
                 $fileContent = file_get_contents($image->getPathname());
-                $filePath = sprintf(
-                    'uploads/profile/%s.%s',
-                    uniqid('', true),
-                    $image->guessExtension()
-                );
+                $filePath = sprintf('uploads/profile/%s.%s', uniqid('', true), $image->guessExtension());
                 $cdnUrl = $uploader->uploadFile($fileContent, $filePath, 'Upload photo profil');
                 $user->setPhoto($cdnUrl);
                 return;
@@ -187,25 +152,14 @@ class RegistrationController extends AbstractController
         } catch (\Exception $e) {
             $this->addFlash('warning', 'Erreur lors de l\'upload de l\'image : ' . $e->getMessage());
         }
-
-        // Utilisation d'une image par défaut en cas d'échec
         $user->setPhoto($this->getDefaultProfileImage());
     }
 
-    /**
-     * Retourne une URL d'image de profil par défaut.
-     */
     private function getDefaultProfileImage(): string
     {
-        return sprintf(
-            'https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default%d.jpg',
-            rand(1, 7)
-        );
+        return sprintf('https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default%d.jpg', rand(1, 7));
     }
 
-    /**
-     * Génère et sauvegarde un QR Code.
-     */
     private function generateAndSaveQrCode(
         User $user,
         UrlGeneratorInterface $urlGenerator,
@@ -223,11 +177,7 @@ class RegistrationController extends AbstractController
             $writer = new PngWriter();
             $qrResult = $writer->write($qrCode);
 
-            $filePath = sprintf(
-                'uploads/qrcodes/%s.png',
-                $user->getReferralCode()
-            );
-
+            $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
             $cdnUrl = $uploader->uploadFile($qrResult->getString(), $filePath, 'Upload QR Code');
             $user->setQrCodePath($cdnUrl);
             $entityManager->flush();
@@ -236,9 +186,6 @@ class RegistrationController extends AbstractController
         }
     }
 
-    /**
-     * Envoie l'email de confirmation.
-     */
     private function sendConfirmationEmail(User $user): void
     {
         $this->emailVerifier->sendEmailConfirmation(
@@ -252,9 +199,6 @@ class RegistrationController extends AbstractController
         );
     }
 
-    /**
-     * Envoie l'email de parrainage.
-     */
     private function sendReferralEmail(User $user, string $referralLink, MailerInterface $mailer): void
     {
         try {
@@ -268,16 +212,12 @@ class RegistrationController extends AbstractController
                     'referralLink' => $referralLink,
                     'qrCodePath' => $user->getQrCodePath(),
                 ]);
-
             $mailer->send($email);
         } catch (TransportExceptionInterface $e) {
             $this->addFlash('warning', 'Échec de l\'envoi de l\'email de parrainage.');
         }
     }
 
-    /**
-     * Met à jour les récompenses du parrain.
-     */
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
     {
         $count = $referrer->getReferralCount();
@@ -291,7 +231,6 @@ class RegistrationController extends AbstractController
         } elseif ($count >= 5) {
             $referrer->setReferralRewardRate(6.0);
         }
-
         $entityManager->persist($referrer);
         $entityManager->flush();
     }

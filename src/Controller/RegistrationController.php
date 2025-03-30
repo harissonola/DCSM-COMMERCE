@@ -8,8 +8,8 @@ use App\Security\AppAuthenticator;
 use App\Security\EmailVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,8 +34,8 @@ class RegistrationController extends AbstractController
     private Filesystem $filesystem;
 
     public function __construct(
-        EmailVerifier $emailVerifier, 
-        Client $githubClient, 
+        EmailVerifier $emailVerifier,
+        Client $githubClient,
         Filesystem $filesystem
     ) {
         $this->emailVerifier = $emailVerifier;
@@ -168,7 +168,7 @@ class RegistrationController extends AbstractController
             // Lecture du contenu du fichier temporaire
             $fileContent = file_get_contents($tempFilePath);
 
-            // Upload sur GitHub
+            // Upload sur GitHub avec la nouvelle méthode
             $githubPath = "uploads/qrcodes/{$user->getReferralCode()}.png";
             $cdnUrl = $this->uploadToGitHub($githubPath, $fileContent, 'QR Code via Registration');
 
@@ -183,6 +183,9 @@ class RegistrationController extends AbstractController
         }
     }
 
+    /**
+     * Méthode mise à jour pour uploader un fichier sur GitHub en utilisant l'API Git Data.
+     */
     private function uploadToGitHub(string $filePath, string $content, string $message): string
     {
         $repoOwner = 'harissonola';
@@ -190,21 +193,51 @@ class RegistrationController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification via variable d'environnement
+            // Authentification avec le token GitHub
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
-            // Upload avec le chemin complet (ex: "uploads/qrcodes/ref_123.png")
-            $response = $this->githubClient->api('repo')->contents()->create(
-                $repoOwner,
-                $repoName,
-                $filePath,
-                base64_encode($content),
-                $message,
-                $branch
-            );
+            // Récupérer la référence de la branche
+            $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);
+            $currentCommitSha = $reference['object']['sha'];
 
-            return $response['content']['download_url'] ?? '';
-        } catch (Exception $e) {
+            // Récupérer le commit courant pour obtenir l'arbre de base
+            $commit = $this->githubClient->api('git')->commits()->show($repoOwner, $repoName, $currentCommitSha);
+            $treeSha = $commit['tree']['sha'];
+
+            // Créer un blob avec le contenu binaire encodé en base64
+            $blob = $this->githubClient->api('git')->blobs()->create($repoOwner, $repoName, [
+                'content' => base64_encode($content),
+                'encoding' => 'base64'
+            ]);
+
+            // Créer un nouvel arbre en ajoutant le blob
+            $tree = $this->githubClient->api('git')->trees()->create($repoOwner, $repoName, [
+                'base_tree' => $treeSha,
+                'tree' => [
+                    [
+                        'path' => $filePath,
+                        'mode' => '100644',
+                        'type' => 'blob',
+                        'sha' => $blob['sha']
+                    ]
+                ]
+            ]);
+
+            // Créer un nouveau commit avec le nouvel arbre
+            $newCommit = $this->githubClient->api('git')->commits()->create($repoOwner, $repoName, [
+                'message' => $message,
+                'tree' => $tree['sha'],
+                'parents' => [$currentCommitSha]
+            ]);
+
+            // Mettre à jour la référence de la branche pour pointer sur le nouveau commit
+            $this->githubClient->api('git')->references()->update($repoOwner, $repoName, 'heads/' . $branch, [
+                'sha' => $newCommit['sha']
+            ]);
+
+            // Retourner l'URL raw du fichier stocké sur GitHub
+            return "https://raw.githubusercontent.com/{$repoOwner}/{$repoName}/{$branch}/{$filePath}";
+        } catch (\Exception $e) {
             throw new \Exception("Échec de l'upload sur GitHub : " . $e->getMessage());
         }
     }
@@ -239,8 +272,10 @@ class RegistrationController extends AbstractController
                 $tempFilePath = $tempDir . $fileName;
                 $image->move($tempDir, $fileName);
 
-                // Upload sur GitHub
+                // Lecture du contenu du fichier temporaire
                 $fileContent = file_get_contents($tempFilePath);
+
+                // Upload sur GitHub
                 $githubPath = "uploads/profile/{$fileName}";
                 $cdnUrl = $this->uploadToGitHub($githubPath, $fileContent, 'Upload photo profil');
 

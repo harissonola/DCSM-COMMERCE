@@ -58,7 +58,7 @@ final class UserSettingsController extends AbstractController
             $updatedFields = [];
 
             // Gestion des mises à jour
-            $this->handleUsernameUpdate($request, $user, $errors, $updatedFields);
+            // $this->handleUsernameUpdate($request, $user, $errors, $updatedFields);
             $this->handleEmailUpdate($request, $user, $errors, $updatedFields);
             $this->handleAvatarUpload($request, $user, $errors, $updatedFields);
             $this->handlePasswordUpdate($request, $user, $passwordHasher, $errors, $updatedFields);
@@ -81,18 +81,18 @@ final class UserSettingsController extends AbstractController
         }
     }
 
-    private function handleUsernameUpdate(Request $request, User $user, array &$errors, array &$updatedFields): void
-    {
-        if ($request->request->has('username')) {
-            $username = $request->request->get('username');
-            if (empty($username)) {
-                $errors[] = 'Le nom d\'utilisateur ne peut pas être vide';
-            } else {
-                $user->setUsername($username);
-                $updatedFields[] = 'username';
-            }
-        }
-    }
+    // private function handleUsernameUpdate(Request $request, User $user, array &$errors, array &$updatedFields): void
+    // {
+    //     if ($request->request->has('username')) {
+    //         $username = $request->request->get('username');
+    //         if (empty($username)) {
+    //             $errors[] = 'Le nom d\'utilisateur ne peut pas être vide';
+    //         } else {
+    //             $user->setUsername($username);
+    //             $updatedFields[] = 'username';
+    //         }
+    //     }
+    // }
 
     private function handleEmailUpdate(Request $request, User $user, array &$errors, array &$updatedFields): void
     {

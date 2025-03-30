@@ -256,4 +256,34 @@ class RegistrationController extends AbstractController
         $entityManager->persist($referrer);
         $entityManager->flush();
     }
+
+    #[Route('/resend-verification-email', name: 'app_verify_email_send')]
+    public function resendVerificationEmail(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        EmailVerifier $emailVerifier
+    ): Response {
+        $user = $this->getUser();
+        if (!$user || $user->isVerified()) {
+            return $this->redirectToRoute('app_register');
+        }
+
+        try {
+            $emailVerifier->sendEmailConfirmation(
+                'app_verify_email', // Nom de la route de vérification
+                $user,
+                (new TemplatedEmail())
+                    ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+                    ->to((string) $user->getEmail())
+                    ->subject('Nouvelle confirmation de votre adresse mail')
+                    ->htmlTemplate('registration/confirmation_email.html.twig')
+            );
+
+            $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé à votre email !');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Impossible d\'envoyer le lien de confirmation. Réessayez plus tard.');
+        }
+
+        return $this->redirectToRoute('app_register'); // Ou vers la page d'accueil
+    }
 }

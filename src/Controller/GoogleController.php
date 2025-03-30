@@ -76,19 +76,29 @@ class GoogleController extends AbstractController
             ->setUsername($username)
             ->setFname($fname)
             ->setLname($lname)
-            ->setPassword($passwordHasher->hashPassword($user, uniqid()))
+            ->setPassword($passwordHasher->hashPassword($user, bin2hex(random_bytes(16)))) // Amélioration de la sécurité
             ->setPhoto($userData->getAvatar())
             ->setCountry('BJ')
             ->setCreatedAt(new \DateTimeImmutable())
             ->setMiningBotActive(false)
             ->setVerified(true);
 
-        $referralCode = uniqid('ref_');
+        // Gestion du parrainage
+        $referredBy = $request->query->get('ref');
+        if ($referredBy) {
+            $user->setReferredBy($referredBy);
+            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
+            if ($referrer) {
+                $referrer->setReferralCount($referrer->getReferralCount() + 1);
+                $this->updateReferrerRewards($referrer, $entityManager);
+                $entityManager->persist($referrer);
+            }
+        }
+
+        $referralCode = uniqid('ref_', true);
         $user->setReferralCode($referralCode);
 
-        // Gestion intégrée et sécurisée des opérations critiques
         try {
-            // Génération et upload du QR Code
             $referralLink = $urlGenerator->generate(
                 'app_register',
                 ['ref' => $referralCode],
@@ -99,21 +109,18 @@ class GoogleController extends AbstractController
             $writer = new PngWriter();
             $qrResult = $writer->write($qrCode);
 
-            $qrCodeFileName = $referralCode . '.png';
-            $filePath = "uploads/qrcodes/$qrCodeFileName";
+            $filePath = "uploads/qrcodes/{$referralCode}.png";
             $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
-            // Sauvegarde en base
             $entityManager->persist($user);
             $entityManager->flush();
 
-            // Envoi de l'email uniquement si tout s'est bien passé
             $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
         } catch (\Exception $e) {
             $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
             $entityManager->clear();
-            return $this->redirectToRoute('app_register'); // Redirection en cas d'échec
+            return $this->redirectToRoute('app_register');
         }
 
         return $authenticator->authenticateUser($user, $appAuthenticator, $request);
@@ -125,12 +132,13 @@ class GoogleController extends AbstractController
         $repoName = 'my-cdn';
         $branch = 'main';
 
-        $this->githubClient->authenticate('YOUR_GITHUB_TOKEN', null, Client::AUTH_ACCESS_TOKEN);
+        // Utilisation du token GitHub réel
+        $this->githubClient->authenticate('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', null, Client::AUTH_ACCESS_TOKEN);
         $contentsApi = $this->githubClient->repo()->contents();
         $response = $contentsApi->create(
             $repoOwner,
             $repoName,
-            $filePath, // Correction : chemin complet sans doublon
+            $filePath,
             base64_encode($content),
             $message,
             $branch
@@ -152,5 +160,23 @@ class GoogleController extends AbstractController
                 'qrCodePath' => $qrCodePath,
             ]);
         $mailer->send($email);
+    }
+
+    // Ajout de la logique de récompense pour les parrains
+    private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
+    {
+        $count = $referrer->getReferralCount();
+        if ($count >= 40) {
+            $referrer->setReferralRewardRate(13.0)
+                     ->setBalance($referrer->getBalance() + 10);
+        } elseif ($count >= 20) {
+            $referrer->setReferralRewardRate(10.0);
+        } elseif ($count >= 10) {
+            $referrer->setReferralRewardRate(7.0);
+        } elseif ($count >= 5) {
+            $referrer->setReferralRewardRate(6.0);
+        }
+        $entityManager->persist($referrer);
+        $entityManager->flush();
     }
 }

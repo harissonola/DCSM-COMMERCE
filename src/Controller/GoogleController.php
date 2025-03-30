@@ -54,7 +54,9 @@ class GoogleController extends AbstractController
         $fname = $userData->getFirstName() ?? $userData->getName();
         $lname = $userData->getLastName() ?? '';
         $username = strtolower(substr($lname, 0, 1) . $fname);
-        if (empty(trim($username))) $username = strtolower($email);
+        if (empty(trim($username))) {
+            $username = strtolower($email);
+        }
 
         $existingUser = $entityManager->getRepository(User::class)
             ->findOneBy(['googleId' => $googleId])
@@ -84,31 +86,35 @@ class GoogleController extends AbstractController
         $referralCode = uniqid('ref_');
         $user->setReferralCode($referralCode);
 
-        // Generate QR Code
-        $referralLink = $urlGenerator->generate(
-            'app_register',
-            ['ref' => $referralCode],
-            UrlGeneratorInterface::ABSOLUTE_URL
-        );
-
-        $qrCode = new QrCode($referralLink);
-        $writer = new PngWriter();
-        $qrResult = $writer->write($qrCode);
-
-        // Upload to GitHub
-        $qrCodeFileName = $referralCode . '.png';
-        $filePath = "uploads/qrcodes/$qrCodeFileName";
+        // Gestion intégrée et sécurisée des opérations critiques
         try {
+            // Génération et upload du QR Code
+            $referralLink = $urlGenerator->generate(
+                'app_register',
+                ['ref' => $referralCode],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
+
+            $qrCode = new QrCode($referralLink);
+            $writer = new PngWriter();
+            $qrResult = $writer->write($qrCode);
+
+            $qrCodeFileName = $referralCode . '.png';
+            $filePath = "uploads/qrcodes/$qrCodeFileName";
             $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
+
+            // Sauvegarde en base
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+            // Envoi de l'email uniquement si tout s'est bien passé
+            $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
         } catch (\Exception $e) {
-            $this->addFlash('error', "QR Upload Failed: " . $e->getMessage());
+            $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
+            $entityManager->clear();
+            return $this->redirectToRoute('app_register'); // Redirection en cas d'échec
         }
-
-        $entityManager->persist($user);
-        $entityManager->flush();
-
-        $this->sendReferralEmail($user, $referralLink, $user->getQrCodePath(), $mailer);
 
         return $authenticator->authenticateUser($user, $appAuthenticator, $request);
     }
@@ -120,12 +126,11 @@ class GoogleController extends AbstractController
         $branch = 'main';
 
         $this->githubClient->authenticate('YOUR_GITHUB_TOKEN', null, Client::AUTH_ACCESS_TOKEN);
-
-        $contentsApi = $this->githubClient->api('repo')->contents();
+        $contentsApi = $this->githubClient->repo()->contents();
         $response = $contentsApi->create(
             $repoOwner,
             $repoName,
-            $filePath,
+            $filePath, // Correction : chemin complet sans doublon
             base64_encode($content),
             $message,
             $branch

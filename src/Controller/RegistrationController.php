@@ -6,12 +6,12 @@ use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Security\AppAuthenticator;
 use App\Security\EmailVerifier;
+use App\Service\GitHubUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormError;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mime\Address;
@@ -39,101 +39,88 @@ class RegistrationController extends AbstractController
         Security $security,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer
+        MailerInterface $mailer,
+        GitHubUploader $githubUploader
     ): Response {
-        // Redirige les utilisateurs déjà connectés vers le tableau de bord
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
 
-        // Création d'un nouvel utilisateur et du formulaire d'inscription
         $user = new User();
         $form = $this->createForm(RegistrationFormType::class, $user);
 
-        // Vérifie si un code de parrainage est présent dans l'URL
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
             $form->get('referredBy')->setData($referredBy);
         }
 
-        // Gestion de la soumission du formulaire
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Validation des mots de passe
             $plainPassword = $form->get('plainPassword')->getData();
             $confirmPassword = $form->get('confirmPassword')->getData();
 
             if ($plainPassword !== $confirmPassword) {
                 $form->addError(new FormError('Les mots de passe ne correspondent pas.'));
             } else {
-                // Génération d'un code de parrainage unique pour le nouvel utilisateur
                 $referralCode = uniqid('ref_');
                 $user->setReferralCode($referralCode);
 
-                // Gestion du parrainage
                 $referredBy = $form->get('referredBy')->getData();
                 if ($referredBy) {
                     $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
                     if ($referrer) {
                         $user->setReferredBy($referredBy);
-
-                        // Mise à jour des informations de parrainage pour le parrain
                         $referrer->setReferralCount($referrer->getReferralCount() + 1);
                         $this->updateReferrerRewards($referrer, $entityManager);
                     }
                 }
 
-                // Configuration des données de l'utilisateur
                 $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword))
                     ->setCreatedAt(new \DateTimeImmutable())
                     ->setMiningBotActive(0)
                     ->setBalance(0);
 
-                // Gestion de l'image de profil
+                // Upload de l'image de profil vers GitHub
                 $image = $form->get('photo')->getData();
                 if ($image) {
-                    $newFilename = uniqid() . '.' . $image->guessExtension();
                     try {
-                        $image->move($this->getParameter('users_img_directory'), $newFilename);
-                    } catch (FileException $e) {
-                        $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
+                        $fileContent = file_get_contents($image->getPathname());
+                        $filePath = 'uploads/profile/' . uniqid() . '.' . $image->guessExtension();
+                        $cdnUrl = $githubUploader->uploadFile($fileContent, $filePath, 'Upload photo profil');
+                        $user->setPhoto($cdnUrl);
+                    } catch (\Exception $e) {
+                        $this->addFlash('error', 'Erreur lors de l\'upload de l\'image: '.$e->getMessage());
                         return $this->redirectToRoute('app_register');
                     }
-                    $user->setPhoto("/users/img/" . $newFilename);
                 } else {
-                    $user->setPhoto("/users/img/default" . rand(1, 7) . ".jpg");
+                    $user->setPhoto("https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default" . rand(1, 7) . ".jpg");
                 }
 
-                // Enregistrement de l'utilisateur en base de données
                 $entityManager->persist($user);
                 $entityManager->flush();
 
-                // Génération du lien de parrainage
                 $referralLink = $urlGenerator->generate(
                     'app_register',
                     ['ref' => $referralCode],
                     UrlGeneratorInterface::ABSOLUTE_URL
                 );
 
-                // Génération du QR Code pour le lien de parrainage
+                // Génération et upload du QR Code
                 $qrCode = new QrCode($referralLink);
                 $writer = new PngWriter();
                 $qrResult = $writer->write($qrCode);
 
-                $qrCodeDirectory = $this->getParameter('qr_code_directory');
-                if (!is_dir($qrCodeDirectory)) {
-                    mkdir($qrCodeDirectory, 0755, true);
+                try {
+                    $qrCodeFileName = $referralCode . '.png';
+                    $filePath = 'uploads/qrcodes/' . $qrCodeFileName;
+                    $cdnUrl = $githubUploader->uploadFile($qrResult->getString(), $filePath, 'Upload QR Code');
+                    $user->setQrCodePath($cdnUrl);
+                    $entityManager->flush();
+                } catch (\Exception $e) {
+                    $this->addFlash('warning', 'Le QR Code n\'a pas pu être sauvegardé sur le CDN');
                 }
-                $qrCodeFileName = $referralCode . '.png';
-                $filePath = $qrCodeDirectory . '/' . $qrCodeFileName;
-                file_put_contents($filePath, $qrResult->getString());
 
-                $publicQrCodeUrl = $this->generateUrl('app_dashboard', [], UrlGeneratorInterface::ABSOLUTE_URL) . 'uploads/user/' . $qrCodeFileName;
-                $user->setQrCodePath($publicQrCodeUrl);
-                $entityManager->flush();
-
-                // Envoi de l'e-mail de confirmation
                 $this->emailVerifier->sendEmailConfirmation(
                     'app_verify_email',
                     $user,
@@ -144,10 +131,8 @@ class RegistrationController extends AbstractController
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
 
-                // Envoi du lien de parrainage et du QR Code par e-mail
-                $this->sendReferralEmail($user, $referralLink, $publicQrCodeUrl, $mailer);
+                $this->sendReferralEmail($user, $referralLink, $user->getQrCodePath(), $mailer);
 
-                // Connexion automatique après inscription
                 return $security->login($user, AppAuthenticator::class, 'main');
             }
         }
@@ -204,7 +189,7 @@ class RegistrationController extends AbstractController
         return $this->redirectToRoute('app_dashboard');
     }
 
-    private function sendReferralEmail(User $user, string $referralLink, string $qrCodePath, MailerInterface $mailer): void
+    private function sendReferralEmail(User $user, string $referralLink, ?string $qrCodePath, MailerInterface $mailer): void
     {
         $email = (new TemplatedEmail())
             ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
@@ -223,10 +208,9 @@ class RegistrationController extends AbstractController
     {
         $count = $referrer->getReferralCount();
 
-        // Attribution des récompenses en fonction du nombre de parrainages
         if ($count >= 40) {
             $referrer->setReferralRewardRate(13.0);
-            $referrer->setBalance($referrer->getBalance() + 10); // Bonus de 10$
+            $referrer->setBalance($referrer->getBalance() + 10);
         } elseif ($count >= 20) {
             $referrer->setReferralRewardRate(10.0);
         } elseif ($count >= 10) {
@@ -235,7 +219,6 @@ class RegistrationController extends AbstractController
             $referrer->setReferralRewardRate(6.0);
         }
 
-        // Enregistrement des modifications
         $entityManager->persist($referrer);
         $entityManager->flush();
     }

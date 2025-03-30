@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Factory;
 
 use App\Entity\Product;
@@ -73,11 +74,11 @@ final class ProductFactory extends PersistentProxyObjectFactory
      */
     private function generateProductImage(string $productName): string
     {
-        // Utiliser le nom exact du produit, avec un remplacement des espaces par des tirets et tout en minuscules
+        // Utiliser le nom exact du produit, avec remplacement des espaces par des tirets et tout en minuscules
         $formattedName = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $productName)));
 
-        // Retourner le chemin de l'image avec le nom du produit
-        return "/products/{$formattedName}.webp";
+        // Retourner l'URL complète de l'image sur GitHub dans le dossier "products"
+        return "https://raw.githubusercontent.com/harissonola/my-cdn/main/products/{$formattedName}.webp";
     }
 
     /**

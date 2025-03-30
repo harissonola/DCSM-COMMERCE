@@ -38,15 +38,16 @@ final class ShopFactory extends PersistentProxyObjectFactory
 
         // Choisir un shop aléatoire parmi ceux qui n'ont pas encore été utilisés
         $shopName = self::faker()->randomElement($remainingShops);
-        $image = $shops[$shopName];
+        $imageFile = $shops[$shopName];
 
         // Marquer ce shop comme utilisé
         self::$usedShops[] = $shopName;
 
         return [
-            'image' => $image,
-            'name' => $shopName,  // Utilise le nom du shop
-            'slug' => strtolower(str_replace(' ', '-', $shopName)), // Slug généré automatiquement
+            // Construction de l'URL complète pour l'image dans le dossier "img/"
+            'image' => "https://raw.githubusercontent.com/harissonola/my-cdn/main/img/{$imageFile}",
+            'name' => $shopName,
+            'slug' => strtolower(str_replace(' ', '-', $shopName)),
             'description' => self::faker()->text(255),
         ];
     }

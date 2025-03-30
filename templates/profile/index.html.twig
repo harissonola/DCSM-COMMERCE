@@ -97,7 +97,7 @@
         {% if app.user.googleId and app.user.photo starts with 'http' %}
           <img src="{{ app.user.photo }}" class="profile-avatar" />
         {% else %}
-          <img src="/users/img/{{ app.user.photo }}" class="profile-avatar" />
+          <img src="{{ app.user.photo }}" class="profile-avatar" />
         {% endif %}
       </div>
       <div class="flex-grow-1 text-center text-md-start">

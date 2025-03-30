@@ -59,7 +59,7 @@ class GoogleController extends AbstractController
             $username = strtolower($email);
         }
 
-        // Vérifier si l'utilisateur existe déjà
+        // Vérification de l'existence
         $existingUser = $entityManager->getRepository(User::class)
             ->findOneBy(['googleId' => $googleId])
             ?? $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
@@ -72,13 +72,11 @@ class GoogleController extends AbstractController
             return $authenticator->authenticateUser($existingUser, $appAuthenticator, $request);
         }
 
-        // Créer un nouvel utilisateur
+        // Création de l'utilisateur
         $user = new User();
-        // Génération d'un referralCode sans point (pour éviter les problèmes de nom de fichier)
-        $referralCode = uniqid('ref_', false); // Supprime le paramètre "true" pour éviter les points
+        $referralCode = uniqid('ref_', false); // Sans point
 
         try {
-            // Configuration de l'utilisateur
             $user->setGoogleId($googleId)
                 ->setEmail($email)
                 ->setUsername($username)
@@ -95,38 +93,34 @@ class GoogleController extends AbstractController
             // Gestion du parrainage
             $this->handleReferralSystem($user, $request, $entityManager);
 
-            // Génération et upload du QR Code
+            // Génération du QR Code
             $referralLink = $urlGenerator->generate(
                 'app_register',
-                ['ref' => $user->getReferralCode()],
+                ['ref' => $referralCode],
                 UrlGeneratorInterface::ABSOLUTE_URL
             );
 
             $qrCode = new QrCode($referralLink);
-            $writer = new PngWriter();
+            $writer = new PngWriter(['eccLevel' => QrCode::ECC_LOW]);
             $qrResult = $writer->write($qrCode);
 
-            // Récupération du contenu binaire
-            $fileContent = $qrResult->getString();
-
-            // Chemin de stockage GitHub (avec un nom de fichier valide)
+            // Upload du QR Code
             $filePath = "uploads/qrcodes/{$referralCode}.png";
-            $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
+            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
-            // Sauvegarde en base
             $entityManager->persist($user);
             $entityManager->flush();
 
             // Envoi de l'email
             $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
+
+            return $authenticator->authenticateUser($user, $appAuthenticator, $request);
         } catch (Exception $e) {
-            $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
+            $this->addFlash('error', "Erreur : " . $e->getMessage());
             $entityManager->clear();
             return $this->redirectToRoute('app_register');
         }
-
-        return $authenticator->authenticateUser($user, $appAuthenticator, $request);
     }
 
     private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
@@ -150,25 +144,22 @@ class GoogleController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification via variable d'environnement
+            // Authentification
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
-            // Encodage base64 obligatoire pour GitHub
-            $encodedContent = base64_encode($content);
-
-            // Vérification du chemin (ex: "uploads/qrcodes/ref_67e96a20467113.png")
+            // Upload avec chemin complet
             $response = $this->githubClient->api('repo')->contents()->create(
                 $repoOwner,
                 $repoName,
                 $filePath,
-                $encodedContent,
+                base64_encode($content),
                 $message,
                 $branch
             );
 
             return $response['content']['download_url'] ?? '';
         } catch (Exception $e) {
-            throw new Exception("Échec de l'upload GitHub : " . $e->getMessage());
+            throw new Exception("Erreur GitHub : " . $e->getMessage());
         }
     }
 
@@ -181,7 +172,7 @@ class GoogleController extends AbstractController
         $email = (new TemplatedEmail())
             ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
             ->to($user->getEmail())
-            ->subject('Votre lien d\'affiliation et QR Code')
+            ->subject('Votre QR Code et lien d\'affiliation')
             ->htmlTemplate('emails/referral_email.html.twig')
             ->context([
                 'user' => $user,
@@ -189,11 +180,7 @@ class GoogleController extends AbstractController
                 'qrCodePath' => $qrCodePath,
             ]);
 
-        try {
-            $mailer->send($email);
-        } catch (\Exception $e) {
-            $this->addFlash('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
-        }
+        $mailer->send($email);
     }
 
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void

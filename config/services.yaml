@@ -22,16 +22,17 @@ services:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%' # Ensure you set this in your .env file
     
+    App\Service\GitHubUploader:
+        arguments:
+            $token: '%env(GITHUB_TOKEN)%'
+            $repoOwner: '%env(GITHUB_REPO_OWNER)%'
+            $repoName: '%env(GITHUB_REPO_NAME)%'
 
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }
     
-    App\Service\GitHubUploader:
-        arguments:
-            $token: '%github.token%'
-            $repoOwner: '%github.repo_owner%'
-            $repoName: '%github.repo_name%'
+   
 
     # Autres services
     App\:

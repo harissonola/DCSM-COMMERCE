@@ -87,7 +87,10 @@ class RegistrationController extends AbstractController
                     $mailer
                 );
 
-                return $security->login($user, AppAuthenticator::class, 'main');
+                // Authentifier l'utilisateur
+                $security->login($user, AppAuthenticator::class, 'main');
+                // Puis rediriger pour indiquer à Turbo que l'action est terminée
+                return $this->redirectToRoute('app_dashboard');
             } catch (\Exception $e) {
                 $this->addFlash('error', $e->getMessage());
                 $entityManager->clear();

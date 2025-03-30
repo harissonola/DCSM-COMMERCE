@@ -1,43 +1,31 @@
-# services.yaml
+# config/services.yaml
 
 parameters:
-    # Chemins des répertoires
     users_img_directory: '%kernel.project_dir%/public/users/img'
     qr_code_directory: '%kernel.project_dir%/public/uploads/user'
-
-    # Paramètres globaux de l'application
     app.site_name: 'DCSM COMMERCE'
 
-    # Paramètres GitHub
-    github.token: '%env(GITHUB_TOKEN)%'
-    github.repo_owner: '%env(GITHUB_REPO_OWNER)%'
-    github.repo_name: '%env(GITHUB_REPO_NAME)%'
-
 services:
-    # Configuration par défaut pour tous les services
     _defaults:
-        autowire: true      # Active l'injection automatique des dépendances
-        autoconfigure: true # Configure automatiquement les tags (ex: event listeners)
+        autowire: true
+        autoconfigure: true
 
-    # Service CryptoService
-    App\Service\CryptoService:
-        arguments:
-            $apiKey: '%env(COINPAYMENTS_API_KEY)%'
-            $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
-
-    # Service GitHubUploader
+    # Configuration explicite pour GitHubUploader
     App\Service\GitHubUploader:
         arguments:
-            $token: '%env(GITHUB_TOKEN)%'
-            $repoOwner: '%env(GITHUB_REPO_OWNER)%'
-            $repoName: '%env(GITHUB_REPO_NAME)%'
+            $token: '%env(resolve:GITHUB_TOKEN)%'
+            $repoOwner: '%env(resolve:GITHUB_REPO_OWNER)%'
+            $repoName: '%env(resolve:GITHUB_REPO_NAME)%'
 
-    # Middleware personnalisé
+    App\Service\CryptoService:
+        arguments:
+            $apiKey: '%env(resolve:COINPAYMENTS_API_KEY)%'
+            $merchantId: '%env(resolve:COINPAYMENTS_MERCHANT_ID)%'
+
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }
 
-    # Autres services dans le répertoire src/
     App\:
         resource: '../src/'
         exclude:

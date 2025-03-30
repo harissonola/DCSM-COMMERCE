@@ -32,7 +32,7 @@ class GoogleController extends AbstractController
     #[Route('/connect/google', name: 'connect_google_start')]
     public function connectGoogle(ClientRegistry $clientRegistry): Response
     {
-        return $clientRegistry->getClient('google')->redirect(['profile', 'email', 'address']);
+        return $clientRegistry->getClient('google')->redirect(['profile', 'email']);
     }
 
     #[Route('/connect/google/check', name: 'connect_google_check')]
@@ -58,6 +58,7 @@ class GoogleController extends AbstractController
             $username = strtolower($email);
         }
 
+        // Vérifier si l'utilisateur existe déjà
         $existingUser = $entityManager->getRepository(User::class)
             ->findOneBy(['googleId' => $googleId])
             ?? $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
@@ -70,35 +71,28 @@ class GoogleController extends AbstractController
             return $authenticator->authenticateUser($existingUser, $appAuthenticator, $request);
         }
 
+        // Créer un nouvel utilisateur
         $user = new User();
-        $user->setGoogleId($googleId)
-            ->setEmail($email)
-            ->setUsername($username)
-            ->setFname($fname)
-            ->setLname($lname)
-            ->setPassword($passwordHasher->hashPassword($user, bin2hex(random_bytes(16)))) // Amélioration de la sécurité
-            ->setPhoto($userData->getAvatar())
-            ->setCountry('BJ')
-            ->setCreatedAt(new \DateTimeImmutable())
-            ->setMiningBotActive(false)
-            ->setVerified(true);
-
-        // Gestion du parrainage
-        $referredBy = $request->query->get('ref');
-        if ($referredBy) {
-            $user->setReferredBy($referredBy);
-            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
-            if ($referrer) {
-                $referrer->setReferralCount($referrer->getReferralCount() + 1);
-                $this->updateReferrerRewards($referrer, $entityManager);
-                $entityManager->persist($referrer);
-            }
-        }
-
         $referralCode = uniqid('ref_', true);
-        $user->setReferralCode($referralCode);
 
         try {
+            $user->setGoogleId($googleId)
+                ->setEmail($email)
+                ->setUsername($username)
+                ->setFname($fname)
+                ->setLname($lname)
+                ->setPassword($passwordHasher->hashPassword($user, bin2hex(random_bytes(16))))
+                ->setPhoto($userData->getAvatar())
+                ->setCountry('BJ')
+                ->setCreatedAt(new \DateTimeImmutable())
+                ->setMiningBotActive(false)
+                ->setVerified(true)
+                ->setReferralCode($referralCode);
+
+            // Gestion du parrainage
+            $this->handleReferralSystem($user, $request, $entityManager);
+
+            // Upload du QR Code sur GitHub
             $referralLink = $urlGenerator->generate(
                 'app_register',
                 ['ref' => $referralCode],
@@ -113,9 +107,11 @@ class GoogleController extends AbstractController
             $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
+            // Sauvegarde en base de données
             $entityManager->persist($user);
             $entityManager->flush();
 
+            // Envoi de l'email de parrainage
             $this->sendReferralEmail($user, $referralLink, $cdnUrl, $mailer);
         } catch (\Exception $e) {
             $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
@@ -126,14 +122,29 @@ class GoogleController extends AbstractController
         return $authenticator->authenticateUser($user, $appAuthenticator, $request);
     }
 
+    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
+    {
+        $referredBy = $request->query->get('ref');
+        if ($referredBy) {
+            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
+            if ($referrer) {
+                $user->setReferredBy($referredBy);
+                $referrer->setReferralCount($referrer->getReferralCount() + 1);
+                $this->updateReferrerRewards($referrer, $entityManager);
+                $entityManager->persist($referrer);
+            }
+        }
+    }
+
     private function uploadToGitHub(string $filePath, string $content, string $message): string
     {
         $repoOwner = 'harissonola';
         $repoName = 'my-cdn';
         $branch = 'main';
 
-        // Utilisation du token GitHub réel
-        $this->githubClient->authenticate('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', null, Client::AUTH_ACCESS_TOKEN);
+        // Authentification GitHub via variable d'environnement
+        $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+
         $contentsApi = $this->githubClient->repo()->contents();
         $response = $contentsApi->create(
             $repoOwner,
@@ -159,10 +170,10 @@ class GoogleController extends AbstractController
                 'referralLink' => $referralLink,
                 'qrCodePath' => $qrCodePath,
             ]);
+
         $mailer->send($email);
     }
 
-    // Ajout de la logique de récompense pour les parrains
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
     {
         $count = $referrer->getReferralCount();

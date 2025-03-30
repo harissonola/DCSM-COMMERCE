@@ -72,7 +72,7 @@ class PaymentController extends AbstractController
         $transaction
             ->setUser($user)
             ->setType("withdrawal")
-            ->setAmount(-$amountUsd)
+            ->setAmount($amountUsd)
             ->setMethod("Crypto ($currency)")
             ->setStatus('pending')
             ->setCreatedAt(new \DateTimeImmutable());

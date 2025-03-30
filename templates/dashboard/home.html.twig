@@ -161,7 +161,7 @@
 				{% for product in products|slice(0, 6) %}
 					<div class="col-lg-4 col-md-6">
 						<div class="card h-100 product-card shadow-sm">
-							{% if date(product.created_at) > date('-30days') %}
+							{% if date(product.createdAt) > date('-30days') %}
 								<span class="badge bg-success position-absolute top-0 start-0 m-2">Nouveau</span>
 							{% endif %}
 

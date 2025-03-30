@@ -6,7 +6,6 @@ use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Security\AppAuthenticator;
 use App\Security\EmailVerifier;
-use App\Service\GitHubUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -24,14 +23,17 @@ use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
+use Github\Client;
 
 class RegistrationController extends AbstractController
 {
     private EmailVerifier $emailVerifier;
+    private Client $githubClient;
 
-    public function __construct(EmailVerifier $emailVerifier)
+    public function __construct(EmailVerifier $emailVerifier, Client $githubClient)
     {
         $this->emailVerifier = $emailVerifier;
+        $this->githubClient = $githubClient;
     }
 
     #[Route('/register', name: 'app_register')]
@@ -41,8 +43,7 @@ class RegistrationController extends AbstractController
         Security $security,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer,
-        GitHubUploader $githubUploader
+        MailerInterface $mailer
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
@@ -76,8 +77,7 @@ class RegistrationController extends AbstractController
                     $userPasswordHasher,
                     $entityManager,
                     $urlGenerator,
-                    $mailer,
-                    $githubUploader
+                    $mailer
                 );
 
                 return $security->login($user, AppAuthenticator::class, 'main');
@@ -98,8 +98,7 @@ class RegistrationController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer,
-        GitHubUploader $githubUploader
+        MailerInterface $mailer
     ): void {
         $referralCode = uniqid('ref_', true);
         $user->setReferralCode($referralCode);
@@ -111,13 +110,11 @@ class RegistrationController extends AbstractController
             ->setMiningBotActive(0)
             ->setBalance(0);
 
-        $this->handleProfileImageUpload($user, $form, $githubUploader);
-
+        $this->handleProfileImageUpload($user, $form);
         $entityManager->persist($user);
         $entityManager->flush();
 
-        $this->generateAndSaveQrCode($user, $urlGenerator, $githubUploader, $entityManager);
-
+        $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
         $this->sendConfirmationEmail($user);
         $this->sendReferralEmail(
             $user,
@@ -140,21 +137,45 @@ class RegistrationController extends AbstractController
         }
     }
 
-    private function handleProfileImageUpload(User $user, $form, GitHubUploader $uploader): void
+    private function handleProfileImageUpload(User $user, $form): void
     {
         try {
             $image = $form->get('photo')->getData();
             if ($image instanceof UploadedFile) {
                 $fileContent = file_get_contents($image->getPathname());
                 $filePath = sprintf('uploads/profile/%s.%s', uniqid('', true), $image->guessExtension());
-                $cdnUrl = $uploader->uploadFile($fileContent, $filePath, 'Upload photo profil');
+                $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'Upload photo profil');
                 $user->setPhoto($cdnUrl);
-                return;
+            } else {
+                $user->setPhoto($this->getDefaultProfileImage());
             }
         } catch (\Exception $e) {
             $this->addFlash('warning', 'Erreur lors de l\'upload de l\'image : ' . $e->getMessage());
+            $user->setPhoto($this->getDefaultProfileImage());
         }
-        $user->setPhoto($this->getDefaultProfileImage());
+    }
+
+    private function uploadToGitHub(string $filePath, string $content, string $message): string
+    {
+        $repoOwner = 'harissonola';
+        $repoName = 'my-cdn';
+        $branch = 'main';
+        $path = "uploads/" . basename($filePath);
+
+        // Authentification GitHub
+        $this->githubClient->authenticate('YOUR_GITHUB_TOKEN', null, Client::AUTH_ACCESS_TOKEN);
+
+        $contentsApi = $this->githubClient->api('repo')->contents();
+        $response = $contentsApi->create(
+            $repoOwner,
+            $repoName,
+            $path,
+            base64_encode($content),
+            $message,
+            $branch
+        );
+
+        return $response['content']['download_url'];
     }
 
     private function getDefaultProfileImage(): string
@@ -165,7 +186,6 @@ class RegistrationController extends AbstractController
     private function generateAndSaveQrCode(
         User $user,
         UrlGeneratorInterface $urlGenerator,
-        GitHubUploader $uploader,
         EntityManagerInterface $entityManager
     ): void {
         try {
@@ -180,7 +200,7 @@ class RegistrationController extends AbstractController
             $qrResult = $writer->write($qrCode);
 
             $filePath = sprintf('uploads/qrcodes/%s.png', $user->getReferralCode());
-            $cdnUrl = $uploader->uploadFile($qrResult->getString(), $filePath, 'Upload QR Code');
+            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'Upload QR Code');
             $user->setQrCodePath($cdnUrl);
             $entityManager->flush();
         } catch (\Exception $e) {
@@ -224,8 +244,8 @@ class RegistrationController extends AbstractController
     {
         $count = $referrer->getReferralCount();
         if ($count >= 40) {
-            $referrer->setReferralRewardRate(13.0);
-            $referrer->setBalance($referrer->getBalance() + 10);
+            $referrer->setReferralRewardRate(13.0)
+                ->setBalance($referrer->getBalance() + 10);
         } elseif ($count >= 20) {
             $referrer->setReferralRewardRate(10.0);
         } elseif ($count >= 10) {
@@ -237,4 +257,3 @@ class RegistrationController extends AbstractController
         $entityManager->flush();
     }
 }
-// src/Controller/RegistrationController.php

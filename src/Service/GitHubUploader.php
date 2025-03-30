@@ -19,7 +19,7 @@ class GitHubUploader
         $this->repoName = $repoName;
     }
 
-    public function uploadFile($fileContent, string $filePath, string $commitMessage = 'Upload file'): string
+    public function uploadFile(string $fileContent, string $filePath, string $commitMessage = 'Upload file'): string
     {
         try {
             $this->createParentDirectories(dirname($filePath));
@@ -32,35 +32,43 @@ class GitHubUploader
                 $commitMessage,
                 'main'
             );
-            
-            return "https://cdn.jsdelivr.net/gh/{$this->repoOwner}/{$this->repoName}@main/$filePath";
-            
+
+            return $this->generateCdnUrl($filePath);
         } catch (ErrorException $e) {
-            throw new \Exception("Erreur lors de l'upload sur GitHub: ".$e->getMessage());
+            throw new \Exception("Échec de l'upload sur GitHub: " . $e->getMessage());
         }
     }
 
     private function createParentDirectories(string $path): void
     {
-        $parts = explode('/', $path);
+        $parts = array_filter(explode('/', $path));
         $currentPath = '';
-        
+
         foreach ($parts as $part) {
-            if (empty($part)) continue;
-            
-            $currentPath .= "$part/";
+            $currentPath .= "{$part}/";
             try {
                 $this->client->api('repo')->contents()->create(
                     $this->repoOwner,
                     $this->repoName,
                     rtrim($currentPath, '/'),
                     '',
-                    "Création dossier $part",
+                    "Création du dossier {$part}",
                     'main'
                 );
             } catch (ErrorException $e) {
+                // Le dossier existe déjà
                 continue;
             }
         }
+    }
+
+    private function generateCdnUrl(string $filePath): string
+    {
+        return sprintf(
+            'https://cdn.jsdelivr.net/gh/%s/%s@main/%s',
+            $this->repoOwner,
+            $this->repoName,
+            ltrim($filePath, '/')
+        );
     }
 }

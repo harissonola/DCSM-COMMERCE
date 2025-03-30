@@ -152,7 +152,7 @@ class GoogleController extends AbstractController
             // Authentification GitHub
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
-            $contentsApi = $this->githubClient->repo()->contents();
+            $contentsApi = $this->githubClient->api('repo')->contents();
             $response = $contentsApi->create(
                 $repoOwner,
                 $repoName,

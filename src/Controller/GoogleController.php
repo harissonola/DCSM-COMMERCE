@@ -97,7 +97,7 @@ class GoogleController extends AbstractController
             // Génération et upload du QR Code
             $referralLink = $urlGenerator->generate(
                 'app_register',
-                ['ref' => $referralCode],
+                ['ref' => $user->getReferralCode()],
                 UrlGeneratorInterface::ABSOLUTE_URL
             );
 
@@ -105,9 +105,12 @@ class GoogleController extends AbstractController
             $writer = new PngWriter();
             $qrResult = $writer->write($qrCode);
 
+            // Récupérer le contenu binaire directement
+            $fileContent = $qrResult->getString();
+
             // Upload sur GitHub
             $filePath = "uploads/qrcodes/{$referralCode}.png";
-            $cdnUrl = $this->uploadToGitHub($filePath, $qrResult->getString(), 'QR Code via Google Login');
+            $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
             $user->setQrCodePath($cdnUrl);
 
             // Sauvegarde en base
@@ -146,7 +149,7 @@ class GoogleController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification via variable d'environnement
+            // Authentification GitHub
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
             $contentsApi = $this->githubClient->repo()->contents();
@@ -154,7 +157,7 @@ class GoogleController extends AbstractController
                 $repoOwner,
                 $repoName,
                 $filePath,
-                base64_encode($content),
+                base64_encode($content), // Encodage requis par GitHub
                 $message,
                 $branch
             );

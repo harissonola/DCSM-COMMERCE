@@ -184,7 +184,7 @@ class RegistrationController extends AbstractController
     }
 
     /**
-     * Méthode mise à jour pour uploader un fichier sur GitHub en utilisant l'API Git Data.
+     * Méthode pour uploader un fichier sur GitHub en utilisant l'API Git Data.
      */
     private function uploadToGitHub(string $filePath, string $content, string $message): string
     {
@@ -257,12 +257,17 @@ class RegistrationController extends AbstractController
         }
     }
 
+    /**
+     * Gestion de l'upload de l'image de profil.
+     * Si une image est sélectionnée, elle est uploadée sur GitHub dans le dossier "user/img/".
+     * Sinon, on attribue à l'utilisateur une image par défaut.
+     */
     private function handleProfileImageUpload(User $user, $form): void
     {
         try {
             $image = $form->get('photo')->getData();
             if ($image instanceof UploadedFile) {
-                // Gestion de l'image de profil
+                // Gestion de l'image uploadée par l'utilisateur
                 $tempDir = $this->getParameter('kernel.project_dir') . '/var/tmp/';
                 if (!$this->filesystem->exists($tempDir)) {
                     $this->filesystem->mkdir($tempDir, 0755);
@@ -275,8 +280,8 @@ class RegistrationController extends AbstractController
                 // Lecture du contenu du fichier temporaire
                 $fileContent = file_get_contents($tempFilePath);
 
-                // Upload sur GitHub
-                $githubPath = "uploads/profile/{$fileName}";
+                // Upload sur GitHub dans le dossier "user/img/"
+                $githubPath = "user/img/{$fileName}";
                 $cdnUrl = $this->uploadToGitHub($githubPath, $fileContent, 'Upload photo profil');
 
                 // Suppression du fichier temporaire
@@ -284,6 +289,7 @@ class RegistrationController extends AbstractController
 
                 $user->setPhoto($cdnUrl);
             } else {
+                // Si aucune image n'est sélectionnée, on attribue une image par défaut déjà présente sur GitHub
                 $user->setPhoto($this->getDefaultProfileImage());
             }
         } catch (\Exception $e) {
@@ -348,9 +354,13 @@ class RegistrationController extends AbstractController
         $entityManager->flush();
     }
 
+    /**
+     * Retourne l'URL d'une image de profil par défaut déjà uploadée sur GitHub.
+     */
     private function getDefaultProfileImage(): string
     {
-        return sprintf('https://cdn.jsdelivr.net/gh/harissonola/my-cdn@main/uploads/profile/default%d.jpg', rand(1, 7));
+        $defaultNumber = rand(1, 7);
+        return "https://raw.githubusercontent.com/harissonola/my-cdn/main/user/img/default{$defaultNumber}.jpg";
     }
 
     #[Route('/resend-verification-email', name: 'app_verify_email_send')]

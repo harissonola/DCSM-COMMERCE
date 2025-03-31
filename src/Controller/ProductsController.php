@@ -20,12 +20,14 @@ use DateTimeZone;
 class ProductsController extends AbstractController
 {
     #[Route('/', name: 'index')]
-    public function index(): Response
+    public function index(ProductRepository $productRepository): Response
     {
         if (!$this->getUser()) {
             return $this->redirectToRoute("app_dashboard");
         }
-        return $this->render('products/index.html.twig');
+        return $this->render('products/index.html.twig', [
+            'products' => $productRepository->findAll(),
+        ]);
     }
 
     #[Route('/{slug}/dashboard', name: 'dashboard')]

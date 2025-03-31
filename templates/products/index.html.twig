@@ -116,7 +116,7 @@
 						<div class="card-footer bg-white border-0 pt-0">
 							<div class="d-grid gap-2">
 								{% if app.user and (product.users.contains(app.user) or 'ROLE_ADMIN' in app.user.roles) %}
-									<a href="{{ path('dashboard', {'slug': product.slug}) }}" class="btn btn-primary btn-sm">
+									<a href="{{ path('app_products_dashboard', {'slug': product.slug}) }}" class="btn btn-primary btn-sm">
 										<i class="fas fa-tachometer-alt me-2"></i>
 										Tableau de bord
 									</a>

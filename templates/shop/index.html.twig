@@ -120,7 +120,7 @@
 					id: {{ loop.index }},
 					name: "{{ prod.name }}",
 					price: "{{ prod.price }}", // prix en CFA
-					priceUSD: "{{ (prod.price / 601.51)|number_format(2, '.', '') }}", // prix converti en USD
+					priceUSD: "{{ prod.price|format_currency('USD') }}", // prix converti en USD
 					slug: "{{ prod.slug }}",
 					image: "{{ prod.image }}",
 					description: "{{ prod.description }}",
@@ -147,7 +147,7 @@
 							<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
 							<div class="card-body">
 								<h5 class="card-title">${product.name}</h5>
-								<h6 class="card-subtitle mb-2 text-muted">$${product.priceUSD}</h6>
+								<h6 class="card-subtitle mb-2 text-muted">${product.priceUSD}</h6>
 								<p class="card-text">${product.description}</p>
 								${buttonHtml}
 							</div>

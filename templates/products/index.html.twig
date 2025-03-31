@@ -146,7 +146,7 @@
                     
                     <div class="d-flex justify-content-between align-items-center mt-auto">
                         <span class="price-tag">{{ product.price|format_currency('USD') }}</span>
-                        <span class="badge bg-secondary">{{ product.shop ?? 'Crypto' }}</span>
+                        <span class="badge bg-secondary">{{ product.shop.name ?? 'Crypto' }}</span>
                     </div>
                 </div>
                 

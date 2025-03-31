@@ -341,7 +341,7 @@
 {% block javascripts %}
     {{ parent() }}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('turbo:load', function() {
             // Highlight active category when scrolling
             const sections = document.querySelectorAll('div[id^="investissement"], div[id^="retraits"], div[id^="securite"], div[id^="compte"], div[id^="autres"]');
             const navLinks = document.querySelectorAll('.list-group-item');

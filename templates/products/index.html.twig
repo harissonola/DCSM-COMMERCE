@@ -1,158 +1,197 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Liste des Produits
-{% endblock %}
+{% block title %}Liste des Produits{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
-	<style>
-		.product-card {
-			transition: transform 0.3s ease, box-shadow 0.3s ease;
-			height: 100%;
-		}
-		.product-card:hover {
-			transform: translateY(-5px);
-			box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-		}
-		.product-img-container {
-			height: 200px;
-			overflow: hidden;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background-color: #f8f9fa;
-		}
-		.product-img {
-			object-fit: contain;
-			max-height: 100%;
-			max-width: 100%;
-		}
-		.badge-vip {
-			background-color: #6f42c1;
-		}
-		.price-tag {
-			font-size: 1.2rem;
-			font-weight: bold;
-		}
-		.shop-badge {
-			font-size: 0.8rem;
-			margin-right: 5px;
-		}
-	</style>
+    <style>
+        .product-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+            background-color: #2a3042;
+            border-color: #3a4258;
+            color: #e9ecef;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        .product-img-container {
+            height: 200px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1e222e;
+        }
+        .product-img {
+            object-fit: contain;
+            max-height: 100%;
+            max-width: 100%;
+        }
+        .badge-vip {
+            background-color: #6f42c1;
+        }
+        .price-tag {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4eac6d;
+        }
+        .shop-badge {
+            font-size: 0.8rem;
+            margin-right: 5px;
+        }
+        .text-muted {
+            color: #8a93a7 !important;
+        }
+        .card-header {
+            background-color: #343a46 !important;
+            border-bottom-color: #3a4258 !important;
+        }
+        .card-footer {
+            background-color: #343a46 !important;
+            border-top-color: #3a4258 !important;
+        }
+        .alert-warning {
+            background-color: #5d4a2a;
+            border-color: #7a5f35;
+            color: #f8f9fa;
+        }
+        .balance-display {
+            background-color: #3a4258 !important;
+            border: 1px solid #4a5468;
+        }
+        .filter-card {
+            background-color: #2a3042;
+            border-color: #3a4258;
+        }
+        .btn-outline-secondary {
+            color: #8a93a7;
+            border-color: #4a5468;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #3a4258;
+            color: #e9ecef;
+        }
+        .btn-outline-secondary.active {
+            background-color: #4a5468;
+            color: #e9ecef;
+        }
+    </style>
 {% endblock %}
 
 {% block body %}
-	<div class="container-fluid py-4">
-		<div class="row mb-4">
-			<div class="col-12">
-				<div class="d-flex justify-content-between align-items-center">
-					<div>
-						<h1 class="display-5 fw-bold">Nos Produits d'Investissement</h1>
-						<p class="lead text-muted">Découvrez notre sélection exclusive de produits crypto</p>
-					</div>
-					{% if app.user %}
-						<div class="balance-display bg-primary text-white p-3 rounded-3">
-							<small class="d-block">Votre solde</small>
-							<span class="h4 mb-0">{{ app.user.balance|format_currency('USD') }}</span>
-						</div>
-					{% endif %}
-				</div>
-			</div>
-		</div>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="display-5 fw-bold text-light">Nos Produits d'Investissement</h1>
+                    <p class="lead text-muted">Découvrez notre sélection exclusive de produits crypto</p>
+                </div>
+                {% if app.user %}
+                    <div class="balance-display text-white p-3 rounded-3">
+                        <small class="d-block">Votre solde</small>
+                        <span class="h4 mb-0">{{ app.user.balance|format_currency('USD') }}</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
-		{# Filtres (optionnel) #}
-		<div class="row mb-4">
-			<div class="col-12">
-				<div class="card shadow-sm">
-					<div class="card-body py-2">
-						<div class="d-flex align-items-center">
-							<span class="me-2 text-muted">Filtrer :</span>
-							<a href="#" class="btn btn-sm btn-outline-secondary me-2 active">Tous</a>
-							<a href="#" class="btn btn-sm btn-outline-secondary me-2">VIP A</a>
-							<a href="#" class="btn btn-sm btn-outline-secondary me-2">VIP B</a>
-							<a href="#" class="btn btn-sm btn-outline-secondary">VIP C</a>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+    {# Filtres (optionnel) #}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm filter-card">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-center">
+                        <span class="me-2 text-muted">Filtrer :</span>
+                        <a href="#" class="btn btn-sm btn-outline-secondary me-2 active">Tous</a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary me-2">VIP A</a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary me-2">VIP B</a>
+                        <a href="#" class="btn btn-sm btn-outline-secondary">VIP C</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-		{# Liste des produits #}
-		<div class="row g-4">
-			{% for product in products %}
-				<div class="col-xl-3 col-lg-4 col-md-6">
-					<div
-						class="card product-card h-100 border-0 shadow-sm">
-						{# En-tête avec badge VIP #}
-						<div class="card-header bg-white border-0 pb-0">
-							<span class="badge bg-primary">{{ product.shop.name }}</span>
-							{% if 'ROLE_ADMIN' in app.user.roles or product.users.contains(app.user) %}
-								<span class="badge bg-success float-end">Vous possédez</span>
-							{% endif %}
-						</div>
-
-						{# Image du produit #}
-						<div class="product-img-container p-3">
-							<img src="{{ asset(product.image) }}" class="product-img" alt="{{ product.name }}">
-						</div>
-
-						{# Corps de la carte #}
-						<div class="card-body pt-0">
-							<h5 class="card-title mb-1">{{ product.name }}</h5>
-							<p class="text-muted small mb-2">
-								Ajouté le
-								{{ product.createdAt|date('d/m/Y') }}
-							</p>
-							<p class="card-text text-muted small mb-3">
-								{{ product.description|slice(0, 100) ~ (product.description|length > 100 ? '...' : '') }}
-							</p>
-
-							<div class="d-flex justify-content-between align-items-center mt-auto">
-								<span class="price-tag text-primary">{{ product.price|format_currency('USD') }}</span>
-								<span class="badge bg-secondary">{{ product.category ?? 'Crypto' }}</span>
-							</div>
-						</div>
-
-						{# Pied de carte avec boutons #}
-						<div class="card-footer bg-white border-0 pt-0">
-							<div class="d-grid gap-2">
-								{% if app.user and (product.users.contains(app.user) or 'ROLE_ADMIN' in app.user.roles) %}
-									<a href="{{ path('app_products_dashboard', {'slug': product.slug}) }}" class="btn btn-primary btn-sm">
-										<i class="fas fa-tachometer-alt me-2"></i>
-										Tableau de bord
-									</a>
-								{% else %}
-									<a href="{{ path('app_product_show', {'slug': product.slug}) }}" class="btn btn-outline-primary btn-sm">
-										<i class="fas fa-info-circle me-2"></i>
-										Détails
-									</a>
-								{% endif %}
-							</div>
-						</div>
-					</div>
-				</div>
-			{% else %}
-				<div class="col-12">
-					<div class="alert alert-warning shadow-sm">
-						<i class="fas fa-exclamation-circle me-2"></i>
-						Aucun produit disponible pour le moment.
-					</div>
-				</div>
-			{% endfor %}
-		</div>
-	</div>
+    {# Liste des produits #}
+    <div class="row g-4">
+        {% for product in products %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card product-card h-100 shadow-sm">
+                {# En-tête avec badge VIP #}
+                <div class="card-header border-0 pb-0">
+                    <span class="badge bg-primary">{{ product.shop.name }}</span>
+                    {% if 'ROLE_ADMIN' in app.user.roles or product.users.contains(app.user) %}
+                        <span class="badge bg-success float-end">Vous possédez</span>
+                    {% endif %}
+                </div>
+                
+                {# Image du produit #}
+                <div class="product-img-container p-3">
+                    <img src="{{ asset(product.image) }}" class="product-img" alt="{{ product.name }}">
+                </div>
+                
+                {# Corps de la carte #}
+                <div class="card-body pt-0">
+                    <h5 class="card-title mb-1 text-light">{{ product.name }}</h5>
+                    <p class="text-muted small mb-2">
+                        Ajouté le {{ product.createdAt|date('d/m/Y') }}
+                    </p>
+                    <p class="card-text text-muted small mb-3">
+                        {{ product.description|slice(0, 100) ~ (product.description|length > 100 ? '...' : '') }}
+                    </p>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-auto">
+                        <span class="price-tag">{{ product.price|format_currency('USD') }}</span>
+                        <span class="badge bg-secondary">{{ product.shop ?? 'Crypto' }}</span>
+                    </div>
+                </div>
+                
+                {# Pied de carte avec boutons #}
+                <div class="card-footer border-0 pt-0">
+                    <div class="d-grid gap-2">
+                        {% if app.user and (product.users.contains(app.user) or 'ROLE_ADMIN' in app.user.roles) %}
+                            <a href="{{ path('app_products_dashboard', {'slug': product.slug}) }}" 
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-tachometer-alt me-2"></i> Tableau de bord
+                            </a>
+                        {% else %}
+                            <a href="{{ path('app_product_show', {'slug': product.slug}) }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-info-circle me-2"></i> Détails
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-warning shadow-sm">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Aucun produit disponible pour le moment.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endblock %}
 
 {% block customScript %}
-	 <script>
-	        // Animation au chargement
-	        document.addEventListener('DOMContentLoaded', function() {
-	            const cards = document.querySelectorAll('.product-card');
-	            cards.forEach((card, index) => {
-	                setTimeout(() => {
-	                    card.style.opacity = '1';
-	                }, index * 100);
-	            });
-	        });
-	    </script>
+    <script>
+        // Animation au chargement
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease';
+                    card.style.opacity = '1';
+                }, index * 100);
+            });
+        });
+    </script>
 {% endblock %}

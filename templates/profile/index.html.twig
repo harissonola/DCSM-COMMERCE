@@ -1,403 +1,409 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}
-  {{ app.user.fname }} {{ app.user.lname }} | Profil
+	{{ app.user.fname }}
+	{{ app.user.lname }}
+	| Profil
 {% endblock %}
 
 {% block body %}
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
-  <style>
-    :root {
-      --primary-color: #6366f1;
-      --secondary-color: #f59e0b;
-      --glass-bg: rgba(255, 255, 255, 0.1);
-      --text-light: rgba(255, 255, 255, 0.9);
-    }
-    body {
-      background: linear-gradient(135deg, #4f46e5, #9333ea);
-      min-height: 100vh;
-      color: var(--text-light);
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    }
-    .profile-header {
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      border-radius: 1.5rem;
-      padding: 2rem;
-      margin: 2rem auto;
-      max-width: 1200px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .profile-avatar {
-      width: 120px;
-      height: 120px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 3px solid #fff;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    .action-grid {
-      display: grid;
-      gap: 1rem;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-    .action-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.5rem;
-      background: var(--glass-bg);
-      border-radius: 1rem;
-      transition: all 0.3s ease;
-      text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .action-btn:hover {
-      transform: translateY(-2px);
-      background: rgba(255, 255, 255, 0.2);
-    }
-    .stats-card {
-      background: var(--glass-bg);
-      padding: 1.5rem;
-      border-radius: 1rem;
-      backdrop-filter: blur(10px);
-      min-width: 200px;
-    }
-    .transaction-card {
-      background: var(--glass-bg);
-      border-radius: 1rem;
-      overflow: hidden;
-    }
-    .modal-content {
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: var(--text-light);
-    }
-    @media (max-width: 768px) {
-      .profile-header {
-        margin: 1rem;
-        padding: 1.5rem;
-      }
-      .profile-avatar {
-        width: 80px;
-        height: 80px;
-      }
-      .stats-card {
-        width: 100%;
-        margin-top: 1rem;
-      }
-    }
-
-    /* Personnalisation du select2 */
-		.select2-container--default .select2-selection--single {
-			height: calc(2.5rem + 2px);
-			border: 1px solid #ced4da;
-			border-radius: 0.375rem;
-			padding: 0.375rem 0.75rem;
-			background: #fff;
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet"/>
+	<style>:root
+	{
+		--primary-color: #6366f1;
+		--secondary-color: #f59e0b;
+		--glass-bg: rgba(255, 255, 255, 0.1);
+		--text-light: rgba(255, 255, 255, 0.9);
+	}
+	body {
+		background: linear-gradient(135deg, #4f46e5, #9333ea);
+		min-height: 100vh;
+		color: var(--text-light);
+		font-family: 'Inter', system-ui, -apple-system, sans-serif;
+	}
+	.profile-header {
+		background: var(--glass-bg);
+		backdrop-filter: blur(20px);
+		border-radius: 1.5rem;
+		padding: 2rem;
+		margin: 2rem auto;
+		max-width: 1200px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	.profile-avatar {
+		width: 120px;
+		height: 120px;
+		object-fit: cover;
+		border-radius: 50%;
+		border: 3px solid #fff;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	}
+	.action-grid {
+		display: grid;
+		gap: 1rem;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	}
+	.action-btn {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 1.5rem;
+		background: var(--glass-bg);
+		border-radius: 1rem;
+		transition: all 0.3s ease;
+		text-align: center;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	.action-btn:hover {
+		transform: translateY(-2px);
+		background: rgba(255, 255, 255, 0.2);
+	}
+	.stats-card {
+		background: var(--glass-bg);
+		padding: 1.5rem;
+		border-radius: 1rem;
+		backdrop-filter: blur(10px);
+		min-width: 200px;
+	}
+	.transaction-card {
+		background: var(--glass-bg);
+		border-radius: 1rem;
+		overflow: hidden;
+	}
+	.modal-content {
+		background: var(--glass-bg);
+		backdrop-filter: blur(20px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		color: var(--text-light);
+	}
+	@media(max-width: 768px) {
+		.profile-header {
+			margin: 1rem;
+			padding: 1.5rem;
 		}
-		.select2-container--default .select2-selection--single .select2-selection__rendered {
-			line-height: 2.5rem;
-			color: #495057;
+		.profile-avatar {
+			width: 80px;
+			height: 80px;
 		}
-		.select2-dropdown {
-			background-color: rgb(9, 68, 92);
-			color: #fff;
+		.stats-card {
+			width: 100%;
+			margin-top: 1rem;
 		}
-		.select2-results__option {
-			color: #fff;
-		}
-		.select2-results__option--highlighted {
-			background-color: #ff7f50 !important;
-			color: #fff !important;
-		}
-  </style>
+	}
 
-  <!-- Section Profil -->
-  <div class="profile-header">
-    <div class="d-flex flex-column flex-md-row align-items-center gap-4">
-      <div class="position-relative">
-        {% if app.user.googleId and app.user.photo starts with 'http' %}
-          <img src="{{ app.user.photo }}" class="profile-avatar" />
-        {% else %}
-          <img src="{{ app.user.photo }}" class="profile-avatar" />
-        {% endif %}
-      </div>
-      <div class="flex-grow-1 text-center text-md-start">
-        <h1 class="h3 mb-1">{{ app.user.fname }} {{ app.user.lname }}</h1>
-        <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
-          <span class="badge bg-primary rounded-pill">@{{ app.user.username }}</span>
-          <span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
-        </div>
-      </div>
-      <div class="d-flex flex-wrap gap-4 justify-content-center justify-content-md-start">
-        <div class="stats-card">
-          <div class="d-flex align-items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
-            </svg>
-            <div>
-              <div class="text-muted">Récompenses</div>
-              <div class="h4 mb-0">${{ app.user.reward|default(0)|number_format(2) }}</div>
-            </div>
-          </div>
-        </div>
-        <div class="stats-card">
-          <div class="d-flex align-items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
-            <div>
-              <div class="text-muted">Solde disponible</div>
-              <div class="h4 mb-0">${{ app.user.balance|number_format(2) }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+	/* Personnalisation du select2 */
+	.select2-container--default .select2-selection--single {
+		height: calc(2.5rem + 2px);
+		border: 1px solid #ced4da;
+		border-radius: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		background: #fff;
+	}
+	.select2-container--default .select2-selection--single .select2-selection__rendered {
+		line-height: 2.5rem;
+		color: #495057;
+	}
+	.select2-dropdown {
+		background-color: rgb(9, 68, 92);
+		color: #fff;
+	}
+	.select2-results__option {
+		color: #fff;
+	}
+	.select2-results__option--highlighted {
+		background-color: #ff7f50 !important;
+		color: #fff !important;
+	}
+</style>
 
-  <!-- Section Actions -->
-  <div class="profile-header">
-    <div class="action-grid">
-      <button class="action-btn" data-bs-toggle="modal" data-bs-target="#depositModal">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-arrow-down-circle mb-2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="8 12 12 16 16 12"></polyline>
-          <line x1="12" y1="8" x2="12" y2="16"></line>
-        </svg>Déposer
-      </button>
-      <button class="action-btn" data-bs-toggle="modal" data-bs-target="#withdrawModal">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-arrow-up-circle mb-2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="16 12 12 8 8 12"></polyline>
-          <line x1="12" y1="16" x2="12" y2="8"></line>
-        </svg>Retirer
-      </button>
-      <a href="{{ path('app_user_settings') }}" class="action-btn text-decoration-none">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-edit mb-2">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-        </svg>Modifier profil
-      </a>
-      <button class="action-btn" data-bs-toggle="modal" data-bs-target="#shareModal">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-share-2 mb-2">
-          <circle cx="18" cy="5" r="3"></circle>
-          <circle cx="6" cy="12" r="3"></circle>
-          <circle cx="18" cy="19" r="3"></circle>
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-        </svg>Parrainage
-      </button>
-    </div>
-  </div>
+<!-- Section Profil -->
+<div class="profile-header">
+	<div class="d-flex flex-column flex-md-row align-items-center gap-4">
+		<div class="position-relative">
+			{% if app.user.googleId and app.user.photo starts with 'http' %}
+				<img src="{{ app.user.photo }}" class="profile-avatar"/>
+			{% else %}
+				<img src="{{ app.user.photo }}" class="profile-avatar"/>
+			{% endif %}
+		</div>
+		<div class="flex-grow-1 text-center text-md-start">
+			<h1 class="h3 mb-1">{{ app.user.fname }}
+				{{ app.user.lname }}</h1>
+			<div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
+				<span class="badge bg-primary rounded-pill">@{{ app.user.username }}</span>
+				<span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
+			</div>
+		</div>
+		<div class="d-flex flex-wrap gap-4 justify-content-center justify-content-md-start">
+			<div class="stats-card">
+				<div class="d-flex align-items-center gap-2">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
+					</svg>
+					<div>
+						<div class="text-muted">Récompenses</div>
+						<div class="h4 mb-0">${{ app.user.reward|default(0)|number_format(2) }}</div>
+					</div>
+				</div>
+			</div>
+			<div class="stats-card">
+				<div class="d-flex align-items-center gap-2">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="12" y1="1" x2="12" y2="23"></line>
+						<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+					</svg>
+					<div>
+						<div class="text-muted">Solde disponible</div>
+						<div class="h4 mb-0">${{ app.user.balance|number_format(2) }}</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
 
-  <!-- Historique des transactions -->
-  <div class="profile-header">
-    <h5 class="mb-3">Historique des transactions</h5>
-    <div class="transaction-card">
-      <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle mb-0">
-          <thead class="bg-dark">
-            <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Méthode</th>
-              <th>Montant</th>
-              <th>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for transaction in transactions %}
-              <tr>
-                <td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
-                <td>
-                  {% if transaction.type == 'withdrawal' %}
-                    <span class="badge bg-danger">Retrait</span>
-                  {% else %}
-                    <span class="badge bg-success">Dépôt</span>
-                  {% endif %}
-                </td>
-                <td>{{ transaction.method }}</td>
-                <td>
-                  {% if transaction.type == 'withdrawal' %}
-                    <span class="text-danger">-{{ transaction.amount|number_format(2) }}</span>
-                  {% else %}
-                    <span class="text-success">+{{ transaction.amount|number_format(2) }}</span>
-                  {% endif %}
-                </td>
-                <td>
-                  <span class="badge rounded-pill bg-{{ transaction.status == 'pending' ? 'warning' : transaction.status == 'failed' ? 'danger' : 'success' }}">
-                    {{ transaction.status }}
-                  </span>
-                </td>
-              </tr>
-            {% else %}
-              <tr>
-                <td colspan="5" class="text-center py-4">
-                  <div class="text-muted">Aucune transaction récente</div>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<!-- Section Actions -->
+<div class="profile-header">
+	<div class="action-grid">
+		<button class="action-btn" data-bs-toggle="modal" data-bs-target="#depositModal">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-arrow-down-circle mb-2">
+				<circle cx="12" cy="12" r="10"></circle>
+				<polyline points="8 12 12 16 16 12"></polyline>
+				<line x1="12" y1="8" x2="12" y2="16"></line>
+			</svg>Déposer
+		</button>
+		<button class="action-btn" data-bs-toggle="modal" data-bs-target="#withdrawModal">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-arrow-up-circle mb-2">
+				<circle cx="12" cy="12" r="10"></circle>
+				<polyline points="16 12 12 8 8 12"></polyline>
+				<line x1="12" y1="16" x2="12" y2="8"></line>
+			</svg>Retirer
+		</button>
+		<a href="{{ path('app_user_settings') }}" class="action-btn text-decoration-none">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-edit mb-2">
+				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+			</svg>Modifier profil
+		</a>
+		<button class="action-btn" data-bs-toggle="modal" data-bs-target="#shareModal">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-share-2 mb-2">
+				<circle cx="18" cy="5" r="3"></circle>
+				<circle cx="6" cy="12" r="3"></circle>
+				<circle cx="18" cy="19" r="3"></circle>
+				<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+				<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+			</svg>Parrainage
+		</button>
+	</div>
+</div>
 
-  <!-- Modal Dépôt -->
-  <div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="depositModalLabel">💳 Déposer des fonds</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="depositForm" action="{{ path('app_deposit') }}" method="post">
-            <div class="mb-3">
-              <label class="form-label">Montant (USD)</label>
-              <div class="input-group">
-                <span class="input-group-text">$</span>
-                <input type="number" name="amount" class="form-control bg-transparent text-light" required step="0.01" />
-              </div>
-            </div>
-            <div class="mb-4">
-              <label class="form-label">Méthode de paiement</label>
-              <div class="d-grid gap-2">
-                {% set paymentMethods = [{ id: 'crypto', label: 'Crypto', icon: 'currency-btc' }, { id: 'paypal', label: 'PayPal', icon: 'paypal' }, { id: 'mobilemoney', label: 'Mobile Money', icon: 'phone' }, { id: 'carte', label: 'Carte Bancaire', icon: 'credit-card' }] %}
-                {% for method in paymentMethods %}
-                  <div class="form-check payment-method">
-                    <input class="form-check-input" type="radio" name="paymentMethod" id="{{ method.id }}" value="{{ method.id }}" required />
-                    <label class="form-check-label d-flex align-items-center" for="{{ method.id }}">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-{{ method.icon }} me-2">
-                        {% if method.icon == 'currency-btc' %}
-                          <path d="M6 6h8a3 3 0 0 1 0 6 3 3 0 0 1 0 6H6" />
-                          <path d="M8 6L8 18" />
-                          <path d="M8 12L14 12" />
-                          <path d="M9 3v3" />
-                          <path d="M13 3v3" />
-                          <path d="M9 18v3" />
-                          <path d="M13 18v3" />
-                        {% elseif method.icon == 'paypal' %}
-                          <path d="M14 9h6" />
-                          <path d="M15 21c1.1 0 2-1 2-1s.4-3.7 2-6" />
-                          <path d="M19.5 12.9c1.7.4 3.3 1.4 4 3.1 1.4 3-1.1 6.1-4.6 6-2.3-.1-3.9-2-3.9-2" />
-                          <path d="M9 10H4v7h6c2.5 0 2.5.5 4 1" />
-                          <path d="M15 9c-.8.8-3 1.9-5 1.9H8.1L6 15.1H9" />
-                        {% elseif method.icon == 'phone' %}
-                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                        {% else %}
-                          <rect x="1" y="4" width="22" height="16" rx="3" ry="3" />
-                          <path d="M1 10h22" />
-                        {% endif %}
-                      </svg>
-                      {{ method.label }}
-                    </label>
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 py-2">Continuer</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- Historique des transactions -->
+<div class="profile-header">
+	<h5 class="mb-3">Historique des transactions</h5>
+	<div class="transaction-card">
+		<div class="table-responsive">
+			<table class="table table-dark table-hover align-middle mb-0">
+				<thead class="bg-dark">
+					<tr>
+						<th>Date</th>
+						<th>Type</th>
+						<th>Méthode</th>
+						<th>Montant</th>
+						<th>Statut</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for transaction in transactions %}
+						<tr>
+							<td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
+							<td>
+								{% if transaction.type == 'withdrawal' %}
+									<span class="badge bg-danger">Retrait</span>
+								{% else %}
+									<span class="badge bg-success">Dépôt</span>
+								{% endif %}
+							</td>
+							<td>{{ transaction.method }}</td>
+							<td>
+								{% if transaction.type == 'withdrawal' %}
+									<span class="text-danger">-{{ transaction.amount|number_format(2) }}</span>
+								{% else %}
+									<span class="text-success">+{{ transaction.amount|number_format(2) }}</span>
+								{% endif %}
+							</td>
+							<td>
+								<span class="badge rounded-pill bg-{{ transaction.status == 'pending' ? 'warning' : transaction.status == 'failed' ? 'danger' : 'success' }}">
+									{{ transaction.status }}
+								</span>
+							</td>
+						</tr>
+					{% else %}
+						<tr>
+							<td colspan="5" class="text-center py-4">
+								<div class="text-muted">Aucune transaction récente</div>
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 
-  <!-- Modal Retrait -->
-  <div class="modal fade" id="withdrawModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-      <form action="{{ path('app_withdraw') }}" method="post" class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">📤 Retirer des fonds</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Montant (USD)</label>
-            <div class="input-group">
-              <span class="input-group-text">$</span>
-              <input type="number" name="amount" class="form-control bg-transparent text-light" step="0.01" required min="0.01" />
-            </div>
-          </div>
-          <div class="mb-3">
-            <label>Type de crypto</label>
-            
-            <select id="cryptoType" name="currency" class="form-select bg-transparent text-light" required>
-              <option value="">Sélectionnez une crypto</option>
-              <option value="BTC">Bitcoin (BTC)</option>
-              <option value="ETH">Ethereum (ETH)</option>
-              <option value="LTC">Litecoin (LTC)</option>
-              <option value="DOGE">Dogecoin (DOGE)</option>
-              <option value="BCH">Bitcoin Cash (BCH)</option>
-              <option value="TRX">TRON (TRX)</option>
-              <option value="DASH">Dash (DASH)</option>
-              <option value="XRP">Ripple (XRP)</option>
-              <option value="ETC">Ethereum Classic (ETC)</option>
-              <option value="XMR">Monero (XMR)</option>
-              <option value="ZEC">Zcash (ZEC)</option>
-              <option value="BNB">Binance Coin (BNB)</option>
-              <option value="ADA">Cardano (ADA)</option>
-              <option value="EOS">EOS (EOS)</option>
-              <option value="XLM">Stellar (XLM)</option>
-              <option value="USDT.BEP20">USDT BEP20</option>
-              <option value="BUSD.BEP20">BUSD Token (BSC Chain) - BEP20</option>
-              <!-- Ajoutez d'autres cryptos supportées -->
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>Adresse de réception</label>
-            <input type="text" name="recipient" class="form-control bg-transparent text-light" placeholder="Ex: 0x... (ETH) ou 1... (BTC)" required />
-          </div>
-          <button type="submit" class="btn btn-primary w-100 py-2">Confirmer</button>
-        </div>
-      </form>
-    </div>
-  </div>
+<!-- Modal Dépôt -->
+<div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="depositModalLabel">💳 Déposer des fonds</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="depositForm" action="{{ path('app_deposit') }}" method="post">
+					<div class="mb-3">
+						<label class="form-label">Montant (USD)</label>
+						<div class="input-group">
+							<span class="input-group-text">$</span>
+							<input type="number" name="amount" class="form-control bg-transparent text-light" required step="0.01"/>
+						</div>
+					</div>
+					<div class="mb-4">
+						<label class="form-label">Méthode de paiement</label>
+						<div class="d-grid gap-2">
+							{% set paymentMethods = [{ id: 'crypto', label: 'Crypto', icon: 'currency-btc' }, { id: 'paypal', label: 'PayPal', icon: 'paypal' }, { id: 'mobilemoney', label: 'Mobile Money', icon: 'phone' }, { id: 'carte', label: 'Carte Bancaire', icon: 'credit-card' }] %}
+							{% for method in paymentMethods %}
+								<div class="form-check payment-method">
+									<input class="form-check-input" type="radio" name="paymentMethod" id="{{ method.id }}" value="{{ method.id }}" required/>
+									<label class="form-check-label d-flex align-items-center" for="{{ method.id }}">
+										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="feather feather-{{ method.icon }} me-2">
+											{% if method.icon == 'currency-btc' %}
+												<path d="M6 6h8a3 3 0 0 1 0 6 3 3 0 0 1 0 6H6"/>
+												<path d="M8 6L8 18"/>
+												<path d="M8 12L14 12"/>
+												<path d="M9 3v3"/>
+												<path d="M13 3v3"/>
+												<path d="M9 18v3"/>
+												<path d="M13 18v3"/>
+											{% elseif method.icon == 'paypal' %}
+												<path d="M14 9h6"/>
+												<path d="M15 21c1.1 0 2-1 2-1s.4-3.7 2-6"/>
+												<path d="M19.5 12.9c1.7.4 3.3 1.4 4 3.1 1.4 3-1.1 6.1-4.6 6-2.3-.1-3.9-2-3.9-2"/>
+												<path d="M9 10H4v7h6c2.5 0 2.5.5 4 1"/>
+												<path d="M15 9c-.8.8-3 1.9-5 1.9H8.1L6 15.1H9"/>
+											{% elseif method.icon == 'phone' %}
+												<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+											{% else %}
+												<rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
+												<path d="M1 10h22"/>
+											{% endif %}
+										</svg>
+										{{ method.label }}
+									</label>
+								</div>
+							{% endfor %}
+						</div>
+					</div>
+					<button type="submit" class="btn btn-primary w-100 py-2">Continuer</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
 
-  <!-- Modal Partage -->
-  <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="shareModalLabel">📢 Partager mon lien</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="input-group mb-3">
-            <input type="text" class="form-control bg-transparent text-light" value="{{ referralLink }}" id="referralLink" readonly />
-            <button class="btn btn-outline-light" onclick="copyToClipboard()">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
-          </div>
-          <div class="d-grid gap-2">
-            <a href="https://wa.me/?text={{ ('Rejoignez-moi: ' ~ referralLink)|url_encode }}" class="btn btn-success" target="_blank"><i class="bi bi-whatsapp me-2"></i>WhatsApp</a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u={{ referralLink|url_encode }}" class="btn btn-primary" target="_blank"><i class="bi bi-facebook me-2"></i>Facebook</a>
-            <a href="https://twitter.com/intent/tweet?text={{ ('Découvrez cette plateforme: ' ~ referralLink)|url_encode }}" class="btn btn-info" target="_blank"><i class="bi bi-twitter-x me-2"></i>Twitter</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- Modal Retrait -->
+<div class="modal fade" id="withdrawModal" tabindex="-1">
+	<div class="modal-dialog modal-dialog-centered">
+		<form action="{{ path('app_withdraw') }}" method="post" class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">📤 Retirer des fonds</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label">Montant (USD)</label>
+					<div class="input-group">
+						<span class="input-group-text">$</span>
+						<input type="number" name="amount" class="form-control bg-transparent text-light" step="0.01" required min="0.01"/>
+					</div>
+				</div>
+				<div class="mb-3">
+					<label>Type de crypto</label>
 
-  <!-- Toast de confirmation -->
-  <div class="toast-container position-fixed top-0 end-0 p-3">
-    <div id="copyToast" class="toast bg-dark" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body">✅ Lien copié dans le presse-papier</div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-      </div>
-    </div>
-  </div>
+					<select id="cryptoType" name="currency" class="form-select bg-transparent text-light" required>
+						<option value="">Sélectionnez une crypto</option>
+						<option value="ADA">Cardano (ADA)</option>
+						<option value="BNB">Binance Coin (BNB)</option>
+						<option value="BCH">Bitcoin Cash (BCH)</option>
+						<option value="BTC">Bitcoin (BTC)</option>
+						<option value="BUSD.BEP20">BUSD Token (BSC Chain) - BEP20</option>
+						<option value="DASH">Dash (DASH)</option>
+						<option value="DOGE">Dogecoin (DOGE)</option>
+						<option value="EOS">EOS (EOS)</option>
+						<option value="ETC">Ethereum Classic (ETC)</option>
+						<option value="ETH">Ethereum (ETH)</option>
+						<option value="LTC">Litecoin (LTC)</option>
+						<option value="POL">POLYGON (POL)</option>
+						<option value="TRX">TRON (TRX)</option>
+						<option value="USDT.BEP20">USDT BEP20</option>
+						<option value="XLM">Stellar (XLM)</option>
+						<option value="XMR">Monero (XMR)</option>
+						<option value="XRP">Ripple (XRP)</option>
+						<option value="ZEC">Zcash (ZEC)</option>
+					</select>
+				</div>
+				<div class="mb-3">
+					<label>Adresse de réception</label>
+					<input type="text" name="recipient" class="form-control bg-transparent text-light" placeholder="Ex: 0x... (ETH) ou 1... (BTC)" required/>
+				</div>
+				<button type="submit" class="btn btn-primary w-100 py-2">Confirmer</button>
+			</div>
+		</form>
+	</div>
+</div>
 
-  <script>
+<!-- Modal Partage -->
+<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="shareModalLabel">📢 Partager mon lien</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="input-group mb-3">
+					<input type="text" class="form-control bg-transparent text-light" value="{{ referralLink }}" id="referralLink" readonly/>
+					<button class="btn btn-outline-light" onclick="copyToClipboard()">
+						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+						</svg>
+					</button>
+				</div>
+				<div class="d-grid gap-2">
+					<a href="https://wa.me/?text={{ ('Rejoignez-moi: ' ~ referralLink)|url_encode }}" class="btn btn-success" target="_blank">
+						<i class="bi bi-whatsapp me-2"></i>WhatsApp</a>
+					<a href="https://www.facebook.com/sharer/sharer.php?u={{ referralLink|url_encode }}" class="btn btn-primary" target="_blank">
+						<i class="bi bi-facebook me-2"></i>Facebook</a>
+					<a href="https://twitter.com/intent/tweet?text={{ ('Découvrez cette plateforme: ' ~ referralLink)|url_encode }}" class="btn btn-info" target="_blank">
+						<i class="bi bi-twitter-x me-2"></i>Twitter</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Toast de confirmation -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+	<div id="copyToast" class="toast bg-dark" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="d-flex">
+			<div class="toast-body">✅ Lien copié dans le presse-papier</div>
+			<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+		</div>
+	</div>
+</div>
+
+ <script>
     // Gestion de la copie du lien
     function copyToClipboard() {
       navigator.clipboard
@@ -414,10 +420,5 @@
         window.location.href = "{{ path('app_paypal_redirect') }}?amount=" + encodeURIComponent(amount)
       }
     })
-  </script>
-{% endblock %}
-
-{% block customScript %}{# Inclusion de Select2 JS via CDN #}
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-  
-{% endblock %}
+  </script>{% endblock %}{% block customScript %}{# Inclusion de Select2 JS via CDN #}
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>{% endblock %}

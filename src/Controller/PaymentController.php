@@ -22,7 +22,7 @@ class PaymentController extends AbstractController
     private $exchangeRates = [
         'BTC' => 82209.33,
         'ETH' => 1815.33,
-        'USDT' => 1.00,
+        'USDT.BEP20' => 1.00,
         'BUSD.BEP20' => 1.00,
         'TRX' => 0.23,
         'DOGE' => 0.17,

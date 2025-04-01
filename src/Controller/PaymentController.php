@@ -54,18 +54,12 @@ class PaymentController extends AbstractController
         $em->flush();
 
         try {
-            // Récupération des taux de change depuis CoinPayments
-            $rates = $this->getExchangeRates();
-
-            // Conversion USD vers la crypto choisie
-            $rate = (float)$rates[$currency]['rate_usd'];
-            $amountCrypto = $amountUsd / $rate;
-
             // Envoi de la demande de retrait à CoinPayments
+            // On spécifie le montant en USD et la crypto cible
             $params = [
-                'amount' => $amountCrypto,
-                'currency' => $currency,
-                'currency2' => 'USD', // Indique que le montant original est en USD
+                'amount' => $amountUsd,       // Montant en USD
+                'currency' => 'USD',          // Devise source
+                'currency2' => $currency,     // Devise cible (crypto)
                 'address' => $address,
                 'auto_confirm' => 1,
                 'ipn_url' => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
@@ -75,14 +69,12 @@ class PaymentController extends AbstractController
             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
 
             if ($response['error'] !== 'ok') {
-                // CoinPayments gère automatiquement les montants minimums et renverra une erreur si nécessaire
                 throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
             }
 
             $this->addFlash('success', sprintf(
-                'Demande de retrait de %.2f USD (environ %f %s) envoyée. Le traitement peut prendre quelques minutes.',
+                'Demande de retrait de %.2f USD envoyée. La conversion en %s sera gérée par CoinPayments.',
                 $amountUsd,
-                $amountCrypto,
                 $currency
             ));
         } catch (\Exception $e) {
@@ -94,6 +86,8 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
+    // ... (les autres méthodes restent inchangées)
+    
     private function getExchangeRates(): array
     {
         $response = $this->coinPaymentsApiCall('rates', ['accepted' => 1]);

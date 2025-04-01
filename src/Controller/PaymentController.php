@@ -146,6 +146,7 @@ class PaymentController extends AbstractController
         return $response['result'];
     }
 
+
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];

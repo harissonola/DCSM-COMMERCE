@@ -26,12 +26,12 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_login');
         }
 
-        $amount = (float)$request->request->get('amount');
+        $amountUsd = (float)$request->request->get('amount');
         $currency = strtoupper(trim($request->request->get('currency')));
         $address = trim($request->request->get('recipient'));
 
         // Validation de base
-        if ($amount <= 0 || $amount > $user->getBalance()) {
+        if ($amountUsd <= 0 || $amountUsd > $user->getBalance()) {
             $this->addFlash('danger', 'Montant invalide ou solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }
@@ -45,7 +45,7 @@ class PaymentController extends AbstractController
         $transaction = (new Transactions())
             ->setUser($user)
             ->setType('withdrawal')
-            ->setAmount($amount)
+            ->setAmount($amountUsd)
             ->setMethod("Crypto ($currency)")
             ->setStatus('pending')
             ->setCreatedAt(new \DateTimeImmutable());
@@ -54,14 +54,25 @@ class PaymentController extends AbstractController
         $em->flush();
 
         try {
+            // Récupération des taux de change depuis CoinPayments
+            $rates = $this->getExchangeRates();
+            if (!isset($rates[$currency])) {
+                throw new \Exception("Devise non supportée");
+            }
+
+            // Conversion USD vers la crypto choisie
+            $rate = (float)$rates[$currency]['rate_usd'];
+            $amountCrypto = $amountUsd / $rate;
+
             // Envoi de la demande de retrait à CoinPayments
             $params = [
-                'amount' => $amount,
-                'currency' => $currency,
+                'amount' => $amountCrypto, // Montant dans la crypto choisie
+                'currency' => $currency,   // Devise de retrait
+                'currency2' => 'USD',      // Devise source (pour conversion)
                 'address' => $address,
                 'auto_confirm' => 1,
                 'ipn_url' => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'custom' => $transaction->getId() // On passe l'ID de transaction comme référence
+                'custom' => $transaction->getId()
             ];
 
             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
@@ -70,7 +81,12 @@ class PaymentController extends AbstractController
                 throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
             }
 
-            $this->addFlash('success', 'Demande de retrait envoyée. Le traitement peut prendre quelques minutes.');
+            $this->addFlash('success', sprintf(
+                'Demande de retrait de %.2f USD (environ %f %s) envoyée. Le traitement peut prendre quelques minutes.',
+                $amountUsd,
+                $amountCrypto,
+                $currency
+            ));
         } catch (\Exception $e) {
             $transaction->setStatus('failed');
             $em->flush();
@@ -78,6 +94,17 @@ class PaymentController extends AbstractController
         }
 
         return $this->redirectToRoute('app_profile');
+    }
+
+    private function getExchangeRates(): array
+    {
+        $response = $this->coinPaymentsApiCall('rates');
+
+        if ($response['error'] !== 'ok') {
+            throw new \Exception("Erreur lors de la récupération des taux de change");
+        }
+
+        return $response['result'];
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
@@ -90,6 +117,7 @@ class PaymentController extends AbstractController
 
         $amount = (float)$request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
+        $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
 
         if ($amount <= 0) {
             $this->addFlash('danger', 'Le montant doit être supérieur à zéro.');
@@ -100,20 +128,20 @@ class PaymentController extends AbstractController
             case 'paypal':
                 return $this->redirectToRoute('app_paypal_redirect', ['amount' => $amount]);
             case 'crypto':
-                return $this->processCryptoDeposit($amount, $user);
+                return $this->processCryptoDeposit($amount, $cryptoType, $user);
             default:
                 $this->addFlash('danger', 'Méthode de paiement invalide.');
                 return $this->redirectToRoute('app_profile');
         }
     }
 
-    private function processCryptoDeposit(float $amount, User $user): Response
+    private function processCryptoDeposit(float $amount, string $cryptoType, User $user): Response
     {
         try {
             $params = [
                 'amount' => $amount,
                 'currency1' => 'USD',
-                'currency2' => 'BTC', // Devise par défaut, peut être modifiée
+                'currency2' => $cryptoType,
                 'buyer_email' => $user->getEmail(),
                 'item_name' => 'Dépôt sur ' . $this->getParameter('app.site_name'),
                 'ipn_url' => $this->generateUrl('coinpayments_deposit_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),

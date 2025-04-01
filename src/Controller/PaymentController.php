@@ -18,19 +18,6 @@ use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 
 class PaymentController extends AbstractController
 {
-    // Taux de change pour les principales cryptos
-    private $exchangeRates = [
-        'BTC' => 82209.33,
-        'ETH' => 1815.33,
-        'USDT.BEP20' => 1.00,
-        'BUSD.BEP20' => 1.00,
-        'TRX' => 0.23,
-        'DOGE' => 0.17,
-        'BNB' => 602.90,
-        'LTC' => 85.21,
-        'XRP' => 0.52,
-    ];
-
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
     public function withdraw(Request $request, EntityManagerInterface $em): Response
     {
@@ -43,15 +30,24 @@ class PaymentController extends AbstractController
         $recipient = trim($request->request->get('recipient'));
         $currency = strtoupper(trim($request->request->get('currency')));
 
+        try {
+            // Récupération dynamique des taux de change depuis CoinPayments
+            $exchangeRates = $this->getExchangeRates();
+        } catch (\Exception $e) {
+            $this->addFlash('danger', "Erreur de récupération des taux de change : " . $e->getMessage());
+            return $this->redirectToRoute('app_profile');
+        }
+
         // Validation des données
-        $errors = $this->validateWithdrawal($user, $amountUsd, $currency, $recipient);
+        $errors = $this->validateWithdrawal($user, $amountUsd, $currency, $recipient, $exchangeRates);
         if (!empty($errors)) {
             $this->addFlash('danger', "Erreur : " . implode(', ', $errors));
             return $this->redirectToRoute('app_profile');
         }
 
-        // Conversion USD -> Crypto
-        $amountCrypto = $amountUsd / $this->exchangeRates[$currency];
+        // Conversion USD -> Crypto en se basant sur le taux retourné par CoinPayments
+        $rateUsd = (float)$exchangeRates[$currency]['rate_usd'];
+        $amountCrypto = $amountUsd / $rateUsd;
 
         // Enregistrement de la transaction
         $transaction = (new Transactions())
@@ -67,12 +63,12 @@ class PaymentController extends AbstractController
 
         try {
             $this->processCryptoWithdrawal($recipient, $amountCrypto, $currency);
-            
+
             $user->setBalance($user->getBalance() - $amountUsd);
             $transaction->setStatus('completed');
-            
+
             $em->flush();
-            
+
             $this->addFlash(
                 'success',
                 sprintf("Retrait de %.2f USD (%f %s) effectué avec succès.", $amountUsd, $amountCrypto, $currency)
@@ -80,57 +76,41 @@ class PaymentController extends AbstractController
         } catch (\Exception $e) {
             $transaction->setStatus('failed');
             $em->flush();
-            
+
             $this->addFlash('danger', "Échec du retrait : " . $e->getMessage());
         }
 
         return $this->redirectToRoute('app_profile');
     }
 
-    private function validateWithdrawal(User $user, float $amount, string $currency, string $address): array
+    private function validateWithdrawal(User $user, float $amount, string $currency, string $address, array $exchangeRates): array
     {
         $errors = [];
-        
+
         if ($amount <= 0) {
             $errors[] = "Montant invalide";
         }
-        
-        if (!array_key_exists($currency, $this->exchangeRates)) {
+
+        if (!isset($exchangeRates[$currency])) {
             $errors[] = "Devise non supportée";
         }
-        
+
         if ($user->getBalance() < $amount) {
             $errors[] = "Solde insuffisant";
         }
-        
-        if (!$this->validateCryptoAddress($address, $currency)) {
-            $errors[] = "Adresse $currency invalide";
+
+        // Validation minimale de l'adresse ; on laisse CoinPayments gérer la vérification poussée
+        if (empty(trim($address))) {
+            $errors[] = "L'adresse ne peut pas être vide";
         }
-        
+
         return $errors;
     }
 
+    // La méthode de validation d'adresse est simplifiée pour laisser CoinPayments gérer la validité complète
     private function validateCryptoAddress(string $address, string $currency): bool
     {
-        if (empty($address)) {
-            return false;
-        }
-
-        $patterns = [
-            'BTC' => '/^([13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/',
-            'ETH' => '/^0x[a-fA-F0-9]{40}$/',
-            'USDT' => '/^0x[a-fA-F0-9]{40}$/',
-            'BUSD.BEP20' => '/^0x[a-fA-F0-9]{40}$/',
-            'TRX' => '/^T[a-zA-Z0-9]{33}$/',
-            'DOGE' => '/^D[5-9a-zA-HJ-NP-Z1][^IOl]{32,34}$/',
-            'BNB' => '/^bnb[a-z0-9]{38}$/i',
-            'LTC' => '/^[LM3][a-km-zA-HJ-NP-Z1-9]{26,33}$/',
-            'XRP' => '/^r[0-9a-zA-Z]{24,34}$/',
-        ];
-
-        return isset($patterns[$currency]) 
-            ? preg_match($patterns[$currency], $address) === 1
-            : strlen($address) >= 20; // Validation minimaliste pour les autres cryptos
+        return !empty(trim($address));
     }
 
     private function processCryptoWithdrawal(string $address, float $amount, string $currency): void
@@ -147,6 +127,21 @@ class PaymentController extends AbstractController
         if ($response['error'] !== 'ok') {
             throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
         }
+    }
+
+    /**
+     * Récupère dynamiquement les taux de change via l'API CoinPayments.
+     *
+     * @return array Tableau associatif des taux, par exemple ['BTC' => ['rate_usd' => ...], ...]
+     * @throws \Exception en cas d'erreur lors de l'appel API.
+     */
+    private function getExchangeRates(): array
+    {
+        $response = $this->coinPaymentsApiCall('rates');
+        if ($response['error'] !== 'ok') {
+            throw new \Exception("Erreur lors de la récupération des taux de change");
+        }
+        return $response['result'];
     }
 
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
@@ -225,10 +220,17 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_profile');
         }
 
+        try {
+            $exchangeRates = $this->getExchangeRates();
+        } catch (\Exception $e) {
+            $this->addFlash('danger', "Erreur de récupération des taux de change : " . $e->getMessage());
+            return $this->redirectToRoute('app_profile');
+        }
+
         if ($request->isMethod('POST')) {
             $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
-            
-            if (!array_key_exists($cryptoType, $this->exchangeRates)) {
+
+            if (!isset($exchangeRates[$cryptoType])) {
                 $this->addFlash('danger', 'Type de crypto non supporté');
                 return $this->redirectToRoute('app_profile');
             }
@@ -254,7 +256,7 @@ class PaymentController extends AbstractController
 
         return $this->render('payment/crypto_deposit.html.twig', [
             'amount' => $amount,
-            'currencies' => array_keys($this->exchangeRates)
+            'currencies' => array_keys($exchangeRates)
         ]);
     }
 
@@ -264,7 +266,7 @@ class PaymentController extends AbstractController
         // Vérification HMAC
         $hmacHeader = $request->headers->get('HMAC');
         $hmacCalculated = hash_hmac('sha512', $request->getContent(), $_ENV['COINPAYMENTS_API_SECRET']);
-        
+
         if ($hmacHeader !== $hmacCalculated) {
             return new Response('HMAC invalide', 401);
         }
@@ -323,9 +325,9 @@ class PaymentController extends AbstractController
         }
 
         $client = $this->getPayPalClient();
-        $request = new OrdersCreateRequest();
-        $request->prefer('return=representation');
-        $request->body = [
+        $paypalRequest = new OrdersCreateRequest();
+        $paypalRequest->prefer('return=representation');
+        $paypalRequest->body = [
             'intent' => 'CAPTURE',
             'purchase_units' => [[
                 'amount' => [
@@ -342,9 +344,9 @@ class PaymentController extends AbstractController
         ];
 
         try {
-            $response = $client->execute($request);
+            $response = $client->execute($paypalRequest);
             $approveUrl = null;
-            
+
             foreach ($response->result->links as $link) {
                 if ($link->rel === 'approve') {
                     $approveUrl = $link->href;
@@ -356,7 +358,7 @@ class PaymentController extends AbstractController
                 throw new \Exception('URL PayPal introuvable');
             }
 
-            $request->getSession()->set('paypal_order_id', $response->result->id);
+            $paypalRequest->getSession()->set('paypal_order_id', $response->result->id);
             return $this->redirect($approveUrl);
         } catch (\Exception $e) {
             $this->addFlash('danger', 'Erreur PayPal: ' . $e->getMessage());
@@ -375,17 +377,17 @@ class PaymentController extends AbstractController
 
         $user = $this->getUser();
         $client = $this->getPayPalClient();
-        $request = new OrdersCaptureRequest($orderId);
+        $captureRequest = new OrdersCaptureRequest($orderId);
 
         try {
-            $response = $client->execute($request);
-            
+            $response = $client->execute($captureRequest);
+
             if ($response->result->status !== 'COMPLETED') {
                 throw new \Exception('Paiement non complété');
             }
 
             $amount = (float)$response->result->purchase_units[0]->amount->value;
-            
+
             $transaction = (new Transactions())
                 ->setUser($user)
                 ->setAmount($amount)
@@ -418,7 +420,7 @@ class PaymentController extends AbstractController
     {
         $clientId = $_ENV['PAYPAL_CLIENT_ID'];
         $clientSecret = $_ENV['PAYPAL_CLIENT_SECRET'];
-        
+
         $environment = $_ENV['APP_ENV'] === 'prod'
             ? new ProductionEnvironment($clientId, $clientSecret)
             : new SandboxEnvironment($clientId, $clientSecret);

@@ -138,6 +138,8 @@ class PaymentController extends AbstractController
     private function getExchangeRates(): array
     {
         $response = $this->coinPaymentsApiCall('rates');
+        dump($response);
+        exit;
         if ($response['error'] !== 'ok') {
             throw new \Exception("Erreur lors de la récupération des taux de change");
         }

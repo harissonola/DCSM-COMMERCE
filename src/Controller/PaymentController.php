@@ -57,11 +57,6 @@ class PaymentController extends AbstractController
             // Récupération des taux de change depuis CoinPayments
             $rates = $this->getExchangeRates();
 
-            // Vérification que la devise est supportée et a un taux de change
-            if (!isset($rates[$currency]) || !isset($rates[$currency]['rate_usd']) || $rates[$currency]['rate_usd'] <= 0) {
-                throw new \Exception("Taux de change indisponible pour cette devise");
-            }
-
             // Conversion USD vers la crypto choisie
             $rate = (float)$rates[$currency]['rate_usd'];
             $amountCrypto = $amountUsd / $rate;

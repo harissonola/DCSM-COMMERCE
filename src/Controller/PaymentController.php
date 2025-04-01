@@ -56,8 +56,10 @@ class PaymentController extends AbstractController
         try {
             // Récupération des taux de change depuis CoinPayments
             $rates = $this->getExchangeRates();
-            if (!isset($rates[$currency])) {
-                throw new \Exception("Devise non supportée");
+
+            // Vérification que la devise est supportée et a un taux de change
+            if (!isset($rates[$currency]) || !isset($rates[$currency]['rate_usd']) || $rates[$currency]['rate_usd'] <= 0) {
+                throw new \Exception("Taux de change indisponible pour cette devise");
             }
 
             // Conversion USD vers la crypto choisie
@@ -66,9 +68,9 @@ class PaymentController extends AbstractController
 
             // Envoi de la demande de retrait à CoinPayments
             $params = [
-                'amount' => $amountCrypto, // Montant dans la crypto choisie
-                'currency' => $currency,   // Devise de retrait
-                'currency2' => 'USD',      // Devise source (pour conversion)
+                'amount' => $amountCrypto,
+                'currency' => $currency,
+                'currency2' => 'USD', // Indique que le montant original est en USD
                 'address' => $address,
                 'auto_confirm' => 1,
                 'ipn_url' => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
@@ -78,6 +80,7 @@ class PaymentController extends AbstractController
             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
 
             if ($response['error'] !== 'ok') {
+                // CoinPayments gère automatiquement les montants minimums et renverra une erreur si nécessaire
                 throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
             }
 
@@ -98,7 +101,7 @@ class PaymentController extends AbstractController
 
     private function getExchangeRates(): array
     {
-        $response = $this->coinPaymentsApiCall('rates');
+        $response = $this->coinPaymentsApiCall('rates', ['accepted' => 1]);
 
         if ($response['error'] !== 'ok') {
             throw new \Exception("Erreur lors de la récupération des taux de change");

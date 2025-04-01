@@ -136,15 +136,19 @@ class PaymentController extends AbstractController
      * @throws \Exception en cas d'erreur lors de l'appel API.
      */
     private function getExchangeRates(): array
-    {
-        $response = $this->coinPaymentsApiCall('rates');
-        dump($response);
-        exit;
-        if ($response['error'] !== 'ok') {
-            throw new \Exception("Erreur lors de la récupération des taux de change");
-        }
-        return $response['result'];
+{
+    $response = $this->coinPaymentsApiCall('rates');
+    
+    // Retirez ou commentez les lignes de debug :
+    // dump($response);
+    // exit;
+    
+    if ($response['error'] !== 'ok') {
+        throw new \Exception("Erreur lors de la récupération des taux de change");
     }
+    return $response['result'];
+}
+
 
 
     private function coinPaymentsApiCall(string $cmd, array $params = []): array

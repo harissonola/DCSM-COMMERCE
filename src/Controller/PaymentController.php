@@ -28,7 +28,7 @@ class PaymentController extends AbstractController
 
         $amount = (float)$request->request->get('amount');
         $currency = strtoupper(trim($request->request->get('currency')));
-        $address = trim($request->request->get('address'));
+        $address = trim($request->request->get('recipient'));
 
         // Validation de base
         if ($amount <= 0 || $amount > $user->getBalance()) {

@@ -22,7 +22,7 @@ class PaymentController extends AbstractController
     private $exchangeRates = [
         'BTC' => 82209.33,
         'ETH' => 1815.33,
-        'USDT.BEP20' => 1.00,
+        'USDT' => 1.00,
         'BUSD.BEP20' => 1.00,
         'TRX' => 0.23,
         'DOGE' => 0.17,
@@ -119,7 +119,7 @@ class PaymentController extends AbstractController
         $patterns = [
             'BTC' => '/^([13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/',
             'ETH' => '/^0x[a-fA-F0-9]{40}$/',
-            'USDT.BEP20' => '/^0x[a-fA-F0-9]{40}$/',
+            'USDT' => '/^0x[a-fA-F0-9]{40}$/',
             'BUSD.BEP20' => '/^0x[a-fA-F0-9]{40}$/',
             'TRX' => '/^T[a-zA-Z0-9]{33}$/',
             'DOGE' => '/^D[5-9a-zA-HJ-NP-Z1][^IOl]{32,34}$/',

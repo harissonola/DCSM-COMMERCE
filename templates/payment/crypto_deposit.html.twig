@@ -1,111 +1,116 @@
 {% extends 'base.html.twig' %}
 
 {% block stylesheets %}
-    {{ parent() }}
-    {# Inclusion de Select2 CSS via CDN #}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+	{{ parent() }}
+	{# Inclusion de Select2 CSS via CDN #}
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet"/>
 
-    <style>
-        /* Style de la carte du formulaire */
-        .crypto-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 2rem;
-            margin: 3rem auto;
-            max-width: 500px;
-        }
-        .crypto-card h2 {
-            color: #333;
-            margin-bottom: 1.5rem;
-        }
-        .crypto-card p {
-            color: #555;
-        }
-        /* Personnalisation du select2 */
-        .select2-container--default .select2-selection--single {
-            height: calc(2.5rem + 2px);
-            border: 1px solid #ced4da;
-            border-radius: 0.375rem;
-            padding: 0.375rem 0.75rem;
-            background: #fff;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 2.5rem;
-            color: #495057;
-        }
-        .select2-dropdown {
-            background-color: rgb(9, 68, 92);
-            color: #fff;
-        }
-        .select2-results__option {
-            color: #fff;
-        }
-        .select2-results__option--highlighted {
-            background-color: #ff7f50 !important;
-            color: #fff !important;
-        }
-        /* Responsive adjustments */
-        @media (max-width: 576px) {
-            .crypto-card {
-                padding: 1rem;
-            }
-        }
-    </style>
+	<style>
+		/* Style de la carte du formulaire */
+		.crypto-card {
+			background: rgba(255, 255, 255, 0.1);
+			border-radius: 10px;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			padding: 2rem;
+			margin: 3rem auto;
+			max-width: 500px;
+		}
+		.crypto-card h2 {
+			color: #333;
+			margin-bottom: 1.5rem;
+		}
+		.crypto-card p {
+			color: #555;
+		}
+		/* Personnalisation du select2 */
+		.select2-container--default .select2-selection--single {
+			height: calc(2.5rem + 2px);
+			border: 1px solid #ced4da;
+			border-radius: 0.375rem;
+			padding: 0.375rem 0.75rem;
+			background: #fff;
+		}
+		.select2-container--default .select2-selection--single .select2-selection__rendered {
+			line-height: 2.5rem;
+			color: #495057;
+		}
+		.select2-dropdown {
+			background-color: rgb(9, 68, 92);
+			color: #fff;
+		}
+		.select2-results__option {
+			color: #fff;
+		}
+		.select2-results__option--highlighted {
+			background-color: #ff7f50 !important;
+			color: #fff !important;
+		}
+		/* Responsive adjustments */
+		@media(max-width: 576px) {
+			.crypto-card {
+				padding: 1rem;
+			}
+		}
+	</style>
 {% endblock %}
 
-{% block title %}Dépôt Crypto{% endblock %}
+{% block title %}Dépôt Crypto
+{% endblock %}
 
 {% block body %}
-<div class="container">
-    <div class="crypto-card">
-        <h2 class="text-center text-white">Dépôt Crypto</h2>
-        <p class="text-center text-white">Montant à déposer : <strong>$ {{ amount }} USD</strong></p>
-        <form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}" data-turbo="false">
-            <div class="mb-3">
-                <label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
-                <select name="cryptoType" id="cryptoType" class="form-select" required>
-                    <option value="">Sélectionnez une crypto</option>
-                    <option value="BTC">Bitcoin (BTC)</option>
-                    <option value="ETH">Ethereum (ETH)</option>
-                    <option value="LTC">Litecoin (LTC)</option>
-                    <option value="DOGE">Dogecoin (DOGE)</option>
-                    <option value="BCH">Bitcoin Cash (BCH)</option>
-                    <option value="TRX">TRON (TRX)</option>
-                    <option value="DASH">Dash (DASH)</option>
-                    <option value="XRP">Ripple (XRP)</option>
-                    <option value="ETC">Ethereum Classic (ETC)</option>
-                    <option value="XMR">Monero (XMR)</option>
-                    <option value="ZEC">Zcash (ZEC)</option>
-                    <option value="BNB">Binance Coin (BNB)</option>
-                    <option value="ADA">Cardano (ADA)</option>
-                    <option value="EOS">EOS (EOS)</option>
-                    <option value="XLM">Stellar (XLM)</option>
-                    <option value="USDT">Tether (USDT)</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="walletAddress" class="form-label">Adresse du portefeuille</label>
-                <input type="text" name="walletAddress" id="walletAddress" class="form-control" required>
-            </div>
-            <div class="text-center">
-                <button type="submit" class="btn btn-primary px-4 py-2">Valider</button>
-            </div>
-        </form>
-    </div>
-</div>
+	<div class="container">
+		<div class="crypto-card">
+			<h2 class="text-center text-white">Dépôt Crypto</h2>
+			<p class="text-center text-white">Montant à déposer :
+				<strong>$
+					{{ amount }}
+					USD</strong>
+			</p>
+			<form method="post" action="{{ path('app_crypto_redirect', {'amount': amount}) }}" data-turbo="false">
+				<div class="mb-3">
+					<label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
+					<select name="cryptoType" id="cryptoType" class="form-select" required>
+						<option value="">Sélectionnez une crypto</option>
+						<option value="BTC">Bitcoin (BTC)</option>
+						<option value="ETH">Ethereum (ETH)</option>
+						<option value="LTC">Litecoin (LTC)</option>
+						<option value="DOGE">Dogecoin (DOGE)</option>
+						<option value="BCH">Bitcoin Cash (BCH)</option>
+						<option value="TRX">TRON (TRX)</option>
+						<option value="DASH">Dash (DASH)</option>
+						<option value="XRP">Ripple (XRP)</option>
+						<option value="ETC">Ethereum Classic (ETC)</option>
+						<option value="XMR">Monero (XMR)</option>
+						<option value="ZEC">Zcash (ZEC)</option>
+						<option value="BNB">Binance Coin (BNB)</option>
+						<option value="ADA">Cardano (ADA)</option>
+						<option value="EOS">EOS (EOS)</option>
+						<option value="XLM">Stellar (XLM)</option>
+						<option value="USDT">Tether (USDT)</option>
+						<option value="BUSD_BEP20">BUSD Token (BSC Chain) - BEP20</option>
+					</select>
+				</div>
+				<div class="mb-3">
+					<label for="walletAddress" class="form-label">Adresse du portefeuille</label>
+					<input type="text" name="walletAddress" id="walletAddress" class="form-control" required>
+				</div>
+				<div class="text-center">
+					<button type="submit" class="btn btn-primary px-4 py-2">Valider</button>
+				</div>
+			</form>
+		</div>
+	</div>
 {% endblock %}
 
-{% block customScript %}
-    {# Inclusion de Select2 JS via CDN #}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            $('#cryptoType').select2({
-                placeholder: "Sélectionnez une crypto",
-                allowClear: true,
-                width: '100%'
-            });
-        });
-    </script>
+{% block customScript %}{# Inclusion de Select2 JS via CDN #}
+	 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+	 <script>
+	        $(document).ready(function() {
+	            $('#cryptoType').select2({
+	                placeholder: "Sélectionnez une crypto",
+	                allowClear: true,
+	                width: '100%'
+	            });
+	        });
+	    </script>
 {% endblock %}

@@ -28,7 +28,7 @@ class PaymentController extends AbstractController
 
         $amount = (float)$request->request->get('amount');
         $currency = strtoupper(trim($request->request->get('currency')));
-        $address = trim($request->request->get('recipient'));
+        $address = trim($request->request->get('address'));
 
         // Validation de base
         if ($amount <= 0 || $amount > $user->getBalance()) {
@@ -70,64 +70,14 @@ class PaymentController extends AbstractController
                 throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
             }
 
-            // On ne déduit pas encore le solde - on attend la confirmation IPN
             $this->addFlash('success', 'Demande de retrait envoyée. Le traitement peut prendre quelques minutes.');
         } catch (\Exception $e) {
             $transaction->setStatus('failed');
             $em->flush();
-
             $this->addFlash('danger', "Échec de la demande de retrait : " . $e->getMessage());
         }
 
         return $this->redirectToRoute('app_profile');
-    }
-
-    #[Route('/coinpayments/withdrawal-ipn', name: 'coinpayments_withdrawal_ipn', methods: ['POST'])]
-    public function coinpaymentsWithdrawalIpn(Request $request, EntityManagerInterface $em): Response
-    {
-        // Vérification HMAC
-        $hmacHeader = $request->headers->get('HMAC');
-        $hmacCalculated = hash_hmac('sha512', $request->getContent(), $_ENV['COINPAYMENTS_API_SECRET']);
-
-        if ($hmacHeader !== $hmacCalculated) {
-            return new Response('HMAC invalide', 401);
-        }
-
-        $data = json_decode($request->getContent(), true);
-        if ($data === null) {
-            return new Response('Données invalides', 400);
-        }
-
-        $transactionId = $data['custom'] ?? null;
-        $status = (int)($data['status'] ?? 0);
-        $withdrawalId = $data['id'] ?? null;
-
-        if (!$transactionId || !$withdrawalId) {
-            return new Response('Données manquantes', 400);
-        }
-
-        // Trouver la transaction dans notre base
-        $transaction = $em->getRepository(Transactions::class)->find($transactionId);
-        if (!$transaction) {
-            return new Response('Transaction non trouvée', 404);
-        }
-
-        $user = $transaction->getUser();
-
-        // Statut >= 100 signifie succès
-        if ($status >= 100) {
-            $transaction->setStatus('completed');
-            $user->setBalance($user->getBalance() - $transaction->getAmount());
-        }
-        // Statut < 0 signifie échec
-        elseif ($status < 0) {
-            $transaction->setStatus('failed');
-        }
-
-        $transaction->setExternalId($withdrawalId);
-        $em->flush();
-
-        return new Response('OK', 200);
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]

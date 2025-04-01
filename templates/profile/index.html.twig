@@ -314,7 +314,7 @@
 <!-- Modal Retrait -->
 <div class="modal fade" id="withdrawModal" tabindex="-1">
 	<div class="modal-dialog modal-dialog-centered">
-		<form action="{{ path('app_withdraw') }}" method="post" class="modal-content">
+		<form action="{{ path('app_withdraw') }}" method="post" class="modal-content" data-turbo="false">
 			<div class="modal-header">
 				<h5 class="modal-title">📤 Retirer des fonds</h5>
 				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -330,7 +330,7 @@
 				<div class="mb-3">
 					<label>Type de crypto</label>
 
-					<select id="cryptoType" name="currency" class="form-select bg-transparent text-light" required>
+					<select id="cryptoType" name="currency" class="form-select bg-transparent text-light" required >
 						<option value="">Sélectionnez une crypto</option>
 						<option value="ADA">Cardano (ADA)</option>
 						<option value="BNB">Binance Coin (BNB)</option>

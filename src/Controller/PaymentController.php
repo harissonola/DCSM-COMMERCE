@@ -58,8 +58,8 @@ class PaymentController extends AbstractController
             // On spécifie le montant en USD et la crypto cible
             $params = [
                 'amount' => $amountUsd,       // Montant en USD
-                'currency' => $currency,          // Devise source
-                'currency2' => 'USD',     // Devise cible (crypto)
+                'currency' => $currency,   // Devise cible (crypto)      
+                'currency2' => 'USD',      // Devise source
                 'address' => $address,
                 'auto_confirm' => 1,
                 'ipn_url' => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),

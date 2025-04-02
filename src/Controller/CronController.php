@@ -72,6 +72,7 @@ class CronController extends AbstractController
         $prices = $this->em->getRepository(ProductPrice::class)
             ->findBy(['product' => $product], ['timestamp' => 'DESC'], 5);
 
+        // Utilisation du prix de base enregistré dans le produit si disponible, sinon une valeur par défaut
         $basePrice = $product->getPrice() ?? 100.00;
 
         if (empty($prices)) {
@@ -161,17 +162,20 @@ class CronController extends AbstractController
 
     private function createPriceEntry(Product $product, float $price): void
     {
+        // On s'assure que le prix est positif
         $price = max($price, 0);
 
-        $product->setPrice($price);
-
+        // Création d'une nouvelle entrée historique
         $entry = (new ProductPrice())
             ->setProduct($product)
             ->setPrice($price)
             ->setTimestamp(new \DateTimeImmutable());
 
+        // On ne touche plus au champ "price" de l'entité Product pour respecter la transparence des historiques
+        // $product->setPrice($price);
+
         $this->em->persist($entry);
-        $this->logger->info("Produit {$product->getId()} : Nouveau prix → {$price}€");
+        $this->logger->info("Produit {$product->getId()} : Nouvelle entrée de prix → {$price}€");
     }
 
     private function getGaussianRandom(float $mean = 0, float $stdDev = 1): float

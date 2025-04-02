@@ -71,23 +71,27 @@
 					<label for="cryptoType" class="form-label">Choisir une crypto-monnaie</label>
 					<select name="cryptoType" id="cryptoType" class="form-select" required>
 						<option value="">Sélectionnez une crypto</option>
-						<option value="ADA">Cardano (ADA)</option>
 						<option value="BNB">Binance Coin (BNB)</option>
-						<option value="BCH">Bitcoin Cash (BCH)</option>
-						<option value="BTC">Bitcoin (BTC)</option>
 						<option value="BUSD.BEP20">BUSD Token (BSC Chain) - BEP20</option>
+						<option value="BTC">Bitcoin (BTC)</option>
+						<option value="BCH">Bitcoin Cash (BCH)</option>
+						<option value="ADA">Cardano (ADA)</option>
 						<option value="DASH">Dash (DASH)</option>
 						<option value="DOGE">Dogecoin (DOGE)</option>
 						<option value="EOS">EOS (EOS)</option>
-						<option value="ETC">Ethereum Classic (ETC)</option>
 						<option value="ETH">Ethereum (ETH)</option>
+						<option value="ETC">Ethereum Classic (ETC)</option>
 						<option value="LTC">Litecoin (LTC)</option>
-						<option value="POL">POLYGON (POL)</option>
-						<option value="TRX">TRON (TRX)</option>
-						<option value="USDT.BEP20">USDT BEP20</option>
-						<option value="XLM">Stellar (XLM)</option>
 						<option value="XMR">Monero (XMR)</option>
+						<option value="POL">POLYGON (POL)</option>
 						<option value="XRP">Ripple (XRP)</option>
+						<option value="XLM">Stellar (XLM)</option>
+						<option value="TRX">TRON (TRX)</option>
+						<option value="USDT.BEP20">USDT (BEP20)</option>
+						<option value="USDT.ERC20">USDT (ERC20)</option>
+						<option value="USDT.MATIC">USDT (Polygon/MATIC)</option>
+						<option value="USDT.TON">USDT (TON)</option>
+						<option value="USDT.TRC20">USDT (TRC20)</option>
 						<option value="ZEC">Zcash (ZEC)</option>
 					</select>
 				</div>
@@ -106,12 +110,12 @@
 {% block customScript %}{# Inclusion de Select2 JS via CDN #}
 	 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 	 <script>
-	        $(document).ready(function() {
-	            $('#cryptoType').select2({
-	                placeholder: "Sélectionnez une crypto",
-	                allowClear: true,
-	                width: '100%'
-	            });
-	        });
-	    </script>
+		        $(document).ready(function() {
+		            $('#cryptoType').select2({
+		                placeholder: "Sélectionnez une crypto",
+		                allowClear: true,
+		                width: '100%'
+		            });
+		        });
+		    </script>
 {% endblock %}

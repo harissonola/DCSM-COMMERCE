@@ -63,6 +63,30 @@
 			color: #a50e0e;
 			background-color: #fce8e6;
 		}
+		/* Barre de boutons pour les plages de temps */
+		.time-range-buttons {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 15px;
+			padding: 0 10px;
+		}
+		.time-range-buttons button {
+			background-color: #f1f3f4;
+			color: #202124;
+			border: 1px solid #e0e0e0;
+			padding: 6px 12px;
+			border-radius: 4px;
+			cursor: pointer;
+			transition: background-color 0.3s ease;
+		}
+		.time-range-buttons button:hover {
+			background-color: #e8eaed;
+		}
+		.time-range-buttons button.active {
+			background-color: #1a73e8;
+			color: #ffffff;
+			border-color: #1a73e8;
+		}
 	</style>
 {% endblock %}
 
@@ -78,7 +102,6 @@
 					{% set previousPrice = chartData.price[chartData.price|length - 2].y ?? latestPrice %}
 					{% set priceDiff = latestPrice - previousPrice %}
 					{% set pricePercent = (priceDiff / previousPrice) * 100 %}
-
 					<div class="chart-price">${{ latestPrice|number_format(2) }}</div>
 				{% endif %}
 			</div>
@@ -87,6 +110,17 @@
 					{{ pricePercent|number_format(2) }}% ({{ priceDiff|number_format(2) }})
 				</div>
 			{% endif %}
+		</div>
+
+		<!-- Boutons pour changer la plage de temps -->
+		<div class="time-range-buttons">
+			<button class="range-btn active" data-range="1d">1J</button>
+			<button class="range-btn" data-range="5d">5J</button>
+			<button class="range-btn" data-range="1m">1M</button>
+			<button class="range-btn" data-range="ytd">YTD</button>
+			<button class="range-btn" data-range="1y">1A</button>
+			<button class="range-btn" data-range="5y">5A</button>
+			<button class="range-btn" data-range="max">MAX</button>
 		</div>
 
 		<div class="chart-container">
@@ -162,171 +196,192 @@
 
 {% block customScript %}
 	 <script>
-	document.addEventListener('turbo:load', function () {
-	    const ctx = document.getElementById('tradingChart');
-	    const loadingOverlay = document.getElementById('chartLoading');
-	    
-	    if (!ctx) return;
-	
-	    let chartInstance = null;
-	    const productSlug = '{{ prod.slug }}';
-	    let updateInterval;
-	
-	    async function updateChart() {
-	        try {
-	            loadingOverlay.style.display = 'flex';
-	            const response = await fetch(`/products/${productSlug}/dashboard/data`);
-	            if (!response.ok) throw new Error('Erreur réseau');
+	        document.addEventListener('turbo:load', function () {
+	            const ctx = document.getElementById('tradingChart');
+	            const loadingOverlay = document.getElementById('chartLoading');
 	            
-	            const newData = await response.json();
-	            
-	            if (chartInstance && newData.price.length > 0) {
-	                chartInstance.data.datasets[0].data = processData(newData.price);
-	                chartInstance.update('none');
-	                
-	                // Mettre à jour l'affichage du prix
-	                const latestPrice = newData.price[newData.price.length - 1].y;
-	                const previousPrice = newData.price[newData.price.length - 2]?.y || latestPrice;
-	                const priceDiff = latestPrice - previousPrice;
-	                const pricePercent = (priceDiff / previousPrice) * 100;
-	                
-	                document.querySelector('.chart-price').textContent = `$${latestPrice.toFixed(2)}`;
-	                const changeElement = document.querySelector('.chart-change');
-	                changeElement.textContent = `${pricePercent.toFixed(2)}% (${priceDiff.toFixed(2)})`;
-	                changeElement.className = `chart-change ${priceDiff >= 0 ? 'positive' : 'negative'}`;
-	            }
-	        } catch (error) {
-	            console.error('Erreur actualisation:', error);
-	        } finally {
-	            loadingOverlay.style.display = 'none';
-	        }
-	    }
-	
-	    function initChart(initialData) {
-	        if (chartInstance) chartInstance.destroy();
-	
-	        // Vérifier qu'on a des données
-	        if (!initialData.price || initialData.price.length === 0) {
-	            console.error("Aucune donnée disponible pour le graphique");
-	            return;
-	        }
-	
-	        chartInstance = new Chart(ctx, {
-	            type: 'line',
-	            data: {
-	                datasets: [
-	                    {
-	                        label: 'Prix',
-	                        data: processData(initialData.price),
-	                        borderColor: '#1a73e8',
-	                        borderWidth: 2,
-	                        backgroundColor: 'rgba(26, 115, 232, 0.1)',
-	                        fill: true,
-	                        tension: 0.1,
-	                        pointRadius: 0
+	            if (!ctx) return;
+	        
+	            let chartInstance = null;
+	            const productSlug = '{{ prod.slug }}';
+	            let updateInterval;
+	        
+	            // Récupération des boutons de plage de temps
+	            const rangeButtons = document.querySelectorAll('.range-btn');
+	        
+	            /**
+	             * Met à jour le graphique en fonction de la plage sélectionnée.
+	             * @param {String} range - "1d", "5d", "1m", "ytd", "1y", "5y", "max"
+	             */
+	            async function updateChart(range) {
+	                try {
+	                    loadingOverlay.style.display = 'flex';
+	                    const response = await fetch(`/products/${productSlug}/dashboard/data?range=${range}`);
+	                    if (!response.ok) throw new Error('Erreur réseau');
+	                    
+	                    const newData = await response.json();
+	                    
+	                    if (chartInstance && newData.price.length > 0) {
+	                        chartInstance.data.datasets[0].data = processData(newData.price);
+	                        chartInstance.update('none');
+	                        
+	                        // Mise à jour de l'affichage du prix
+	                        const latestPrice = newData.price[newData.price.length - 1].y;
+	                        const previousPrice = newData.price[newData.price.length - 2]?.y || latestPrice;
+	                        const priceDiff = latestPrice - previousPrice;
+	                        const pricePercent = (priceDiff / previousPrice) * 100;
+	                        
+	                        document.querySelector('.chart-price').textContent = `$${latestPrice.toFixed(2)}`;
+	                        const changeElement = document.querySelector('.chart-change');
+	                        changeElement.textContent = `${pricePercent.toFixed(2)}% (${priceDiff.toFixed(2)})`;
+	                        changeElement.className = `chart-change ${priceDiff >= 0 ? 'positive' : 'negative'}`;
 	                    }
-	                ]
-	            },
-	            options: {
-	                responsive: true,
-	                maintainAspectRatio: false,
-	                interaction: {
-	                    mode: 'nearest',
-	                    axis: 'x',
-	                    intersect: false
-	                },
-	                plugins: {
-	                    legend: {
-	                        display: false
-	                    },
-	                    tooltip: {
-	                        mode: 'nearest',
-	                        intersect: false,
-	                        backgroundColor: '#ffffff',
-	                        titleColor: '#202124',
-	                        bodyColor: '#5f6368',
-	                        borderColor: '#e0e0e0',
-	                        borderWidth: 1,
-	                        padding: 10,
-	                        displayColors: false,
-	                        callbacks: {
-	                            label: (context) => {
-	                                return `Prix: $${context.parsed.y.toFixed(2)}`;
-	                            },
-	                            title: (items) => {
-	                                return new Date(items[0].parsed.x).toLocaleString();
-	                            }
-	                        }
-	                    }
-	                },
-	                scales: {
-	                    x: {
-	                        type: 'time',
-	                        time: {
-	                            unit: 'day',
-	                            displayFormats: {
-	                                day: 'MMM d'
-	                            }
-	                        },
-	                        grid: {
-	                            display: false,
-	                            drawBorder: false
-	                        },
-	                        ticks: {
-	                            color: '#5f6368'
-	                        }
-	                    },
-	                    y: {
-	                        position: 'right',
-	                        grid: {
-	                            color: '#f1f1f1',
-	                            drawBorder: false
-	                        },
-	                        ticks: {
-	                            color: '#5f6368',
-	                            callback: (value) => `$${value}`
-	                        }
-	                    }
-	                },
-	                elements: {
-	                    line: {
-	                        tension: 0.4
-	                    }
+	                } catch (error) {
+	                    console.error('Erreur actualisation:', error);
+	                } finally {
+	                    loadingOverlay.style.display = 'none';
 	                }
 	            }
-	        });
-	
-	        updateInterval = setInterval(updateChart, 30000);
-	    }
-	
-	    function processData(rawData) {
-	        return rawData.map(item => {
-	            try {
-	                return { 
-	                    x: new Date(item.x), 
-	                    y: parseFloat(item.y) 
-	                };
-	            } catch (e) {
-	                console.warn("Donnée invalide:", item);
-	                return null;
+	        
+	            function initChart(initialData) {
+	                if (chartInstance) chartInstance.destroy();
+	        
+	                if (!initialData.price || initialData.price.length === 0) {
+	                    console.error("Aucune donnée disponible pour le graphique");
+	                    return;
+	                }
+	        
+	                chartInstance = new Chart(ctx, {
+	                    type: 'line',
+	                    data: {
+	                        datasets: [
+	                            {
+	                                label: 'Prix',
+	                                data: processData(initialData.price),
+	                                borderColor: '#1a73e8',
+	                                borderWidth: 2,
+	                                backgroundColor: 'rgba(26, 115, 232, 0.1)',
+	                                fill: true,
+	                                tension: 0.1,
+	                                pointRadius: 0
+	                            }
+	                        ]
+	                    },
+	                    options: {
+	                        responsive: true,
+	                        maintainAspectRatio: false,
+	                        interaction: {
+	                            mode: 'nearest',
+	                            axis: 'x',
+	                            intersect: false
+	                        },
+	                        plugins: {
+	                            legend: {
+	                                display: false
+	                            },
+	                            tooltip: {
+	                                mode: 'nearest',
+	                                intersect: false,
+	                                backgroundColor: '#ffffff',
+	                                titleColor: '#202124',
+	                                bodyColor: '#5f6368',
+	                                borderColor: '#e0e0e0',
+	                                borderWidth: 1,
+	                                padding: 10,
+	                                displayColors: false,
+	                                callbacks: {
+	                                    label: (context) => {
+	                                        return `Prix: $${context.parsed.y.toFixed(2)}`;
+	                                    },
+	                                    title: (items) => {
+	                                        return new Date(items[0].parsed.x).toLocaleString();
+	                                    }
+	                                }
+	                            }
+	                        },
+	                        scales: {
+	                            x: {
+	                                type: 'time',
+	                                time: {
+	                                    unit: 'day',
+	                                    displayFormats: {
+	                                        day: 'MMM d'
+	                                    }
+	                                },
+	                                grid: {
+	                                    display: false,
+	                                    drawBorder: false
+	                                },
+	                                ticks: {
+	                                    color: '#5f6368'
+	                                }
+	                            },
+	                            y: {
+	                                position: 'right',
+	                                grid: {
+	                                    color: '#f1f1f1',
+	                                    drawBorder: false
+	                                },
+	                                ticks: {
+	                                    color: '#5f6368',
+	                                    callback: (value) => `$${value}`
+	                                }
+	                            }
+	                        },
+	                        elements: {
+	                            line: {
+	                                tension: 0.4
+	                            }
+	                        }
+	                    }
+	                });
+	        
+	                // Actualiser les données toutes les 30 secondes avec la plage active
+	                updateInterval = setInterval(() => {
+	                    const activeButton = document.querySelector('.range-btn.active');
+	                    const currentRange = activeButton ? activeButton.dataset.range : '1d';
+	                    updateChart(currentRange);
+	                }, 30000);
 	            }
-	        }).filter(item => item !== null);
-	    }
-	
-	    try {
-	        const initialData = {{ chartData|json_encode|raw }};
-	        initChart(initialData);
-	    } catch (e) {
-	        console.error("Erreur initialisation:", e);
-	    }
-	
-	    document.addEventListener('turbo:before-cache', () => {
-	        if (chartInstance) {
-	            chartInstance.destroy();
-	            chartInstance = null;
-	        }
-	        clearInterval(updateInterval);
-	    });
-	});
-	</script>
+	        
+	            function processData(rawData) {
+	                return rawData.map(item => {
+	                    try {
+	                        return { 
+	                            x: new Date(item.x), 
+	                            y: parseFloat(item.y) 
+	                        };
+	                    } catch (e) {
+	                        console.warn("Donnée invalide:", item);
+	                        return null;
+	                    }
+	                }).filter(item => item !== null);
+	            }
+	        
+	            try {
+	                const initialData = {{ chartData|json_encode|raw }};
+	                initChart(initialData);
+	            } catch (e) {
+	                console.error("Erreur initialisation:", e);
+	            }
+	        
+	            // Gestion du clic sur les boutons de plage de temps
+	            rangeButtons.forEach(button => {
+	                button.addEventListener('click', () => {
+	                    rangeButtons.forEach(btn => btn.classList.remove('active'));
+	                    button.classList.add('active');
+	                    const selectedRange = button.dataset.range;
+	                    updateChart(selectedRange);
+	                });
+	            });
+	        
+	            document.addEventListener('turbo:before-cache', () => {
+	                if (chartInstance) {
+	                    chartInstance.destroy();
+	                    chartInstance = null;
+	                }
+	                clearInterval(updateInterval);
+	            });
+	        });
+	        </script>
 {% endblock %}

@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use DateTimeZone;
+use DateTime;
 
 #[Route('/products', name: 'app_products_')]
 class ProductsController extends AbstractController
@@ -65,45 +65,104 @@ class ProductsController extends AbstractController
     }
 
     /**
+     * Nouvelle action pour renvoyer les données du graphique en fonction d'une plage de temps.
+     * Exemple d'URL : /products/{slug}/dashboard/data?range=1d
+     */
+    #[Route('/{slug}/dashboard/data', name: 'dashboard_data')]
+    public function dashboardData(
+        string $slug,
+        Request $request,
+        ProductRepository $productRepository,
+        ProductPriceRepository $priceRepository
+    ): JsonResponse {
+        $product = $productRepository->findOneBy(['slug' => $slug]);
+        if (!$product) {
+            throw $this->createNotFoundException("Produit introuvable");
+        }
+
+        // Récupérer la plage de temps souhaitée via le paramètre "range"
+        $range = $request->query->get('range', '1d');
+        $startDate = null;
+
+        switch ($range) {
+            case '1d':
+                $startDate = (new \DateTime())->modify('-1 day');
+                break;
+            case '5d':
+                $startDate = (new \DateTime())->modify('-5 day');
+                break;
+            case '1m':
+                $startDate = (new \DateTime())->modify('-1 month');
+                break;
+            case 'ytd':
+                // Premier jour de l'année en cours
+                $startDate = new \DateTime('first day of January ' . date('Y'));
+                break;
+            case '1y':
+                $startDate = (new \DateTime())->modify('-1 year');
+                break;
+            case '5y':
+                $startDate = (new \DateTime())->modify('-5 year');
+                break;
+            case 'max':
+                $startDate = null;
+                break;
+            default:
+                $startDate = (new \DateTime())->modify('-1 day');
+        }
+
+        // Récupérer les prix filtrés par date si nécessaire
+        if ($startDate) {
+            $prices = $priceRepository->createQueryBuilder('pp')
+                ->andWhere('pp.product = :product')
+                ->andWhere('pp.timestamp >= :startDate')
+                ->setParameter('product', $product)
+                ->setParameter('startDate', $startDate)
+                ->orderBy('pp.timestamp', 'ASC')
+                ->getQuery()
+                ->getResult();
+        } else {
+            $prices = $priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']);
+        }
+
+        $data = ['price' => [], 'market_cap' => []];
+        $exchangeRate = 601.5;
+
+        foreach ($prices as $price) {
+            $timestamp = $price->getTimestamp()->format('c');
+            $data['price'][] = ['x' => $timestamp, 'y' => round($price->getPrice() / $exchangeRate, 2)];
+            if ($price->getMarketCap() !== null) {
+                $data['market_cap'][] = ['x' => $timestamp, 'y' => round($price->getMarketCap() / $exchangeRate, 2)];
+            }
+        }
+        return new JsonResponse($data);
+    }
+
+    /**
      * Itère sur chaque produit possédé par l'utilisateur et, si 24h se sont écoulées
      * depuis la dernière attribution pour ce produit, crédite sur son solde un pourcentage
      * de la valeur actuelle du produit (calculé à partir du dernier enregistrement dans ProductPrice).
-     *
-     * Il est nécessaire d'avoir dans l'entité User des méthodes telles que :
-     * - getProducts() qui retourne la collection des produits possédés par l'utilisateur,
-     * - getLastReferralRewardTimeForProduct(Product $product) et
-     * - setLastReferralRewardTimeForProduct(Product $product, \DateTime $date)
-     * pour gérer la date de dernière attribution par produit.
      */
     private function handleReferralRewards(EntityManagerInterface $em, User $user): void
     {
         $now = new \DateTime();
 
-        // On suppose que getProducts() retourne l'ensemble des produits possédés par l'utilisateur.
         foreach ($user->getProduct() as $product) {
-            // Récupération de la dernière date de récompense pour ce produit
             $lastRewardTime = $user->getLastReferralRewardTimeForProduct($product);
             if (!$lastRewardTime) {
-                // Si aucune récompense n'a été attribuée, on considère que la dernière attribution date de plus de 24h
                 $lastRewardTime = (clone $now)->modify('-25 hours');
             }
 
-            // Si 24h (86400 secondes) se sont écoulées depuis la dernière attribution pour ce produit
             if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) >= 86400) {
-                // Récupération de la valeur actuelle du produit via le dernier prix enregistré
                 $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
                 if (!$latestPrice) {
                     continue;
                 }
 
-                // Calcul de la récompense en fonction du taux de parrainage (ex: 0.4 pour 4%)
                 $rewardRate = $user->getReferralRewardRate();
                 $reward = $latestPrice->getPrice() * $rewardRate;
 
-                // Crédite la récompense sur le solde de l'utilisateur
                 $user->setBalance($user->getBalance() + $reward);
-
-                // Met à jour la date de dernière attribution pour ce produit
                 $user->setLastReferralRewardTimeForProduct($product, $now);
 
                 $this->addFlash('success', sprintf(
@@ -140,7 +199,6 @@ class ProductsController extends AbstractController
             $this->generateUrl('sell_product', ['slug' => $slug], UrlGeneratorInterface::ABSOLUTE_URL)
         );
     }
-
 
     #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
     public function sellProduct(
@@ -218,3 +276,4 @@ class ProductsController extends AbstractController
         ]);
     }
 }
+// src/Controller/ProductsController.php

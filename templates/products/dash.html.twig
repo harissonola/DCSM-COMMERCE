@@ -2,42 +2,63 @@
 {% block stylesheets %}
 	{{ parent() }}
 	<style>
+		/* Corps en mode sombre */
+		body {
+			background-color: #121212;
+			color: #e0e0e0;
+			font-family: 'Helvetica Neue', Arial, sans-serif;
+			transition: background-color 0.3s ease, color 0.3s ease;
+		}
+		.container-fluid {
+			padding: 20px;
+		}
+
+		/* Graphique en mode sombre */
 		#tradingChart {
-			background: #ffffff;
+			background: #1e1e1e;
 			border-radius: 8px;
 			padding: 15px;
-			transition: opacity 0.3s ease;
+			transition: opacity 0.3s ease, transform 0.3s ease;
 			cursor: crosshair;
-			border: 1px solid #e0e0e0;
+			border: 1px solid #333;
 		}
+		#tradingChart:hover {
+			transform: scale(1.01);
+		}
+
+		/* Tooltip personnalisé */
 		.chartjs-tooltip {
-			background: #ffffff !important;
-			border: 1px solid #e0e0e0;
+			background: #1e1e1e !important;
+			border: 1px solid #333;
 			border-radius: 4px;
 			pointer-events: none;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 			transition: all 0.1s ease;
-			color: #202124;
+			color: #e0e0e0;
 			padding: 8px;
 		}
+
+		/* Overlay de chargement */
 		.loading-overlay {
 			position: absolute;
 			top: 0;
 			left: 0;
 			right: 0;
 			bottom: 0;
-			background: rgba(255, 255, 255, 0.7);
+			background: rgba(30, 30, 30, 0.7);
 			display: none;
 			align-items: center;
 			justify-content: center;
-			color: #5f6368;
+			color: #e0e0e0;
 			font-size: 1.2em;
 		}
+
 		.chart-container {
 			position: relative;
 			height: 60vh;
 			margin-bottom: 20px;
 		}
+
 		.chart-header {
 			display: flex;
 			justify-content: space-between;
@@ -45,24 +66,28 @@
 			margin-bottom: 15px;
 			padding: 0 10px;
 		}
+
 		.chart-price {
 			font-size: 2rem;
 			font-weight: 500;
-			color: #202124;
+			color: #e0e0e0;
 		}
+
 		.chart-change {
 			font-size: 1rem;
 			padding: 4px 8px;
 			border-radius: 4px;
+			transition: background-color 0.3s ease, color 0.3s ease;
 		}
 		.positive {
-			color: #0d652d;
-			background-color: #e6f4ea;
+			color: #4caf50;
+			background-color: #2e7d32;
 		}
 		.negative {
-			color: #a50e0e;
-			background-color: #fce8e6;
+			color: #ef5350;
+			background-color: #c62828;
 		}
+
 		/* Barre de boutons pour les plages de temps */
 		.time-range-buttons {
 			display: flex;
@@ -71,21 +96,42 @@
 			padding: 0 10px;
 		}
 		.time-range-buttons button {
-			background-color: #f1f3f4;
-			color: #202124;
-			border: 1px solid #e0e0e0;
+			background-color: #2e2e2e;
+			color: #e0e0e0;
+			border: 1px solid #444;
 			padding: 6px 12px;
 			border-radius: 4px;
 			cursor: pointer;
 			transition: background-color 0.3s ease;
 		}
 		.time-range-buttons button:hover {
-			background-color: #e8eaed;
+			background-color: #3a3a3a;
 		}
 		.time-range-buttons button.active {
 			background-color: #1a73e8;
-			color: #ffffff;
+			color: #fff;
 			border-color: #1a73e8;
+		}
+
+		/* Cartes d'information */
+		.card {
+			background-color: #1e1e1e;
+			border: none;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+		.card:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+		}
+		.card-body {
+			padding: 15px;
+		}
+		.card-title {
+			color: #e0e0e0;
+		}
+		.card-text {
+			color: #b0b0b0;
 		}
 	</style>
 {% endblock %}
@@ -125,7 +171,7 @@
 
 		<div class="chart-container">
 			<div class="loading-overlay" id="chartLoading">
-				<div class="spinner-border text-primary" role="status">
+				<div class="spinner-border text-light" role="status">
 					<span class="visually-hidden">Chargement...</span>
 				</div>
 			</div>
@@ -282,10 +328,10 @@
 	                            tooltip: {
 	                                mode: 'nearest',
 	                                intersect: false,
-	                                backgroundColor: '#ffffff',
-	                                titleColor: '#202124',
-	                                bodyColor: '#5f6368',
-	                                borderColor: '#e0e0e0',
+	                                backgroundColor: '#1e1e1e',
+	                                titleColor: '#e0e0e0',
+	                                bodyColor: '#b0b0b0',
+	                                borderColor: '#333',
 	                                borderWidth: 1,
 	                                padding: 10,
 	                                displayColors: false,
@@ -313,17 +359,17 @@
 	                                    drawBorder: false
 	                                },
 	                                ticks: {
-	                                    color: '#5f6368'
+	                                    color: '#b0b0b0'
 	                                }
 	                            },
 	                            y: {
 	                                position: 'right',
 	                                grid: {
-	                                    color: '#f1f1f1',
+	                                    color: '#333',
 	                                    drawBorder: false
 	                                },
 	                                ticks: {
-	                                    color: '#5f6368',
+	                                    color: '#b0b0b0',
 	                                    callback: (value) => `$${value}`
 	                                }
 	                            }
@@ -359,6 +405,7 @@
 	            }
 	        
 	            try {
+	                // Données initiales (par exemple la plage "1d" par défaut)
 	                const initialData = {{ chartData|json_encode|raw }};
 	                initChart(initialData);
 	            } catch (e) {

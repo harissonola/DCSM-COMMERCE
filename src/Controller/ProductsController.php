@@ -205,7 +205,8 @@ class ProductsController extends AbstractController
         Request $request,
         ProductRepository $productRepository,
         EntityManagerInterface $em,
-        string $slug
+        string $slug,
+        \Symfony\Component\Intl\Currencies $currencies // Inject the Currencies service
     ): JsonResponse {
         if (!$request->isXmlHttpRequest()) {
             return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
@@ -222,7 +223,12 @@ class ProductsController extends AbstractController
             return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
         }
 
-        $priceUSD = $product->getPrice() / 601.56;
+        // Use the same logic as in the twig template to get the price in USD
+        $priceUSD = $product->getPrice();
+
+        // Get the currency symbol for USD
+        $currencySymbol = $currencies->getSymbol('USD');
+
         if ($user->getBalance() < $priceUSD) {
             return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
         }

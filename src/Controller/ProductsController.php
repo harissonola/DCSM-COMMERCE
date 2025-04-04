@@ -235,6 +235,7 @@ class ProductsController extends AbstractController
             $formattedPrice = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
             $priceUSD = (float) preg_replace('/[^0-9.]/', '', $formattedPrice);
 
+            dd($priceUSD);
             // Debug log pour vérifier les valeurs
             $this->logger->info('Tentative d\'achat', [
                 'balance' => $user->getBalance(),

@@ -15,7 +15,7 @@ services:
     NumberFormatter:
         class: 'NumberFormatter'
         arguments: 
-            - 'en'  # Changed from 'fr' to 'en'
+            - 'fr'  # Changed from 'fr' to 'en'
             - 1     # NumberFormatter::CURRENCY constant value is 1
         
     

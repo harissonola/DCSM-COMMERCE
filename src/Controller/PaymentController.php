@@ -172,47 +172,6 @@ class PaymentController extends AbstractController
         }
     }
 
-    #[Route('/coinpayments/deposit-ipn', name: 'coinpayments_deposit_ipn', methods: ['POST'])]
-    public function coinpaymentsDepositIpn(Request $request, EntityManagerInterface $em): Response
-    {
-        if (!$this->validateCoinpaymentsIpn($request)) {
-            return new Response('HMAC invalide', 401);
-        }
-        $data = json_decode($request->getContent(), true);
-        if ($data === null) {
-            return new Response('Données invalides', 400);
-        }
-        // Traitement seulement pour les transactions complètes (status >= 100)
-        if (($data['status'] ?? 0) >= 100) {
-            $userId = $data['custom'] ?? null;
-            $amount = (float)($data['amount1'] ?? 0); // Montant en USD
-            $txnId  = $data['txn_id'] ?? null;
-            if (!$userId || $amount <= 0 || !$txnId) {
-                return new Response('Données manquantes', 400);
-            }
-            // Vérifier si la transaction existe déjà
-            if ($em->getRepository(Transactions::class)->findOneBy(['externalId' => $txnId])) {
-                return new Response('Transaction déjà traitée', 200);
-            }
-            $user = $em->getRepository(User::class)->find($userId);
-            if (!$user) {
-                return new Response('Utilisateur non trouvé', 404);
-            }
-            $transaction = new Transactions();
-            $transaction->setUser($user)
-                ->setAmount($amount)
-                ->setMethod('crypto_deposit')
-                ->setStatus('completed')
-                ->setExternalId($txnId)
-                ->setCreatedAt(new \DateTimeImmutable());
-            $user->setBalance($user->getBalance() + $amount);
-            $em->persist($transaction);
-            $em->persist($user);
-            $em->flush();
-        }
-        return new Response('OK', 200);
-    }
-
     #[Route('/coinpayments/withdrawal-ipn', name: 'coinpayments_withdrawal_ipn', methods: ['POST'])]
     public function coinpaymentsWithdrawalIpn(Request $request, EntityManagerInterface $em): Response
     {

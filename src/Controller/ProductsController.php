@@ -230,6 +230,8 @@ class ProductsController extends AbstractController
         // Nettoyer la chaîne pour obtenir uniquement la valeur numérique
         $priceUSD = (float) preg_replace('/[^0-9.]/', '', $priceUSD);
 
+        dd($priceUSD);
+
         if ($user->getBalance() < $priceUSD) {
             return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
         }

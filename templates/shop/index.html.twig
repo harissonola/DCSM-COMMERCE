@@ -50,8 +50,12 @@
 		}
 
 		@keyframes loading {
-			0% { background-position: 200% 0; }
-			100% { background-position: -200% 0; }
+			0% {
+				background-position: 200% 0;
+			}
+			100% {
+				background-position: -200% 0;
+			}
 		}
 
 		.skeleton-box {
@@ -69,10 +73,28 @@
 			border-radius: 5px;
 		}
 
-		.skeleton-title { height: 20px; width: 60%; margin-bottom: 15px; }
-		.skeleton-subtitle { height: 15px; width: 40%; margin-bottom: 10px; }
-		.skeleton-description { height: 15px; width: 80%; margin-bottom: 20px; }
-		.btn-skeleton { width: 120px; height: 35px; background-color: #2a2a2a; border-radius: 5px; margin-top: 10px; }
+		.skeleton-title {
+			height: 20px;
+			width: 60%;
+			margin-bottom: 15px;
+		}
+		.skeleton-subtitle {
+			height: 15px;
+			width: 40%;
+			margin-bottom: 10px;
+		}
+		.skeleton-description {
+			height: 15px;
+			width: 80%;
+			margin-bottom: 20px;
+		}
+		.btn-skeleton {
+			width: 120px;
+			height: 35px;
+			background-color: #2a2a2a;
+			border-radius: 5px;
+			margin-top: 10px;
+		}
 	</style>
 
 	<section style="overflow: hidden;" class="hero align-items-center justify-content-center text-center">
@@ -104,100 +126,95 @@
 		</div>
 	</section>
 
-	<script>
-		document.addEventListener('turbo:load', function() {
-			{% if not is_granted('ROLE_ADMIN') %}
-				// Pour un utilisateur non-admin, on définit le solde (en USD) et le taux de conversion.
-				const userBalance = parseFloat('{{ app.user.balance|default(0) }}');
-				// Taux de conversion : 1 USD = 601.51 CFA
-				const conversionRate = 601.51;
-			{% endif %}
-
-			// Création d'un tableau JavaScript avec les informations des produits
-			const products = [
-				{% for prod in prods %}
-				{
-					id: {{ loop.index }},
-					name: "{{ prod.name }}",
-					price: "{{ prod.price }}", // prix en CFA
-					priceUSD: "{{ prod.price|format_currency('USD') }}", // prix converti en USD
-					slug: "{{ prod.slug }}",
-					image: "{{ prod.image }}",
-					description: "{{ prod.description }}",
-					// Pour les admins, on garde l'URL de visualisation, sinon l'URL de vente.
-					url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('app_products_sell_product', { slug: prod.slug }) }}{% endif %}"
-				},
-				{% endfor %}
-			];
-
-			// Remplacer le contenu des cartes après 1 seconde
-			setTimeout(() => {
-				products.forEach(product => {
-					const card = document.getElementById(`prod-card-${product.id}`);
-					let buttonHtml = '';
-					{% if is_granted('ROLE_ADMIN') %}
-						buttonHtml = `<a href="${product.url}" class="btn btn-primary float-end">Visualiser</a>`;
-					{% else %}
-						// Pour les non-admin, le bouton "Acheter" déclenche une requête AJAX
-						buttonHtml = `<button data-url="${product.url}" data-price="${product.price}" data-slug="${product.slug}" class="btn btn-primary float-end acheter-btn">Acheter</button>`;
-					{% endif %}
-
-					const content = `
-						<div class="prod-card card">
-							<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
-							<div class="card-body">
-								<h5 class="card-title">${product.name}</h5>
-								<h6 class="card-subtitle mb-2 text-muted">${product.priceUSD}</h6>
-								<p class="card-text">${product.description}</p>
-								${buttonHtml}
-							</div>
-						</div>
-					`;
-					card.classList.remove('skeleton');
-					card.innerHTML = content;
-				});
-
+	 <script>
+			document.addEventListener('turbo:load', function() {
 				{% if not is_granted('ROLE_ADMIN') %}
-				// Pour les utilisateurs non-admin, intercepter le clic sur le bouton "Acheter"
-				const acheterButtons = document.querySelectorAll('.acheter-btn');
-				acheterButtons.forEach(btn => {
-					btn.addEventListener('click', function(e) {
-						e.preventDefault();
-						const productUrl = this.getAttribute('data-url');
-						// Le prix est envoyé en CFA (et sera récupéré côté serveur depuis la DB)
-						const productPriceCFA = parseFloat(this.getAttribute('data-price'));
-						const productPriceUSD = productPriceCFA / conversionRate;
-						// Vérifier si le solde est suffisant (comparaison en USD)
-						if (userBalance >= productPriceUSD) {
-							// Effectuer la vente via une requête AJAX vers la route "app_sell_product"
-							fetch(productUrl, {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json',
-									'X-Requested-With': 'XMLHttpRequest'
-								},
-								body: JSON.stringify({ slug: this.getAttribute('data-slug') })
-							})
-							.then(response => response.json())
-							.then(data => {
-								if (data.success) {
-									alert("Achat réussi !");
-									// Vous pouvez ici mettre à jour l'affichage du solde ou rediriger l'utilisateur.
-								} else {
-									alert("Erreur lors de l'achat : " + data.message);
-								}
-							})
-							.catch(error => {
-								console.error('Error:', error);
-								alert("Une erreur s'est produite lors de l'achat.");
-							});
-						} else {
-							alert('Votre solde est insuffisant pour acheter ce produit.');
-						}
-					});
-				});
+					// Pour un utilisateur non-admin, on définit le solde (en USD)
+					const userBalance = parseFloat('{{ app.user.balance|default(0) }}');
 				{% endif %}
-			}, 1000);
-		});
-	</script>
+		
+				// Création d'un tableau JavaScript avec les informations des produits
+				const products = [
+					{% for prod in prods %}
+					{
+						id: {{ loop.index }},
+						name: "{{ prod.name }}",
+						// On stocke le prix formaté en USD sans le symbole $
+						priceUSD: parseFloat("{{ prod.price|format_currency('USD')|replace({'$': '', ' ': ''}) }}"),
+						displayPrice: "{{ prod.price|format_currency('USD') }}", // prix affiché
+						slug: "{{ prod.slug }}",
+						image: "{{ prod.image }}",
+						description: "{{ prod.description }}",
+						url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('app_products_sell_product', { slug: prod.slug }) }}{% endif %}"
+					},
+					{% endfor %}
+				];
+		
+				// Remplacer le contenu des cartes après 1 seconde
+				setTimeout(() => {
+					products.forEach(product => {
+						const card = document.getElementById(`prod-card-${product.id}`);
+						let buttonHtml = '';
+						{% if is_granted('ROLE_ADMIN') %}
+							buttonHtml = `<a href="${product.url}" class="btn btn-primary float-end">Visualiser</a>`;
+						{% else %}
+							buttonHtml = `<button data-url="${product.url}" data-price="${product.priceUSD}" data-slug="${product.slug}" class="btn btn-primary float-end acheter-btn">Acheter</button>`;
+						{% endif %}
+		
+						const content = `
+							<div class="prod-card card">
+								<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
+								<div class="card-body">
+									<h5 class="card-title">${product.name}</h5>
+									<h6 class="card-subtitle mb-2 text-muted">${product.displayPrice}</h6>
+									<p class="card-text">${product.description}</p>
+									${buttonHtml}
+								</div>
+							</div>
+						`;
+						card.classList.remove('skeleton');
+						card.innerHTML = content;
+					});
+		
+					{% if not is_granted('ROLE_ADMIN') %}
+					// Pour les utilisateurs non-admin, intercepter le clic sur le bouton "Acheter"
+					const acheterButtons = document.querySelectorAll('.acheter-btn');
+					acheterButtons.forEach(btn => {
+						btn.addEventListener('click', function(e) {
+							e.preventDefault();
+							const productUrl = this.getAttribute('data-url');
+							const productPrice = parseFloat(this.getAttribute('data-price'));
+							
+							// Vérifier si le solde est suffisant (comparaison directement en USD)
+							if (userBalance >= productPrice) {
+								fetch(productUrl, {
+									method: 'POST',
+									headers: {
+										'Content-Type': 'application/json',
+										'X-Requested-With': 'XMLHttpRequest'
+									},
+									body: JSON.stringify({ slug: this.getAttribute('data-slug') })
+								})
+								.then(response => response.json())
+								.then(data => {
+									if (data.success) {
+										alert("Achat réussi !");
+										window.location.reload();
+									} else {
+										alert("Erreur lors de l'achat : " + data.message);
+									}
+								})
+								.catch(error => {
+									console.error('Error:', error);
+									alert("Une erreur s'est produite lors de l'achat.");
+								});
+							} else {
+								alert('Votre solde est insuffisant pour acheter ce produit.');
+							}
+						});
+					});
+					{% endif %}
+				}, 1000);
+			});
+		</script>
 {% endblock %}

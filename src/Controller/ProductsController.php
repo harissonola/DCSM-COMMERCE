@@ -223,24 +223,33 @@ class ProductsController extends AbstractController
             return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
         }
 
-        // Créer une instance de NumberFormatter avec les mêmes paramètres que Twig
-        $formatter = new NumberFormatter('fr', NumberFormatter::CURRENCY);
-        // Formater le prix en USD comme dans le template
-        $priceUSD = $formatter->formatCurrency($product->getPrice(), 'USD');
-        // Nettoyer la chaîne pour obtenir uniquement la valeur numérique
-        $priceUSD = (float) preg_replace('/[^0-9.]/', '', $priceUSD);
+        try {
+            // Créer une instance de NumberFormatter
+            $formatter = new NumberFormatter('fr', NumberFormatter::CURRENCY);
 
-        dd($priceUSD);
+            // Obtenir le prix en CFA
+            $priceCFA = $product->getPrice();
 
-        if ($user->getBalance() < $priceUSD) {
-            return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
+            // Convertir en USD (601.51 CFA = 1 USD)
+            $priceUSD = $priceCFA / 601.51;
+
+            if ($user->getBalance() < $priceUSD) {
+                return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
+            }
+
+            $user->setBalance($user->getBalance() - $priceUSD);
+            $user->addProduct($product);
+            $em->flush();
+
+            return new JsonResponse(['success' => true, 'message' => 'Achat réussi']);
+        } catch (\Exception $e) {
+            // Log l'erreur pour le débogage
+            error_log($e->getMessage());
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Une erreur est survenue lors du traitement de l\'achat'
+            ], 500);
         }
-
-        $user->setBalance($user->getBalance() - $priceUSD);
-        $user->addProduct($product);
-        $em->flush();
-
-        return new JsonResponse(['success' => true, 'message' => 'Achat réussi']);
     }
 
     #[Route('/cinetpay-callback', name: 'cinetpay_callback')]

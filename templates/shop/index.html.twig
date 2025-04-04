@@ -166,7 +166,7 @@
 								buttonHtml = `<a href="${product.url}" class="btn btn-primary float-end">Visualiser</a>`;
 							{% else %}
 								buttonHtml = `
-									<form action="${product.url}" method="POST" style="display: inline;">
+									<form action="${product.url}" method="POST" style="display: inline;" data-turbo="false">
 										<button type="submit" class="btn btn-primary float-end">Acheter</button>
 									</form>
 								`;

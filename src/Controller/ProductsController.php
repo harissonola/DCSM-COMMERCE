@@ -208,13 +208,14 @@ class ProductsController extends AbstractController
             $this->generateUrl('sell_product', ['slug' => $slug], UrlGeneratorInterface::ABSOLUTE_URL)
         );
     }
-
+    
     #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
     public function sellProduct(
         Request $request,
         ProductRepository $productRepository,
         EntityManagerInterface $em,
-        string $slug
+        string $slug,
+        NumberFormatter $numberFormatter  // Injecter le service NumberFormatter
     ): Response {
         try {
             /** @var User $user */
@@ -230,10 +231,16 @@ class ProductsController extends AbstractController
                 return $this->redirectToRoute('app_dashboard');
             }
 
-            // Utiliser la même logique que le filtre Twig format_currency
-            $formatter = new \NumberFormatter('fr', \NumberFormatter::CURRENCY);
-            $formattedPrice = $formatter->formatCurrency($product->getPrice(), 'USD');
+            // Utiliser le service NumberFormatter injecté
+            $formattedPrice = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
             $priceUSD = (float) preg_replace('/[^0-9.]/', '', $formattedPrice);
+
+            // Debug log pour vérifier les valeurs
+            $this->logger->info('Tentative d\'achat', [
+                'balance' => $user->getBalance(),
+                'price' => $priceUSD,
+                'original_price' => $product->getPrice()
+            ]);
 
             if ($user->getBalance() < $priceUSD) {
                 $this->addFlash('error', 'Solde insuffisant');
@@ -256,7 +263,8 @@ class ProductsController extends AbstractController
             $this->logger->error('Erreur transaction produit', [
                 'user_id' => $user?->getId(),
                 'product_slug' => $slug,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             $this->addFlash('error', 'Une erreur est survenue lors du traitement de l\'achat');

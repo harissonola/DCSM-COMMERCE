@@ -12,6 +12,11 @@ services:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
 
+    Symfony\Polyfill\Intl\Icu\NumberFormatter:
+        arguments:
+            $locale: 'fr'
+            $style: 2  # CURRENCY = 2 in NumberFormatter
+
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }

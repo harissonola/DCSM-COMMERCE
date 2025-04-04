@@ -215,7 +215,7 @@ class ProductsController extends AbstractController
         ProductRepository $productRepository,
         EntityManagerInterface $em,
         string $slug,
-        NumberFormatter $numberFormatter  // Injecter le service NumberFormatter
+        NumberFormatter $numberFormatter
     ): Response {
         try {
             /** @var User $user */
@@ -231,16 +231,15 @@ class ProductsController extends AbstractController
                 return $this->redirectToRoute('app_dashboard');
             }
 
-            // Utiliser le service NumberFormatter injecté
+            // Utiliser la même logique que {{ prod.price|format_currency('USD') }}
             $formattedPrice = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
-            $priceUSD = $formattedPrice;
+            // Convertir la chaîne formatée en nombre sans le symbole $
+            $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
 
-            dd($priceUSD);
-            // Debug log pour vérifier les valeurs
             $this->logger->info('Tentative d\'achat', [
                 'balance' => $user->getBalance(),
-                'price' => $priceUSD,
-                'original_price' => $product->getPrice()
+                'price_usd' => $priceUSD,
+                'formatted_price' => $formattedPrice
             ]);
 
             if ($user->getBalance() < $priceUSD) {
@@ -252,20 +251,11 @@ class ProductsController extends AbstractController
             $user->addProduct($product);
             $em->flush();
 
-            $this->logger->info('Achat réussi', [
-                'user_id' => $user->getId(),
-                'product_slug' => $slug,
-                'price' => $priceUSD
-            ]);
-
             $this->addFlash('success', 'Achat réussi !');
             return $this->redirectToRoute('app_dashboard');
         } catch (\Throwable $e) {
             $this->logger->error('Erreur transaction produit', [
-                'user_id' => $user?->getId(),
-                'product_slug' => $slug,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
             $this->addFlash('error', 'Une erreur est survenue lors du traitement de l\'achat');

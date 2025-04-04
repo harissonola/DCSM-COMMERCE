@@ -224,14 +224,11 @@ class ProductsController extends AbstractController
         }
 
         try {
-            // Créer une instance de NumberFormatter
+            // Utiliser la même logique que le filtre Twig format_currency
             $formatter = new NumberFormatter('fr', NumberFormatter::CURRENCY);
-
-            // Obtenir le prix en CFA
-            $priceCFA = $product->getPrice();
-
-            // Convertir en USD (601.51 CFA = 1 USD)
-            $priceUSD = $priceCFA / 601.51;
+            $priceUSD = $formatter->formatCurrency($product->getPrice(), 'USD');
+            // Nettoyer la chaîne pour obtenir uniquement la valeur numérique
+            $priceUSD = (float) preg_replace('/[^0-9.]/', '', $priceUSD);
 
             if ($user->getBalance() < $priceUSD) {
                 return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
@@ -243,7 +240,6 @@ class ProductsController extends AbstractController
 
             return new JsonResponse(['success' => true, 'message' => 'Achat réussi']);
         } catch (\Exception $e) {
-            // Log l'erreur pour le débogage
             error_log($e->getMessage());
             return new JsonResponse([
                 'success' => false,

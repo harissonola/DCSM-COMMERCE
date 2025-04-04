@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use DateTime;
+use Symfony\Polyfill\Intl\Icu\NumberFormatter;
 
 #[Route('/products', name: 'app_products_')]
 class ProductsController extends AbstractController
@@ -199,8 +200,6 @@ class ProductsController extends AbstractController
             $this->generateUrl('sell_product', ['slug' => $slug], UrlGeneratorInterface::ABSOLUTE_URL)
         );
     }
-
-    use Symfony\Component\Intl\Formatter\NumberFormatter;
 
     #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
     public function sellProduct(

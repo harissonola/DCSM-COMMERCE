@@ -215,21 +215,19 @@ class ProductsController extends AbstractController
         ProductRepository $productRepository,
         EntityManagerInterface $em,
         string $slug
-    ): JsonResponse {
+    ): Response {
         try {
-            if (!$request->isXmlHttpRequest()) {
-                throw new \RuntimeException('Requête invalide');
-            }
-
             /** @var User $user */
             $user = $this->getUser();
             if (!$user) {
-                throw new \RuntimeException('Non authentifié');
+                $this->addFlash('error', 'Non authentifié');
+                return $this->redirectToRoute('app_login');
             }
 
             $product = $productRepository->findOneBy(['slug' => $slug]);
             if (!$product) {
-                throw new \RuntimeException('Produit introuvable');
+                $this->addFlash('error', 'Produit introuvable');
+                return $this->redirectToRoute('app_dashboard');
             }
 
             // Utiliser la même logique que le filtre Twig format_currency
@@ -238,7 +236,8 @@ class ProductsController extends AbstractController
             $priceUSD = (float) preg_replace('/[^0-9.]/', '', $formattedPrice);
 
             if ($user->getBalance() < $priceUSD) {
-                throw new \RuntimeException('Solde insuffisant');
+                $this->addFlash('error', 'Solde insuffisant');
+                return $this->redirectToRoute('app_dashboard');
             }
 
             $user->setBalance($user->getBalance() - $priceUSD);
@@ -251,7 +250,8 @@ class ProductsController extends AbstractController
                 'price' => $priceUSD
             ]);
 
-            return new JsonResponse(['success' => true, 'message' => 'Achat réussi']);
+            $this->addFlash('success', 'Achat réussi !');
+            return $this->redirectToRoute('app_dashboard');
         } catch (\Throwable $e) {
             $this->logger->error('Erreur transaction produit', [
                 'user_id' => $user?->getId(),
@@ -259,10 +259,8 @@ class ProductsController extends AbstractController
                 'error' => $e->getMessage()
             ]);
 
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'Une erreur est survenue lors du traitement de l\'achat'
-            ], 500);
+            $this->addFlash('error', 'Une erreur est survenue lors du traitement de l\'achat');
+            return $this->redirectToRoute('app_dashboard');
         }
     }
 

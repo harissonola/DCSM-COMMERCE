@@ -200,13 +200,15 @@ class ProductsController extends AbstractController
         );
     }
 
+    use Symfony\Component\Intl\Formatter\NumberFormatter;
+
     #[Route('/sell-product/{slug}', name: 'sell_product', methods: ['POST'])]
     public function sellProduct(
         Request $request,
         ProductRepository $productRepository,
         EntityManagerInterface $em,
         string $slug,
-        \Symfony\Component\Intl\Currencies $currencies // Inject the Currencies service
+        NumberFormatter $numberFormatter
     ): JsonResponse {
         if (!$request->isXmlHttpRequest()) {
             return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
@@ -223,11 +225,10 @@ class ProductsController extends AbstractController
             return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
         }
 
-        // Use the same logic as in the twig template to get the price in USD
-        $priceUSD = $product->getPrice();
-
-        // Get the currency symbol for USD
-        $currencySymbol = $currencies->getSymbol('USD');
+        // Convertir le prix CFA en USD en utilisant le même formatter que Twig
+        $priceUSD = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
+        // Nettoyer la chaîne formatée pour obtenir uniquement la valeur numérique
+        $priceUSD = (float) preg_replace('/[^0-9.]/', '', $priceUSD);
 
         if ($user->getBalance() < $priceUSD) {
             return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);

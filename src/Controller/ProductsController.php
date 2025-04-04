@@ -206,8 +206,7 @@ class ProductsController extends AbstractController
         Request $request,
         ProductRepository $productRepository,
         EntityManagerInterface $em,
-        string $slug,
-        NumberFormatter $numberFormatter
+        string $slug
     ): JsonResponse {
         if (!$request->isXmlHttpRequest()) {
             return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
@@ -224,9 +223,11 @@ class ProductsController extends AbstractController
             return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
         }
 
-        // Convertir le prix CFA en USD en utilisant le même formatter que Twig
-        $priceUSD = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
-        // Nettoyer la chaîne formatée pour obtenir uniquement la valeur numérique
+        // Créer une instance de NumberFormatter avec les mêmes paramètres que Twig
+        $formatter = new NumberFormatter('fr', NumberFormatter::CURRENCY);
+        // Formater le prix en USD comme dans le template
+        $priceUSD = $formatter->formatCurrency($product->getPrice(), 'USD');
+        // Nettoyer la chaîne pour obtenir uniquement la valeur numérique
         $priceUSD = (float) preg_replace('/[^0-9.]/', '', $priceUSD);
 
         if ($user->getBalance() < $priceUSD) {

@@ -15,11 +15,19 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use DateTime;
+use Psr\Log\LoggerInterface;
 use Symfony\Polyfill\Intl\Icu\NumberFormatter;
 
 #[Route('/products', name: 'app_products_')]
 class ProductsController extends AbstractController
 {
+    private LoggerInterface $logger;
+
+    public function __construct(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
     #[Route('/', name: 'index')]
     public function index(ProductRepository $productRepository): Response
     {
@@ -208,39 +216,49 @@ class ProductsController extends AbstractController
         EntityManagerInterface $em,
         string $slug
     ): JsonResponse {
-        if (!$request->isXmlHttpRequest()) {
-            return new JsonResponse(['success' => false, 'message' => 'Requête invalide'], 400);
-        }
-
-        /** @var User $user */
-        $user = $this->getUser();
-        if (!$user) {
-            return new JsonResponse(['success' => false, 'message' => 'Non authentifié'], 401);
-        }
-
-        $product = $productRepository->findOneBy(['slug' => $slug]);
-        if (!$product) {
-            return new JsonResponse(['success' => false, 'message' => 'Produit introuvable'], 404);
-        }
-
         try {
+            if (!$request->isXmlHttpRequest()) {
+                throw new \RuntimeException('Requête invalide');
+            }
+
+            /** @var User $user */
+            $user = $this->getUser();
+            if (!$user) {
+                throw new \RuntimeException('Non authentifié');
+            }
+
+            $product = $productRepository->findOneBy(['slug' => $slug]);
+            if (!$product) {
+                throw new \RuntimeException('Produit introuvable');
+            }
+
             // Utiliser la même logique que le filtre Twig format_currency
-            $formatter = new NumberFormatter('fr', NumberFormatter::CURRENCY);
-            $priceUSD = $formatter->formatCurrency($product->getPrice(), 'USD');
-            // Nettoyer la chaîne pour obtenir uniquement la valeur numérique
-            $priceUSD = (float) preg_replace('/[^0-9.]/', '', $priceUSD);
+            $formatter = new \NumberFormatter('fr', \NumberFormatter::CURRENCY);
+            $formattedPrice = $formatter->formatCurrency($product->getPrice(), 'USD');
+            $priceUSD = (float) preg_replace('/[^0-9.]/', '', $formattedPrice);
 
             if ($user->getBalance() < $priceUSD) {
-                return new JsonResponse(['success' => false, 'message' => 'Solde insuffisant'], 200);
+                throw new \RuntimeException('Solde insuffisant');
             }
 
             $user->setBalance($user->getBalance() - $priceUSD);
             $user->addProduct($product);
             $em->flush();
 
+            $this->logger->info('Achat réussi', [
+                'user_id' => $user->getId(),
+                'product_slug' => $slug,
+                'price' => $priceUSD
+            ]);
+
             return new JsonResponse(['success' => true, 'message' => 'Achat réussi']);
-        } catch (\Exception $e) {
-            error_log($e->getMessage());
+        } catch (\Throwable $e) {
+            $this->logger->error('Erreur transaction produit', [
+                'user_id' => $user?->getId(),
+                'product_slug' => $slug,
+                'error' => $e->getMessage()
+            ]);
+
             return new JsonResponse([
                 'success' => false,
                 'message' => 'Une erreur est survenue lors du traitement de l\'achat'

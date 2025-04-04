@@ -233,7 +233,7 @@ class ProductsController extends AbstractController
 
             // Utiliser le service NumberFormatter injecté
             $formattedPrice = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
-            $priceUSD = (float) $formattedPrice;
+            $priceUSD = $formattedPrice;
 
             dd($priceUSD);
             // Debug log pour vérifier les valeurs

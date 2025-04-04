@@ -126,95 +126,83 @@
 		</div>
 	</section>
 
-	 <script>
-			document.addEventListener('turbo:load', function() {
-				{% if not is_granted('ROLE_ADMIN') %}
-					// Pour un utilisateur non-admin, on définit le solde (en USD)
-					const userBalance = parseFloat('{{ app.user.balance|default(0) }}');
-				{% endif %}
-		
-				// Création d'un tableau JavaScript avec les informations des produits
-				const products = [
-					{% for prod in prods %}
-					{
-						id: {{ loop.index }},
-						name: "{{ prod.name }}",
-						// On stocke le prix formaté en USD sans le symbole $
-						priceUSD: parseFloat("{{ prod.price|format_currency('USD')|replace({'$': '', ' ': ''}) }}"),
-						displayPrice: "{{ prod.price|format_currency('USD') }}", // prix affiché
-						slug: "{{ prod.slug }}",
-						image: "{{ prod.image }}",
-						description: "{{ prod.description }}",
-						url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('app_products_sell_product', { slug: prod.slug }) }}{% endif %}"
-					},
-					{% endfor %}
-				];
-		
-				// Remplacer le contenu des cartes après 1 seconde
-				setTimeout(() => {
-					products.forEach(product => {
-						const card = document.getElementById(`prod-card-${product.id}`);
-						let buttonHtml = '';
-						{% if is_granted('ROLE_ADMIN') %}
-							buttonHtml = `<a href="${product.url}" class="btn btn-primary float-end">Visualiser</a>`;
-						{% else %}
-							buttonHtml = `<button data-url="${product.url}" data-price="${product.priceUSD}" data-slug="${product.slug}" class="btn btn-primary float-end acheter-btn">Acheter</button>`;
-						{% endif %}
-		
-						const content = `
-							<div class="prod-card card">
-								<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
-								<div class="card-body">
-									<h5 class="card-title">${product.name}</h5>
-									<h6 class="card-subtitle mb-2 text-muted">${product.displayPrice}</h6>
-									<p class="card-text">${product.description}</p>
-									${buttonHtml}
-								</div>
+	<script>
+		document.addEventListener('turbo:load', function() {
+			{% if not is_granted('ROLE_ADMIN') %}
+				const userBalance = parseFloat('{{ app.user.balance|default(0) }}');
+			{% endif %}
+	
+			const products = [
+				{% for prod in prods %}
+				{
+					id: {{ loop.index }},
+					name: "{{ prod.name }}",
+					displayPrice: "{{ prod.price|format_currency('USD') }}", // Uniquement pour l'affichage
+					slug: "{{ prod.slug }}",
+					image: "{{ prod.image }}",
+					description: "{{ prod.description }}",
+					url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('app_products_sell_product', { slug: prod.slug }) }}{% endif %}"
+				},
+				{% endfor %}
+			];
+	
+			setTimeout(() => {
+				products.forEach(product => {
+					const card = document.getElementById(`prod-card-${product.id}`);
+					let buttonHtml = '';
+					{% if is_granted('ROLE_ADMIN') %}
+						buttonHtml = `<a href="${product.url}" class="btn btn-primary float-end">Visualiser</a>`;
+					{% else %}
+						buttonHtml = `<button data-url="${product.url}" data-slug="${product.slug}" class="btn btn-primary float-end acheter-btn">Acheter</button>`;
+					{% endif %}
+	
+					const content = `
+						<div class="prod-card card">
+							<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
+							<div class="card-body">
+								<h5 class="card-title">${product.name}</h5>
+								<h6 class="card-subtitle mb-2 text-muted">${product.displayPrice}</h6>
+								<p class="card-text">${product.description}</p>
+								${buttonHtml}
 							</div>
-						`;
-						card.classList.remove('skeleton');
-						card.innerHTML = content;
-					});
-		
-					{% if not is_granted('ROLE_ADMIN') %}
-					// Pour les utilisateurs non-admin, intercepter le clic sur le bouton "Acheter"
-					const acheterButtons = document.querySelectorAll('.acheter-btn');
-					acheterButtons.forEach(btn => {
-						btn.addEventListener('click', function(e) {
-							e.preventDefault();
-							const productUrl = this.getAttribute('data-url');
-							const productPrice = parseFloat(this.getAttribute('data-price'));
-							
-							// Vérifier si le solde est suffisant (comparaison directement en USD)
-							if (userBalance >= productPrice) {
-								fetch(productUrl, {
-									method: 'POST',
-									headers: {
-										'Content-Type': 'application/json',
-										'X-Requested-With': 'XMLHttpRequest'
-									},
-									body: JSON.stringify({ slug: this.getAttribute('data-slug') })
-								})
-								.then(response => response.json())
-								.then(data => {
-									if (data.success) {
-										alert("Achat réussi !");
-										window.location.reload();
-									} else {
-										alert("Erreur lors de l'achat : " + data.message);
-									}
-								})
-								.catch(error => {
-									console.error('Error:', error);
-									alert("Une erreur s'est produite lors de l'achat.");
-								});
+						</div>
+					`;
+					card.classList.remove('skeleton');
+					card.innerHTML = content;
+				});
+	
+				{% if not is_granted('ROLE_ADMIN') %}
+				const acheterButtons = document.querySelectorAll('.acheter-btn');
+				acheterButtons.forEach(btn => {
+					btn.addEventListener('click', function(e) {
+						e.preventDefault();
+						const productUrl = this.getAttribute('data-url');
+						
+						fetch(productUrl, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								'X-Requested-With': 'XMLHttpRequest'
+							},
+							body: JSON.stringify({ slug: this.getAttribute('data-slug') })
+						})
+						.then(response => response.json())
+						.then(data => {
+							if (data.success) {
+								alert("Achat réussi !");
+								window.location.reload();
 							} else {
-								alert('Votre solde est insuffisant pour acheter ce produit.');
+								alert("Erreur lors de l'achat : " + data.message);
 							}
+						})
+						.catch(error => {
+							console.error('Error:', error);
+							alert("Une erreur s'est produite lors de l'achat.");
 						});
 					});
-					{% endif %}
-				}, 1000);
-			});
-		</script>
+				});
+				{% endif %}
+			}, 1000);
+		});
+	</script>
 {% endblock %}

@@ -171,11 +171,11 @@ class CronController extends AbstractController
             ->setPrice($price)
             ->setTimestamp(new \DateTimeImmutable());
 
-        // On ne touche plus au champ "price" de l'entité Product pour respecter la transparence des historiques
-        // $product->setPrice($price);
+        // Mise à jour du prix du produit
+        $product->setPrice($price);
 
         $this->em->persist($entry);
-        $this->logger->info("Produit {$product->getId()} : Nouvelle entrée de prix → {$price}€");
+        $this->logger->info("Produit {$product->getId()} : Nouvelle entrée de prix → {$price}");
     }
 
     private function getGaussianRandom(float $mean = 0, float $stdDev = 1): float

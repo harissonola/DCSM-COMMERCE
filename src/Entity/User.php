@@ -128,7 +128,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $referralCount = null;
 
     #[ORM\Column]
-    private float $referralRewardRate = 4;
+    private float $referralRewardRate = 0.4;
 
     #[ORM\Column(nullable: true)]
     private ?array $lastReferralRewards = null;

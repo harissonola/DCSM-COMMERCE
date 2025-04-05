@@ -131,7 +131,7 @@
               <div class="card-body">
                 <h3 class="card-title fw-bold text-white">{{ product.name }}</h3>
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                  <span class="h4 text-primary">{{ product.price|format_currency('USD') }}</span>
+                  <span class="h4 text-primary">{{ (product.price / 601.51)|format_currency('USD') }}</span>
                   <span class="badge bg-warning text-dark">4% quotidien</span>
                 </div>
                 <p class="card-text text-muted">{{ (product.description|slice(0, 100)) ~ '...' }}</p>

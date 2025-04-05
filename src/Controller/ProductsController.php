@@ -167,9 +167,16 @@ class ProductsController extends AbstractController
             ->getResult();
 
         foreach ($usersWithProducts as $user) {
-            // Vérifier si l'utilisateur a déjà reçu une récompense globale dans les dernières 24 heures
-            $lastGlobalRewardTime = $user->getLastReferralRewards(); // Méthode existante
-            if ($lastGlobalRewardTime && ($now->getTimestamp() - $lastGlobalRewardTime->getTimestamp()) < 86400) {
+            // Récupérer le tableau des dates de récompenses précédentes
+            $lastReferralRewards = $user->getLastReferralRewards() ?: [];
+            $aDejaRecu = false;
+            foreach ($lastReferralRewards as $rewardTime) {
+                if (($now->getTimestamp() - $rewardTime->getTimestamp()) < 86400) {
+                    $aDejaRecu = true;
+                    break;
+                }
+            }
+            if ($aDejaRecu) {
                 continue;
             }
 
@@ -180,7 +187,7 @@ class ProductsController extends AbstractController
                     continue;
                 }
 
-                // Conversion du prix en CFA en USD en utilisant le numberFormatter
+                // Conversion du prix en CFA en USD avec le numberFormatter
                 $priceValue = $latestPrice->getPrice(); // Prix en CFA
                 $formattedPrice = $this->numberFormatter->formatCurrency($priceValue, 'USD');
                 $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
@@ -194,9 +201,12 @@ class ProductsController extends AbstractController
             // Si une récompense a été calculée pour au moins un produit, créditer le compte
             if ($totalReward > 0) {
                 $user->setBalance($user->getBalance() + $totalReward);
-                $user->setLastReferralRewards($now); // Mise à jour de la date globale de récompense
 
-                // Ajouter le message flash seulement pour l'utilisateur actuellement connecté
+                // Ajouter la date actuelle au tableau des récompenses
+                $lastReferralRewards[] = $now;
+                $user->setLastReferralRewards($lastReferralRewards);
+
+                // Message flash pour l'utilisateur actuellement connecté
                 if ($user->getId() === $currentUser->getId()) {
                     $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
                     $this->addFlash('success', sprintf(
@@ -205,7 +215,7 @@ class ProductsController extends AbstractController
                     ));
                 }
 
-                // Journalisation de la récompense attribuée
+                // Journalisation
                 $this->logger->info('Récompense attribuée', [
                     'user_id'   => $user->getId(),
                     'reward'    => $totalReward,

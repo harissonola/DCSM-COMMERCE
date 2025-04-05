@@ -61,7 +61,7 @@
           <div class="col-md-3">
             <div class="stats-card bg-dark p-3 rounded text-center">
               <i class="fas fa-money-bill-wave text-primary mb-2 fs-4"></i>
-              <div class="stats-number fs-3 fw-bold">{{ ((app.user.balance|default(0)) * 0.04)|format_currency('USD') }}</div>
+              <div class="stats-number fs-3 fw-bold">{{ ((app.user.balance|default(0)) * app.user.referralRewardRate)|format_currency('USD') }}</div>
               <div class="stats-label text-muted">Gains quotidiens</div>
             </div>
           </div>

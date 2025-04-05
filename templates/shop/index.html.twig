@@ -153,7 +153,7 @@
 							slug: "{{ prod.slug }}",
 							image: "{{ prod.image }}",
 							description: "{{ prod.description }}",
-							userHasProduct: {% if app.user and prod.id in app.user.products|map(p => p.id) %}true{% else %}false{% endif %},
+							userHasProduct: {% if app.user and prod.id in app.user.product|map(p => p.id) %}true{% else %}false{% endif %},
 							dashboardUrl: "{{ path('app_products_dashboard', { slug: prod.slug }) }}",
 							buyUrl: "{{ path('app_products_sell_product', { slug: prod.slug }) }}"
 						},

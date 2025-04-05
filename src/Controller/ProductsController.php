@@ -21,11 +21,14 @@ use Psr\Log\LoggerInterface;
 #[Route('/products', name: 'app_products_')]
 class ProductsController extends AbstractController
 {
+    private NumberFormatter $numberFormatter;
     private LoggerInterface $logger;
 
     public function __construct(LoggerInterface $logger)
     {
+
         $this->logger = $logger;
+        $this->numberFormatter = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
     }
 
     #[Route('/', name: 'index')]
@@ -148,37 +151,64 @@ class ProductsController extends AbstractController
     }
 
     /**
-     * Itère sur chaque produit possédé par l'utilisateur et, si 24h se sont écoulées
-     * depuis la dernière attribution pour ce produit, crédite sur son solde un pourcentage
-     * de la valeur actuelle du produit (calculé à partir du dernier enregistrement dans ProductPrice).
+     * Attribue des récompenses à tous les utilisateurs qui possèdent au moins un produit,
+     * qu'ils soient connectés ou non, si 24 heures se sont écoulées depuis la dernière attribution.
      */
-    private function handleReferralRewards(EntityManagerInterface $em, User $user): void
+    private function handleReferralRewards(EntityManagerInterface $em, User $currentUser): void
     {
         $now = new \DateTime();
 
-        foreach ($user->getProduct() as $product) {
-            $lastRewardTime = $user->getLastReferralRewardTimeForProduct($product);
-            if (!$lastRewardTime) {
-                $lastRewardTime = (clone $now)->modify('-25 hours');
-            }
+        // Récupérer tous les utilisateurs qui possèdent au moins un produit
+        $userRepository = $em->getRepository(User::class);
+        $usersWithProducts = $userRepository->createQueryBuilder('u')
+            ->join('u.products', 'p')
+            ->distinct()
+            ->getQuery()
+            ->getResult();
 
-            if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) >= 86400) {
-                $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
-                if (!$latestPrice) {
-                    continue;
+        foreach ($usersWithProducts as $user) {
+            foreach ($user->getProduct() as $product) {
+                $lastRewardTime = $user->getLastReferralRewardTimeForProduct($product);
+                if (!$lastRewardTime) {
+                    $lastRewardTime = (clone $now)->modify('-25 hours');
                 }
 
-                $rewardRate = $user->getReferralRewardRate();
-                $reward = $latestPrice->getPrice() * $rewardRate;
+                if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) >= 86400) {
+                    $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
+                    if (!$latestPrice) {
+                        continue;
+                    }
 
-                $user->setBalance($user->getBalance() + $reward);
-                $user->setLastReferralRewardTimeForProduct($product, $now);
+                    // Conversion du prix en CFA en USD en utilisant le numberFormatter
+                    $priceValue = $latestPrice->getPrice(); // Prix en CFA
+                    $formattedPrice = $this->numberFormatter->formatCurrency($priceValue, 'USD');
+                    $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
 
-                $this->addFlash('success', sprintf(
-                    'Vous avez reçu %.2f USD de récompense sur le produit %s !',
-                    $reward,
-                    $product->getSlug()
-                ));
+                    $rewardRate = $user->getReferralRewardRate();
+                    // Calcul de la récompense en USD en appliquant le pourcentage
+                    $reward = $priceUSD * ($rewardRate / 100);
+
+                    $user->setBalance($user->getBalance() + $reward);
+                    $user->setLastReferralRewardTimeForProduct($product, $now);
+
+                    // Ajouter le message flash seulement pour l'utilisateur actuellement connecté
+                    if ($user->getId() === $currentUser->getId()) {
+                        $formattedReward = $this->numberFormatter->formatCurrency($reward, 'USD');
+                        $this->addFlash('success', sprintf(
+                            'Vous avez reçu %s de récompense sur le produit %s !',
+                            $formattedReward,
+                            $product->getSlug()
+                        ));
+                    }
+
+                    // Journal pour le suivi des récompenses attribuées
+                    $this->logger->info('Récompense attribuée', [
+                        'user_id'   => $user->getId(),
+                        'product'   => $product->getSlug(),
+                        'reward'    => $reward,
+                        'timestamp' => $now->format('Y-m-d H:i:s')
+                    ]);
+                }
             }
         }
 

@@ -156,7 +156,7 @@ class ProductsController extends AbstractController
      */
     private function handleReferralRewards(EntityManagerInterface $em, User $currentUser): void
     {
-        $now = new \DateTime();
+        $now = new \DateTimeImmutable();
 
         // Récupérer tous les utilisateurs qui possèdent au moins un produit
         $userRepository = $em->getRepository(User::class);
@@ -167,21 +167,13 @@ class ProductsController extends AbstractController
             ->getResult();
 
         foreach ($usersWithProducts as $user) {
-            // Récupérer les dates de récompenses précédentes
-            $lastReferralRewards = $user->getLastReferralRewards() ?: [];
+            $lastRewardTime = $user->getLastReferralRewardAt();
 
-            $aDejaRecu = false;
-            foreach ($lastReferralRewards as $rewardTime) {
-                if ($rewardTime instanceof \DateTimeInterface) {
-                    if (($now->getTimestamp() - $rewardTime->getTimestamp()) < 86400) {
-                        $aDejaRecu = true;
-                        break;
-                    }
+            if ($lastRewardTime instanceof \DateTimeImmutable) {
+                // Vérifie si moins de 24h se sont écoulées depuis la dernière récompense
+                if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) < 86400) {
+                    continue;
                 }
-            }
-
-            if ($aDejaRecu) {
-                continue;
             }
 
             $totalReward = 0;
@@ -204,9 +196,8 @@ class ProductsController extends AbstractController
             if ($totalReward > 0) {
                 $user->setBalance($user->getBalance() + $totalReward);
 
-                // Ajouter la date actuelle au tableau des récompenses
-                $lastReferralRewards[] = $now;
-                $user->setLastReferralRewards($lastReferralRewards);
+                // Met à jour la date de la dernière récompense
+                $user->setLastReferralRewardAt($now);
 
                 // Message flash si c'est l'utilisateur actuel
                 if ($user->getId() === $currentUser->getId()) {
@@ -228,7 +219,6 @@ class ProductsController extends AbstractController
 
         $em->flush();
     }
-
 
     private function generateChartData(Product $product, ProductPriceRepository $priceRepository): array
     {

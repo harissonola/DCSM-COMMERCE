@@ -133,6 +133,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?array $lastReferralRewards = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastReferralRewardAt = null;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -575,6 +578,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // Stocke la date au format ISO 8601 (par exemple)
         $lastReferralRewards[$product->getId()] = $date->format('c');
         $this->setLastReferralRewards($lastReferralRewards);
+
+        return $this;
+    }
+
+    public function getLastReferralRewardAt(): ?\DateTimeImmutable
+    {
+        return $this->lastReferralRewardAt;
+    }
+
+    public function setLastReferralRewardAt(?\DateTimeImmutable $lastReferralRewardAt): static
+    {
+        $this->lastReferralRewardAt = $lastReferralRewardAt;
 
         return $this;
     }

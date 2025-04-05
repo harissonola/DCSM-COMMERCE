@@ -112,7 +112,7 @@ class PaymentController extends AbstractController
 
     /**
      * Route de dépôt en crypto.
-     * - En GET : Affiche le formulaire (template crypto_deposit.html.twig) avec le montant.
+     * - En GET : Affiche le formulaire avec le montant.
      * - En POST : Traite le formulaire, crée une transaction en statut "pending"
      *           et redirige l'utilisateur vers l'URL de paiement renvoyée par CoinPayments.
      */
@@ -157,7 +157,7 @@ class PaymentController extends AbstractController
             'currency2'   => $cryptoType, // Crypto sélectionnée
             'buyer_email' => $user->getEmail(),
             'item_name'   => 'Dépôt sur ' . $this->getParameter('app.site_name'),
-            'ipn_url'     => $this->generateUrl('coinpayments_deposit_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'ipn_url'     => $this->generateUrl('app_payment_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'success_url' => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'cancel_url'  => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'custom'      => $transaction->getId(),
@@ -175,44 +175,39 @@ class PaymentController extends AbstractController
         }
     }
 
-    #[Route('/coinpayments/deposit-ipn', name: 'coinpayments_deposit_ipn')]
-    public function coinpaymentsDepositIpn(Request $request, EntityManagerInterface $em): Response
+    /**
+     * Méthode dédiée à la réception des notifications IPN de CoinPayments.
+     * Les données reçues sont loguées pour vérification.
+     * En cas de succès (status >= 100), le solde de l'utilisateur est crédité.
+     */
+    #[Route('/payment/ipn-handler', name: 'app_payment_ipn', methods: ['POST'])]
+    public function handleIpn(Request $request, EntityManagerInterface $em): Response
     {
-        if (!$this->validateCoinpaymentsIpn($request)) {
-            return new Response('HMAC invalide', 401);
+        $ipnData = $request->request->all();
+
+        // Logger les données IPN pour débogage
+        file_put_contents(__DIR__.'/../../var/log/ipn.log', print_r($ipnData, true), FILE_APPEND);
+
+        // Vérifier que les données nécessaires sont présentes et que la transaction est complétée (status >= 100)
+        if (
+            isset($ipnData['status']) && (int)$ipnData['status'] >= 100 &&
+            isset($ipnData['txn_id']) &&
+            isset($ipnData['amount1']) &&
+            isset($ipnData['custom'])
+        ) {
+            $txnId  = $ipnData['txn_id'];
+            $amount = (float)$ipnData['amount1'];
+            $userId = (int)$ipnData['custom']; // On suppose que l'ID utilisateur a été passé dans "custom"
+
+            $user = $em->getRepository(User::class)->find($userId);
+            if ($user) {
+                // Créditer le compte de l'utilisateur
+                $user->setBalance($user->getBalance() + $amount);
+                $em->flush();
+            }
         }
 
-        $data = json_decode($request->getContent(), true);
-        if ($data === null) {
-            return new Response('Données invalides', 400);
-        }
-
-        $transactionId = $data['custom'] ?? null;
-        $status = (int)($data['status'] ?? 0);
-
-        if (!$transactionId) {
-            return new Response('Données manquantes', 400);
-        }
-
-        $transaction = $em->getRepository(Transactions::class)->find($transactionId);
-        if (!$transaction) {
-            return new Response('Transaction non trouvée', 404);
-        }
-
-        $user = $transaction->getUser();
-
-        // Si le paiement est complété (status >= 100 pour CoinPayments)
-        if ($status >= 100) {
-            $transaction->setStatus('completed');
-            // Crédit du compte utilisateur
-            $user->setBalance($user->getBalance() + $transaction->getAmount()); // ✅ Add this line
-            $em->flush();
-        } elseif ($status < 0) {
-            $transaction->setStatus('failed');
-            $em->flush();
-        }
-
-        return new Response('OK');
+        return new Response('IPN handled', 200);
     }
 
     #[Route('/paypal/redirect', name: 'app_paypal_redirect')]
@@ -308,13 +303,6 @@ class PaymentController extends AbstractController
         return $this->redirectToRoute('app_profile');
     }
 
-    private function validateCoinpaymentsIpn(Request $request): bool
-    {
-        $hmacHeader = $request->headers->get('HMAC');
-        $hmacCalculated = hash_hmac('sha512', $request->getContent(), $_ENV['COINPAYMENTS_API_SECRET']);
-        return $hmacHeader === $hmacCalculated;
-    }
-
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
@@ -363,6 +351,7 @@ class PaymentController extends AbstractController
     {
         return false;
     }
+
     private function processMobileMoney(User $user, float $amount): bool
     {
         return false;

@@ -167,48 +167,50 @@ class ProductsController extends AbstractController
             ->getResult();
 
         foreach ($usersWithProducts as $user) {
+            // Vérifier si l'utilisateur a déjà reçu une récompense globale dans les dernières 24 heures
+            $lastGlobalRewardTime = $user->getLastReferralRewardTime(); // méthode à créer ou déjà existante dans User
+            if ($lastGlobalRewardTime && ($now->getTimestamp() - $lastGlobalRewardTime->getTimestamp()) < 86400) {
+                continue;
+            }
+
+            $totalReward = 0;
             foreach ($user->getProduct() as $product) {
-                $lastRewardTime = $user->getLastReferralRewardTimeForProduct($product);
-                if (!$lastRewardTime) {
-                    $lastRewardTime = (clone $now)->modify('-25 hours');
+                $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
+                if (!$latestPrice) {
+                    continue;
                 }
 
-                if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) >= 86400) {
-                    $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
-                    if (!$latestPrice) {
-                        continue;
-                    }
+                // Conversion du prix en CFA en USD en utilisant le numberFormatter
+                $priceValue = $latestPrice->getPrice(); // Prix en CFA
+                $formattedPrice = $this->numberFormatter->formatCurrency($priceValue, 'USD');
+                $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
 
-                    // Conversion du prix en CFA en USD en utilisant le numberFormatter
-                    $priceValue = $latestPrice->getPrice(); // Prix en CFA
-                    $formattedPrice = $this->numberFormatter->formatCurrency($priceValue, 'USD');
-                    $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
+                $rewardRate = $user->getReferralRewardRate();
+                // Calcul de la récompense en USD en appliquant le pourcentage
+                $reward = $priceUSD * ($rewardRate / 100);
+                $totalReward += $reward;
+            }
 
-                    $rewardRate = $user->getReferralRewardRate();
-                    // Calcul de la récompense en USD en appliquant le pourcentage
-                    $reward = $priceUSD * ($rewardRate / 100);
+            // Si une récompense a été calculée pour au moins un produit, créditer le compte
+            if ($totalReward > 0) {
+                $user->setBalance($user->getBalance() + $totalReward);
+                $user->setLastReferralRewardTime($now); // mise à jour de la date globale de récompense
 
-                    $user->setBalance($user->getBalance() + $reward);
-                    $user->setLastReferralRewardTimeForProduct($product, $now);
-
-                    // Ajouter le message flash seulement pour l'utilisateur actuellement connecté
-                    if ($user->getId() === $currentUser->getId()) {
-                        $formattedReward = $this->numberFormatter->formatCurrency($reward, 'USD');
-                        $this->addFlash('success', sprintf(
-                            'Vous avez reçu %s de récompense sur le produit %s !',
-                            $formattedReward,
-                            $product->getSlug()
-                        ));
-                    }
-
-                    // Journal pour le suivi des récompenses attribuées
-                    $this->logger->info('Récompense attribuée', [
-                        'user_id'   => $user->getId(),
-                        'product'   => $product->getSlug(),
-                        'reward'    => $reward,
-                        'timestamp' => $now->format('Y-m-d H:i:s')
-                    ]);
+                // Ajouter le message flash seulement pour l'utilisateur actuellement connecté
+                if ($user->getId() === $currentUser->getId()) {
+                    $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
+                    $this->addFlash('success', sprintf(
+                        'Vous avez reçu %s de récompense pour vos produits !',
+                        $formattedReward
+                    ));
                 }
+
+                // Journalisation de la récompense attribuée
+                $this->logger->info('Récompense attribuée', [
+                    'user_id'   => $user->getId(),
+                    'reward'    => $totalReward,
+                    'timestamp' => $now->format('Y-m-d H:i:s')
+                ]);
             }
         }
 

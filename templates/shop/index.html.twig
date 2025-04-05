@@ -169,7 +169,7 @@
 								buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
 							{% else %}
 								if (product.userHasProduct) {
-									buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-success float-end">Gérer mon produit</a>`;
+									buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
 								} else {
 									buttonHtml = `
 										<form action="${product.buyUrl}" method="POST" style="display: inline;" data-turbo="false">

@@ -167,15 +167,19 @@ class ProductsController extends AbstractController
             ->getResult();
 
         foreach ($usersWithProducts as $user) {
-            // Récupérer le tableau des dates de récompenses précédentes
+            // Récupérer les dates de récompenses précédentes
             $lastReferralRewards = $user->getLastReferralRewards() ?: [];
+
             $aDejaRecu = false;
             foreach ($lastReferralRewards as $rewardTime) {
-                if (($now->getTimestamp() - $rewardTime->getTimestamp()) < 86400) {
-                    $aDejaRecu = true;
-                    break;
+                if ($rewardTime instanceof \DateTimeInterface) {
+                    if (($now->getTimestamp() - $rewardTime->getTimestamp()) < 86400) {
+                        $aDejaRecu = true;
+                        break;
+                    }
                 }
             }
+
             if ($aDejaRecu) {
                 continue;
             }
@@ -187,18 +191,16 @@ class ProductsController extends AbstractController
                     continue;
                 }
 
-                // Conversion du prix en CFA en USD avec le numberFormatter
+                // Conversion du prix en CFA en USD via numberFormatter
                 $priceValue = $latestPrice->getPrice(); // Prix en CFA
                 $formattedPrice = $this->numberFormatter->formatCurrency($priceValue, 'USD');
                 $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
 
                 $rewardRate = $user->getReferralRewardRate();
-                // Calcul de la récompense en USD en appliquant le pourcentage
                 $reward = $priceUSD * ($rewardRate / 100);
                 $totalReward += $reward;
             }
 
-            // Si une récompense a été calculée pour au moins un produit, créditer le compte
             if ($totalReward > 0) {
                 $user->setBalance($user->getBalance() + $totalReward);
 
@@ -206,7 +208,7 @@ class ProductsController extends AbstractController
                 $lastReferralRewards[] = $now;
                 $user->setLastReferralRewards($lastReferralRewards);
 
-                // Message flash pour l'utilisateur actuellement connecté
+                // Message flash si c'est l'utilisateur actuel
                 if ($user->getId() === $currentUser->getId()) {
                     $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
                     $this->addFlash('success', sprintf(
@@ -226,6 +228,7 @@ class ProductsController extends AbstractController
 
         $em->flush();
     }
+
 
     private function generateChartData(Product $product, ProductPriceRepository $priceRepository): array
     {

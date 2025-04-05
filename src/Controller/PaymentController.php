@@ -172,36 +172,44 @@ class PaymentController extends AbstractController
         }
     }
 
-    #[Route('/coinpayments/withdrawal-ipn', name: 'coinpayments_withdrawal_ipn', methods: ['POST'])]
-    public function coinpaymentsWithdrawalIpn(Request $request, EntityManagerInterface $em): Response
+    #[Route('/coinpayments/deposit-ipn', name: 'coinpayments_deposit_ipn', methods: ['POST'])]
+    public function coinpaymentsDepositIpn(Request $request, EntityManagerInterface $em): Response
     {
         if (!$this->validateCoinpaymentsIpn($request)) {
             return new Response('HMAC invalide', 401);
         }
+
         $data = json_decode($request->getContent(), true);
         if ($data === null) {
             return new Response('Données invalides', 400);
         }
+
         $transactionId = $data['custom'] ?? null;
         $status = (int)($data['status'] ?? 0);
-        $withdrawalId = $data['id'] ?? null;
-        if (!$transactionId || !$withdrawalId) {
+
+        if (!$transactionId) {
             return new Response('Données manquantes', 400);
         }
+
         $transaction = $em->getRepository(Transactions::class)->find($transactionId);
         if (!$transaction) {
             return new Response('Transaction non trouvée', 404);
         }
+
         $user = $transaction->getUser();
+
+        // Si le paiement est complété (status >= 100 pour CoinPayments)
         if ($status >= 100) {
             $transaction->setStatus('completed');
-            $user->setBalance($user->getBalance() - $transaction->getAmount());
+            // Crédit du compte utilisateur
+            $user->setBalance($user->getBalance() + $transaction->getAmount()); // ✅ Add this line
+            $em->flush();
         } elseif ($status < 0) {
             $transaction->setStatus('failed');
+            $em->flush();
         }
-        $transaction->setExternalId($withdrawalId);
-        $em->flush();
-        return new Response('OK', 200);
+
+        return new Response('OK');
     }
 
     #[Route('/paypal/redirect', name: 'app_paypal_redirect')]

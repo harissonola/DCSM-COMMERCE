@@ -172,7 +172,7 @@ class PaymentController extends AbstractController
         }
     }
 
-    #[Route('/coinpayments/deposit-ipn', name: 'coinpayments_deposit_ipn', methods: ['POST'])]
+    #[Route('/coinpayments/deposit-ipn', name: 'coinpayments_deposit_ipn')]
     public function coinpaymentsDepositIpn(Request $request, EntityManagerInterface $em): Response
     {
         if (!$this->validateCoinpaymentsIpn($request)) {

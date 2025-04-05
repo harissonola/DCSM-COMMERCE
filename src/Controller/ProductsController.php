@@ -168,7 +168,7 @@ class ProductsController extends AbstractController
 
         foreach ($usersWithProducts as $user) {
             // Vérifier si l'utilisateur a déjà reçu une récompense globale dans les dernières 24 heures
-            $lastGlobalRewardTime = $user->getLastReferralRewardTime(); // méthode à créer ou déjà existante dans User
+            $lastGlobalRewardTime = $user->getLastReferralRewards(); // Méthode existante
             if ($lastGlobalRewardTime && ($now->getTimestamp() - $lastGlobalRewardTime->getTimestamp()) < 86400) {
                 continue;
             }
@@ -194,7 +194,7 @@ class ProductsController extends AbstractController
             // Si une récompense a été calculée pour au moins un produit, créditer le compte
             if ($totalReward > 0) {
                 $user->setBalance($user->getBalance() + $totalReward);
-                $user->setLastReferralRewardTime($now); // mise à jour de la date globale de récompense
+                $user->setLastReferralRewards($now); // Mise à jour de la date globale de récompense
 
                 // Ajouter le message flash seulement pour l'utilisateur actuellement connecté
                 if ($user->getId() === $currentUser->getId()) {
@@ -216,6 +216,7 @@ class ProductsController extends AbstractController
 
         $em->flush();
     }
+
 
     private function generateChartData(Product $product, ProductPriceRepository $priceRepository): array
     {

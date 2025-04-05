@@ -153,7 +153,9 @@
 							slug: "{{ prod.slug }}",
 							image: "{{ prod.image }}",
 							description: "{{ prod.description }}",
-							url: "{% if is_granted('ROLE_ADMIN') %}{{ path('app_products_dashboard', { slug: prod.slug }) }}{% else %}{{ path('app_products_sell_product', { slug: prod.slug }) }}{% endif %}"
+							userHasProduct: {% if app.user and prod.id in app.user.products|map(p => p.id) %}true{% else %}false{% endif %},
+							dashboardUrl: "{{ path('app_products_dashboard', { slug: prod.slug }) }}",
+							buyUrl: "{{ path('app_products_sell_product', { slug: prod.slug }) }}"
 						},
 						{% endfor %}
 					];
@@ -162,14 +164,19 @@
 						products.forEach(product => {
 							const card = document.getElementById(`prod-card-${product.id}`);
 							let buttonHtml = '';
+							
 							{% if is_granted('ROLE_ADMIN') %}
-								buttonHtml = `<a href="${product.url}" class="btn btn-primary float-end">Visualiser</a>`;
+								buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
 							{% else %}
-								buttonHtml = `
-									<form action="${product.url}" method="POST" style="display: inline;" data-turbo="false">
-										<button type="submit" class="btn btn-primary float-end">Acheter</button>
-									</form>
-								`;
+								if (product.userHasProduct) {
+									buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-success float-end">Gérer mon produit</a>`;
+								} else {
+									buttonHtml = `
+										<form action="${product.buyUrl}" method="POST" style="display: inline;" data-turbo="false">
+											<button type="submit" class="btn btn-primary float-end">Acheter</button>
+										</form>
+									`;
+								}
 							{% endif %}
 		
 							const content = `

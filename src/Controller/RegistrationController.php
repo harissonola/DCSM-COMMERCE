@@ -355,14 +355,14 @@ class RegistrationController extends AbstractController
     {
         $count = $referrer->getReferralCount();
         if ($count >= 40) {
-            $referrer->setReferralRewardRate(13.0)
+            $referrer->setReferralRewardRate(0.13)
                 ->setBalance($referrer->getBalance() + 10);
         } elseif ($count >= 20) {
-            $referrer->setReferralRewardRate(10.0);
+            $referrer->setReferralRewardRate(0.10);
         } elseif ($count >= 10) {
-            $referrer->setReferralRewardRate(7.0);
+            $referrer->setReferralRewardRate(0.7);
         } elseif ($count >= 5) {
-            $referrer->setReferralRewardRate(6.0);
+            $referrer->setReferralRewardRate(0.6);
         }
         $entityManager->persist($referrer);
         $entityManager->flush();

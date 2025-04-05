@@ -227,7 +227,6 @@ class ProductsController extends AbstractController
         $em->flush();
     }
 
-
     private function generateChartData(Product $product, ProductPriceRepository $priceRepository): array
     {
         $data = ['price' => [], 'market_cap' => []];

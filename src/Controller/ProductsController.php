@@ -161,7 +161,7 @@ class ProductsController extends AbstractController
         // Récupérer tous les utilisateurs qui possèdent au moins un produit
         $userRepository = $em->getRepository(User::class);
         $usersWithProducts = $userRepository->createQueryBuilder('u')
-            ->join('u.products', 'p')
+            ->join('u.product', 'p')
             ->distinct()
             ->getQuery()
             ->getResult();

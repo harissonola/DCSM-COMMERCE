@@ -158,7 +158,7 @@ class ProductsController extends AbstractController
     {
         $now = new \DateTimeImmutable();
 
-        // Récupérer tous les utilisateurs qui possèdent au moins un produit
+        // Récupérer tous les utilisateurs possédant au moins un produit
         $userRepository = $em->getRepository(User::class);
         $usersWithProducts = $userRepository->createQueryBuilder('u')
             ->join('u.product', 'p')
@@ -169,37 +169,39 @@ class ProductsController extends AbstractController
         foreach ($usersWithProducts as $user) {
             $lastRewardTime = $user->getLastReferralRewardAt();
 
-            if ($lastRewardTime instanceof \DateTimeImmutable) {
-                // Vérifie si moins de 24h se sont écoulées depuis la dernière récompense
-                if (($now->getTimestamp() - $lastRewardTime->getTimestamp()) < 86400) {
-                    continue;
-                }
+            // Si moins de 24h se sont écoulées depuis la dernière récompense, on passe au suivant
+            if (
+                $lastRewardTime instanceof \DateTimeImmutable &&
+                (($now->getTimestamp() - $lastRewardTime->getTimestamp()) < 86400)
+            ) {
+                continue;
             }
 
             $totalReward = 0;
             foreach ($user->getProduct() as $product) {
+                // Récupère le dernier prix du produit
                 $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
                 if (!$latestPrice) {
                     continue;
                 }
 
-                // Conversion du prix en CFA en USD via numberFormatter
-                $priceValue = $latestPrice->getPrice(); // Prix en CFA
-                $formattedPrice = $this->numberFormatter->formatCurrency($priceValue, 'USD');
-                $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
+                // Conversion du prix de CFA en USD en divisant par 601.50
+                $priceCFA = $latestPrice->getPrice();
+                $priceUSD = $priceCFA / 601.50;
 
+                // Calcul de la récompense basée sur le pourcentage referralRewardRate
                 $rewardRate = $user->getReferralRewardRate();
                 $reward = $priceUSD * ($rewardRate / 100);
                 $totalReward += $reward;
             }
 
             if ($totalReward > 0) {
+                // Mise à jour du solde de l'utilisateur
                 $user->setBalance($user->getBalance() + $totalReward);
-
-                // Met à jour la date de la dernière récompense
+                // Mise à jour de la date de la dernière récompense
                 $user->setLastReferralRewardAt($now);
 
-                // Message flash si c'est l'utilisateur actuel
+                // Affichage d'un message flash pour l'utilisateur actuel
                 if ($user->getId() === $currentUser->getId()) {
                     $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
                     $this->addFlash('success', sprintf(
@@ -208,7 +210,7 @@ class ProductsController extends AbstractController
                     ));
                 }
 
-                // Journalisation
+                // Journalisation de l'attribution de récompense
                 $this->logger->info('Récompense attribuée', [
                     'user_id'   => $user->getId(),
                     'reward'    => $totalReward,

@@ -302,13 +302,13 @@
 </div>
 
 <!-- Modal Parrainage -->
-<div
-	class="profile-header">
+<div class="profile-header">
 	{# On récupère le nombre de personnes parrainées, par exemple via une propriété ou une méthode de l'utilisateur #}
-	{% set referrals = app.user.referralsCount|default(0) %}
+	{# Récupération du nombre de personnes parrainées #}
+	{% set referrals = app.user.referralCount|default(0) %}
 
 	{# Définition des paliers et récompenses #}
-	{% if referrals < 5 %}
+		{% if referrals < 5 %}
 		{% set required = 5 %}
 		{% set reward = 6 %}
 		{% set level = 1 %}
@@ -327,7 +327,10 @@
 	{% endif %}
 
 	{# Calcul du pourcentage de progression dans le niveau actuel #}
-	{% set progress = (referrals / required * 100)|min(100) %}
+	{% set progress = referrals / required * 100 %}
+	{% if progress > 100 %}
+		{% set progress = 100 %}
+	{% endif %}
 
 	<div class="mb-4">
 		<h6>Niveau

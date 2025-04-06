@@ -269,7 +269,7 @@ class ProductsController extends AbstractController
             }
 
             // Utiliser la même logique que {{ prod.price|format_currency('USD') }}
-            $formattedPrice = $numberFormatter->formatCurrency($product->getPrice(), 'USD');
+            $formattedPrice = ($product->getPrice() / 601.50);
             // Convertir la chaîne formatée en nombre sans le symbole $
             $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
 

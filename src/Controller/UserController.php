@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class UserController extends AbstractController
 {
     #[Route('/profile/product/remove/{id}', name: 'app_user_remove_product')]
-    public function removeProduct(Product $product, EntityManagerInterface $entityManager): Response
+    public function removeProduct(Product $product, Request $request, EntityManagerInterface $entityManager): Response
     {
         $user = $this->getUser();
 

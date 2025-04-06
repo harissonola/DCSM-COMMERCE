@@ -283,7 +283,7 @@
 										Voir
 									</a>
 									{# Dans le template twig, remplacer le lien de suppression par un formulaire #}
-								<form method="post" action="{{ path('app_user_remove_product', {'id': product.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce produit ? Vous serez remboursé de {{ (product.price / 601.51)|format_currency('USD') }}');">
+								<form method="post" action="{{ path('app_user_remove_product', {'id': product.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce produit ? Vous serez remboursé de {{ (product.price / 601.51)|format_currency('USD') }}');" data-turbo="false">
 									<input type="hidden" name="_token" value="{{ csrf_token('delete-product-' ~ product.id) }}">
 									<button type="submit" class="btn btn-danger btn-sm">
 										<i class="fas fa-trash-alt"></i>

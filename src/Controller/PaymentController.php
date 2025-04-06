@@ -160,7 +160,7 @@ class PaymentController extends AbstractController
             'ipn_url'     => $this->generateUrl('app_payment_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'success_url' => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'cancel_url'  => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
-            'custom'      => $transaction->getId(),
+            'custom'      => $transaction->getId(), // Ici, c'est l'ID de la transaction qui est envoyé
             // 'address' => $walletAddress, // À activer si CoinPayments requiert l'adresse
         ];
         try {
@@ -178,7 +178,8 @@ class PaymentController extends AbstractController
     /**
      * Méthode dédiée à la réception des notifications IPN de CoinPayments.
      * Les données reçues sont loguées pour vérification.
-     * En cas de succès (status >= 100), le solde de l'utilisateur est crédité.
+     * En cas de succès (status >= 100), le solde de l'utilisateur est crédité
+     * et le statut de la transaction est mis à jour.
      */
     #[Route('/payment/ipn-handler', name: 'app_payment_ipn', methods: ['POST'])]
     public function handleIpn(Request $request, EntityManagerInterface $em): Response
@@ -195,14 +196,22 @@ class PaymentController extends AbstractController
             isset($ipnData['amount1']) &&
             isset($ipnData['custom'])
         ) {
-            $txnId  = $ipnData['txn_id'];
-            $amount = (float)$ipnData['amount1'];
-            $userId = (int)$ipnData['custom']; // On suppose que l'ID utilisateur a été passé dans "custom"
+            $txnId      = $ipnData['txn_id'];
+            $amount     = (float)$ipnData['amount1'];
+            $transactionId = (int)$ipnData['custom']; // Ici, c'est l'ID de la transaction
 
-            $user = $em->getRepository(User::class)->find($userId);
-            if ($user) {
-                // Créditer le compte de l'utilisateur
-                $user->setBalance($user->getBalance() + $amount);
+            // Récupérer la transaction correspondante
+            $transaction = $em->getRepository(Transactions::class)->find($transactionId);
+            if ($transaction) {
+                // Mettre à jour le statut de la transaction
+                $transaction->setStatus('completed');
+
+                // Récupérer l'utilisateur associé et créditer son solde
+                $user = $transaction->getUser();
+                if ($user) {
+                    // Vous pouvez choisir de créditer le montant depuis la transaction
+                    $user->setBalance($user->getBalance() + $transaction->getAmount());
+                }
                 $em->flush();
             }
         }

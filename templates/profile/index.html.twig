@@ -134,10 +134,8 @@
 				<span class="badge bg-primary rounded-pill">@{{ app.user.username }}</span>
 				<span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
 			</div>
-			<a href="{{ path("app_logout") }}" class="btn btn-danger">
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-					<path d="M16 12H4m8-8v16m0-16l-4 4m4-4l4 4"></path>
-				</svg>
+			<a href="{{ path("app_logout") }}" class="btn btn-danger btn-sm">
+				<i class="fas fa-sign-out-alt"></i>
 				Déconnexion
 			</a>
 		</div>

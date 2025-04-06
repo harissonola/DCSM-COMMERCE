@@ -203,7 +203,7 @@ class ProductsController extends AbstractController
 
                 // Affichage d'un message flash pour l'utilisateur actuel
                 if ($user->getId() === $currentUser->getId()) {
-                    $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
+                    $formattedReward = ($totalReward / 601.50);
                     $this->addFlash('success', sprintf(
                         'Vous avez reçu %s de récompense pour vos produits !',
                         $formattedReward

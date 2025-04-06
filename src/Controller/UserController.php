@@ -31,7 +31,7 @@ class UserController extends AbstractController
         }
 
         // Récupérer le prix actuel du produit
-        $productPrice = $product->getProductPrice();
+        $productPrice = $product->getPrice();
 
         // Ajouter le prix au solde de l'utilisateur (remboursement)
         $user->setBalance($user->getBalance() + $productPrice);

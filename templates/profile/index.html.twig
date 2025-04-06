@@ -238,13 +238,13 @@
 	{% endif %}
 
 	<div class="mb-4">
-		<h6>Niveau
+		<h4>Niveau
 			{{ level }}
 			-
 			{{ referrals }}
 			sur
 			{{ required }}
-			personnes parrainées</h6>
+			personnes parrainées</h4>
 		<div class="progress" style="height: 1.5rem;">
 			<div class="progress-bar progress-bar-striped bg-info" role="progressbar" style="width: {{ progress|round(0, 'ceil') }}%;" aria-valuenow="{{ progress|round(0, 'ceil') }}" aria-valuemin="0" aria-valuemax="100">
 				{{ progress|round(0, 'ceil') }}%

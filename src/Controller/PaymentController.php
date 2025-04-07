@@ -35,50 +35,54 @@ class PaymentController extends AbstractController
             $this->addFlash('danger', 'Montant invalide ou solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }
+        if ($amountUsd < 2) {
+            $this->addFlash('danger', 'Montant invalide, le retrait minimum est de $2');
+            return $this->redirectToRoute('app_profile');
+        }
         if (empty($address)) {
             $this->addFlash('danger', 'Adresse de portefeuille requise');
             return $this->redirectToRoute('app_profile');
         }
 
-        // On informe l'utilisateur que les retraits sont temporairement indisponibles
-        $this->addFlash('info', 'Les retraits sont temporairement indisponibles. Veuillez réessayer ultérieurement.');
+        // // On informe l'utilisateur que les retraits sont temporairement indisponibles
+        // $this->addFlash('info', 'Les retraits sont temporairement indisponibles. Veuillez réessayer ultérieurement.');
 
         // Création de la transaction en statut "pending"
-        // $transaction = (new Transactions())
-        //     ->setUser($user)
-        //     ->setType('withdrawal')
-        //     ->setAmount($amountUsd)
-        //     ->setMethod("Crypto ($currency)")
-        //     ->setStatus('pending')
-        //     ->setCreatedAt(new \DateTimeImmutable());
-        // $em->persist($transaction);
-        // $em->flush();
+         $transaction = (new Transactions())
+             ->setUser($user)
+             ->setType('withdrawal')
+             ->setAmount($amountUsd)
+             ->setMethod("Crypto ($currency)")
+             ->setStatus('pending')
+             ->setCreatedAt(new \DateTimeImmutable());
+         $em->persist($transaction);
+         $em->flush();
 
-        // try {
-        //     // Envoi de la demande de retrait à CoinPayments
-        //     $params = [
-        //         'amount'    => $amountUsd,       // Montant en USD
-        //         'currency'  => $currency,        // Devise cible (crypto)
-        //         'currency2' => 'USD',            // Devise source
-        //         'address'   => $address,
-        //         'auto_confirm' => 1,
-        //         'ipn_url'   => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-        //         'custom'    => $transaction->getId()
-        //     ];
-        //     $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
-        //     if ($response['error'] !== 'ok') {
-        //         throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
-        //     }
-        //     $this->addFlash('success', sprintf(
-        //         'Demande de retrait de %.2f USD envoyée. La conversion en %s sera gérée par CoinPayments.',
-        //         $amountUsd,
-        //         $currency
-        //     ));
-        // } catch (\Exception $e) {
-        //     $transaction->setStatus('failed');
-        //     $em->flush();
-        //     $this->addFlash('danger', "Échec de la demande de retrait : " . $e->getMessage());
-        // }
+         try {
+             // Envoi de la demande de retrait à CoinPayments
+             $params = [
+                 'amount'    => $amountUsd,      //  Montant en USD
+                 'currency'  => $currency,        // Devise cible (crypto)
+                 'currency2' => 'USD',           //  Devise source
+                 'address'   => $address,
+                 'auto_confirm' => 1,
+                 'ipn_url'   => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                 'custom'    => $transaction->getId()
+             ];
+             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
+             if ($response['error'] !== 'ok') {
+                 throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
+             }
+             $this->addFlash('success', sprintf(
+                 'Demande de retrait de %.2f USD envoyée. La conversion en %s sera gérée par CoinPayments.',
+                 $amountUsd,
+                 $currency
+             ));
+         } catch (\Exception $e) {
+             $transaction->setStatus('failed');
+             $em->flush();
+             $this->addFlash('danger', "Échec de la demande de retrait : " . $e->getMessage());
+         }
         return $this->redirectToRoute('app_profile');
     }
 

@@ -56,7 +56,7 @@ class PaymentController extends AbstractController
         $em->flush();
 
         try {
-            // Envoi de la demande de retrait à CoinPayments
+            // Envoi de la demande de retrait
             $params = [
                 'amount'       => $amountUsd,      // Montant en USD
                 'currency'     => $currency,       // Devise cible (crypto)
@@ -68,10 +68,10 @@ class PaymentController extends AbstractController
             ];
             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
             if ($response['error'] !== 'ok') {
-                throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
+                throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
             }
             $this->addFlash('success', sprintf(
-                'Votre demande de retrait de %.2f USD a bien été envoyée. La conversion en %s sera prise en charge par CoinPayments.',
+                'Votre demande de retrait de %.2f USD a été enregistrée. La conversion en %s sera effectuée dans les plus brefs délais.',
                 $amountUsd,
                 $currency
             ));
@@ -191,11 +191,11 @@ class PaymentController extends AbstractController
         try {
             $response = $this->coinPaymentsApiCall('create_transaction', $params);
             if ($response['error'] !== 'ok') {
-                throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
+                throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
             }
             return $this->redirect($response['result']['checkout_url']);
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Une erreur est survenue lors du dépôt via CoinPayments. Veuillez réessayer ultérieurement.');
+            $this->addFlash('danger', 'Une erreur est survenue lors du dépôt. Veuillez réessayer ultérieurement.');
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -350,7 +350,7 @@ class PaymentController extends AbstractController
             throw new \Exception("Réponse API invalide");
         }
         if (!isset($result['error']) || $result['error'] !== 'ok') {
-            throw new \Exception($result['error'] ?? 'Erreur inconnue');
+            throw new \Exception($result['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
         }
         return $result;
     }

@@ -203,7 +203,7 @@ class ProductsController extends AbstractController
 
                 // Affichage d'un message flash pour l'utilisateur actuel
                 if ($user->getId() === $currentUser->getId()) {
-                    $formattedReward = ($totalReward / 601.50);
+                    $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
                     $this->addFlash('success', sprintf(
                         'Vous avez reçu %s de récompense pour vos produits !',
                         $formattedReward
@@ -269,9 +269,9 @@ class ProductsController extends AbstractController
             }
 
             // Utiliser la même logique que {{ prod.price|format_currency('USD') }}
-            $formattedPrice = ($product->getPrice() / 601.50);
+            $formattedPrice = $numberFormatter->formatCurrency(($product->getPrice() / 601.50), 'USD');
             // Convertir la chaîne formatée en nombre sans le symbole $
-            $priceUSD = $formattedPrice ? (float) str_replace(['$', ','], ['', ''], $formattedPrice) : 0.0;
+            $priceUSD = $formattedPrice;
 
             $this->logger->info('Tentative d\'achat', [
                 'balance' => $user->getBalance(),

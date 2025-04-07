@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Repository\ProductRepository;
 use App\Repository\ShopRepository;
 use DateTimeImmutable;
+use NumberFormatter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,7 +15,8 @@ class DashboardController extends AbstractController
     #[Route('/', name: 'app_dashboard')]
     public function index(
         ShopRepository $shopRepository,
-        ProductRepository $productRepository
+        ProductRepository $productRepository,
+        NumberFormatter $numberFormatter
     ): Response
     {
         $user = $this->getUser();

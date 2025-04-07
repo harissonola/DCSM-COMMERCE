@@ -48,44 +48,85 @@ class PaymentController extends AbstractController
         // $this->addFlash('info', 'Les retraits sont temporairement indisponibles. Veuillez réessayer ultérieurement.');
 
         // Création de la transaction en statut "pending"
-         $transaction = (new Transactions())
-             ->setUser($user)
-             ->setType('withdrawal')
-             ->setAmount($amountUsd)
-             ->setMethod("Crypto ($currency)")
-             ->setStatus('pending')
-             ->setCreatedAt(new \DateTimeImmutable());
-         $em->persist($transaction);
-         $em->flush();
+        $transaction = (new Transactions())
+            ->setUser($user)
+            ->setType('withdrawal')
+            ->setAmount($amountUsd)
+            ->setMethod("Crypto ($currency)")
+            ->setStatus('pending')
+            ->setCreatedAt(new \DateTimeImmutable());
+        $em->persist($transaction);
+        $em->flush();
 
-         try {
-             // Envoi de la demande de retrait à CoinPayments
-             $params = [
-                 'amount'    => $amountUsd,      //  Montant en USD
-                 'currency'  => $currency,        // Devise cible (crypto)
-                 'currency2' => 'USD',           //  Devise source
-                 'address'   => $address,
-                 'auto_confirm' => 1,
-                 'ipn_url'   => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                 'custom'    => $transaction->getId()
-             ];
-             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
-             if ($response['error'] !== 'ok') {
-                 throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
-             }
-             $this->addFlash('success', sprintf(
-                 'Demande de retrait de %.2f USD envoyée. La conversion en %s sera gérée par CoinPayments.',
-                 $amountUsd,
-                 $currency
-             ));
-         } catch (\Exception $e) {
-             $transaction->setStatus('failed');
-             $em->flush();
-             $this->addFlash('danger', "Échec de la demande de retrait : " . $e->getMessage());
-         }
+        try {
+            // Envoi de la demande de retrait à CoinPayments
+            $params = [
+                'amount'    => $amountUsd,      //  Montant en USD
+                'currency'  => $currency,        // Devise cible (crypto)
+                'currency2' => 'USD',           //  Devise source
+                'address'   => $address,
+                'auto_confirm' => 1,
+                'ipn_url'   => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                'custom'    => $transaction->getId()
+            ];
+            $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
+            if ($response['error'] !== 'ok') {
+                throw new \Exception($response['error'] ?? 'Erreur inconnue de CoinPayments');
+            }
+            $this->addFlash('success', sprintf(
+                'Demande de retrait de %.2f USD envoyée. La conversion en %s sera gérée par CoinPayments.',
+                $amountUsd,
+                $currency
+            ));
+        } catch (\Exception $e) {
+            $transaction->setStatus('failed');
+            $em->flush();
+            $this->addFlash('danger', "Échec de la demande de retrait : " . $e->getMessage());
+        }
         return $this->redirectToRoute('app_profile');
     }
 
+    #[Route('/coinpayments/withdrawal-ipn', name: 'coinpayments_withdrawal_ipn', methods: ['POST'])]
+    public function coinpaymentsWithdrawalIpn(Request $request, EntityManagerInterface $em): Response
+    {
+        $ipnData = $request->request->all();
+
+        // Logger les données pour le débogage
+        file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_ipn.log', print_r($ipnData, true), FILE_APPEND);
+
+        // Vérifier les champs nécessaires
+        if (
+            isset($ipnData['status']) && (int)$ipnData['status'] >= 100 &&
+            isset($ipnData['custom']) &&
+            isset($ipnData['amount']) // ici c'est en crypto (à noter selon ton besoin)
+        ) {
+            $transactionId = (int)$ipnData['custom'];
+            $transaction = $em->getRepository(Transactions::class)->find($transactionId);
+
+            if ($transaction && $transaction->getStatus() !== 'completed') {
+                $transaction->setStatus('completed');
+                $user = $transaction->getUser();
+
+                if ($user) {
+                    // Très important : vérifier que le montant a déjà été soustrait à la demande !
+                    // Sinon, on le retire ici.
+                    if ($user->getBalance() >= $transaction->getAmount()) {
+                        $user->setBalance($user->getBalance() - $transaction->getAmount());
+                    } else {
+                        // Pour éviter un bug si le solde a changé entre-temps
+                        file_put_contents(__DIR__ . '/../../var/log/withdrawal_error.log', "Solde insuffisant pour l'utilisateur #" . $user->getId() . "\n", FILE_APPEND);
+                    }
+
+                    $em->persist($user);
+                }
+
+                $em->flush();
+            }
+        }
+
+        return new Response('IPN retrait traité', 200);
+    }
+    
     // --- Dépôts ---
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
     public function deposit(Request $request): Response
@@ -191,7 +232,7 @@ class PaymentController extends AbstractController
         $ipnData = $request->request->all();
 
         // Logger les données IPN pour débogage
-        file_put_contents(__DIR__.'/../../var/log/ipn.log', print_r($ipnData, true), FILE_APPEND);
+        file_put_contents(__DIR__ . '/../../var/log/ipn.log', print_r($ipnData, true), FILE_APPEND);
 
         // Vérifier que les données nécessaires sont présentes et que la transaction est complétée (status >= 100)
         if (

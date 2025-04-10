@@ -15,12 +15,14 @@
 						<span class="text-warning">{{ (app.user.referralRewardRate * 10) }}%</span>
 						sur vos produits
 					</h1>
-					<p class="lead mb-4">Chaque produit acheté vous rapporte automatiquement {{ (app.user.referralRewardRate * 10) }}% de sa valeur actuelle quotidiennement.</p>
+					<p class="lead mb-4">Chaque produit acheté vous rapporte automatiquement
+						{{ (app.user.referralRewardRate * 10) }}% de sa valeur actuelle quotidiennement.</p>
 					<div class="d-flex flex-wrap gap-3">
 						{% if app.user %}
 							<a href="{{ path('app_products_index') }}" class="btn btn-light btn-lg px-4">Voir les produits</a>
 						{% else %}
-							<a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4">Commencer à {{ (app.user.referralRewardRate * 10) }}%</a>
+							<a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4">Commencer à
+								{{ (app.user.referralRewardRate * 10) }}%</a>
 						{% endif %}
 						<a href="#how-it-works" class="btn btn-outline-light btn-lg px-4">
 							<i class="fas fa-play me-2"></i>Comment ça marche</a>
@@ -62,314 +64,322 @@
 					<div class="col-md-3">
 						<div class="stats-card bg-dark p-3 rounded text-center">
 							<i class="fas fa-money-bill-wave text-primary mb-2 fs-4"></i>
-              
-								<div class="stats-number fs-3 fw-bold">{# utiliser ici le prix la somme du prix des produits que possedent le User au lieu du solde du User #}${{ ((app.user.balance|default(0)) * app.user.referralRewardRate)|number_format(2) }}</div>
-								<div class="stats-label text-muted">Gains quotidiens</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</section>
-		{% endif %}
 
-		<!-- How It Works Section -->
-		<section id="how-it-works" class="py-5 bg-dark">
-			<div class="container py-4">
-				<div class="text-center mb-5">
-					<h2 class="fw-bold text-white">Comment fonctionnent vos {{ (app.user.referralRewardRate * 10) }}% ?</h2>
-					<p class="lead text-muted">Un système simple et transparent</p>
-				</div>
-				<div class="row g-4">
-					<div class="col-md-4">
-						<div class="feature-card bg-gray-800 p-4 rounded shadow-sm h-100">
-							<div class="feature-icon text-primary mb-3 fs-2">
-								<i class="fas fa-shopping-cart"></i>
+							{% set total_usd = 0 %}
+							{% for product in app.user.product %}
+								{% set total_usd = total_usd + (product.price / 601.51) %}
+							{% endfor %}
+							<div class="stats-number fs-3 fw-bold">
+								${{ total_usd|number_format(2) }}
 							</div>
-							<h3 class="fw-bold text-white">1. Achetez des produits</h3>
-							<p class="text-muted">Choisissez parmi notre sélection de produits d'investissement crypto.</p>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="feature-card bg-gray-800 p-4 rounded shadow-sm h-100">
-							<div class="feature-icon text-primary mb-3 fs-2">
-								<i class="fas fa-chart-line"></i>
-							</div>
-							<h3 class="fw-bold text-white">2. Recevez vos {{ (app.user.referralRewardRate * 10) }}%</h3>
-							<p class="text-muted">Chaque jour, vous gagnez {{ (app.user.referralRewardRate * 10) }}% de la valeur actuelle de chaque produit.</p>
-						</div>
-					</div>
-					<div class="col-md-4">
-						<div class="feature-card bg-gray-800 p-4 rounded shadow-sm h-100">
-							<div class="feature-icon text-primary mb-3 fs-2">
-								<i class="fas fa-wallet"></i>
-							</div>
-							<h3 class="fw-bold text-white">3. Retirez vos gains</h3>
-							<p class="text-muted">Retirez vos gains à tout moment sur votre compte bancaire ou portefeuille crypto.</p>
+							<div class="stats-label text-muted">Gains quotidiens</div>
 						</div>
 					</div>
 				</div>
 			</div>
 		</section>
+	{% endif %}
 
-		<!-- Products Section -->
-		<section class="py-5 bg-secondary">
-			<div class="container py-4">
-				<div class="text-center mb-5">
-					<h2 class="fw-bold text-white">Nos produits populaires</h2>
-					<p class="lead text-muted">Tous génèrent {{ (app.user.referralRewardRate * 10) }}% de rendement quotidien</p>
-				</div>
-				<div class="row g-4">
-					{% for product in products|slice(0, 6) %}
-						<div class="col-lg-4 col-md-6">
-							<div class="card h-100 product-card shadow-sm bg-dark border-gray-700">
-								{% if date(product.createdAt) > date('-30days') %}
-									<span class="badge bg-success position-absolute top-0 start-0 m-2">Nouveau</span>
-								{% endif %}
-
-								<div class="product-img-container" style="height: 200px;">
-									<img src="{{ asset(product.image) }}" class="card-img-top h-100 w-100 object-fit-cover" alt="{{ product.name }}" loading="lazy"/>
-								</div>
-
-								<div class="card-body">
-									<h3 class="card-title fw-bold text-white">{{ product.name }}</h3>
-									<div class="d-flex justify-content-between align-items-center mb-3">
-										<span class="h4 text-primary">${{ (product.price / 601.51)|number_format(2) }}</span>
-										<span class="badge bg-warning text-dark">{{ (app.user.referralRewardRate * 10) }}% quotidien</span>
-									</div>
-									<p class="card-text text-muted">{{ (product.description|slice(0, 100)) ~ '...' }}</p>
-								</div>
-
-								<div class="card-footer bg-gray-800 border-top-0">
-									<div class="d-grid gap-2">
-										<a href="{{ path('app_shop', { slug: product.shop.slug }) }}" class="btn btn-primary">
-											<i class="fas fa-info-circle me-2"></i>Détails</a>
-										{% if app.user %}
-											<a href="{{ path('app_products_sell_product', { slug: product.slug }) }}" class="btn btn-success">
-												<i class="fas fa-shopping-cart me-2"></i>Acheter</a>
-										{% endif %}
-									</div>
-								</div>
-							</div>
+	<!-- How It Works Section -->
+	<section id="how-it-works" class="py-5 bg-dark">
+		<div class="container py-4">
+			<div class="text-center mb-5">
+				<h2 class="fw-bold text-white">Comment fonctionnent vos
+					{{ (app.user.referralRewardRate * 10) }}% ?</h2>
+				<p class="lead text-muted">Un système simple et transparent</p>
+			</div>
+			<div class="row g-4">
+				<div class="col-md-4">
+					<div class="feature-card bg-gray-800 p-4 rounded shadow-sm h-100">
+						<div class="feature-icon text-primary mb-3 fs-2">
+							<i class="fas fa-shopping-cart"></i>
 						</div>
-					{% else %}
-						<div class="col-12">
-							<div class="alert alert-info text-center bg-dark text-white border-info">Aucun produit disponible pour le moment.</div>
-						</div>
-					{% endfor %}
-				</div>
-
-				{% if (products|length) > 6 %}
-					<div class="text-center mt-5">
-						<a href="{{ path('app_products_index') }}" class="btn btn-outline-primary btn-lg px-5">Voir tous les produits ({{ products|length }})</a>
+						<h3 class="fw-bold text-white">1. Achetez des produits</h3>
+						<p class="text-muted">Choisissez parmi notre sélection de produits d'investissement crypto.</p>
 					</div>
-				{% endif %}
-			</div>
-		</section>
-
-		<!-- Testimonials -->
-		<section class="py-5 bg-dark">
-			<div class="container py-4">
-				<div class="text-center mb-5">
-					<h2 class="fw-bold text-white">Ils utilisent DCSM-COMMERCE</h2>
-					<p class="lead text-muted">Ce que nos utilisateurs disent de nous</p>
 				</div>
-				<div class="row g-4">
-					{% set testimonials = [{ name: 'Jean L.', avatar: 'default1.jpg', content: 'Je gagne environ $200 par jour grâce à mes investissements. La plateforme est fiable et les retraits sont rapides.', rating: 5 }, { name: 'Chris L.', avatar: 'default2.jpg', content: "Excellent service client. J'ai pu multiplier mon capital initial par 5 en quelques mois.", rating: 4 }, { name: 'Fabrice G.', avatar: 'default3.jpg', content: "Simple d'utilisation et très rentable. Je recommande à tous ceux qui veulent des revenus passifs.", rating: 5 }] %}
+				<div class="col-md-4">
+					<div class="feature-card bg-gray-800 p-4 rounded shadow-sm h-100">
+						<div class="feature-icon text-primary mb-3 fs-2">
+							<i class="fas fa-chart-line"></i>
+						</div>
+						<h3 class="fw-bold text-white">2. Recevez vos
+							{{ (app.user.referralRewardRate * 10) }}%</h3>
+						<p class="text-muted">Chaque jour, vous gagnez
+							{{ (app.user.referralRewardRate * 10) }}% de la valeur actuelle de chaque produit.</p>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="feature-card bg-gray-800 p-4 rounded shadow-sm h-100">
+						<div class="feature-icon text-primary mb-3 fs-2">
+							<i class="fas fa-wallet"></i>
+						</div>
+						<h3 class="fw-bold text-white">3. Retirez vos gains</h3>
+						<p class="text-muted">Retirez vos gains à tout moment sur votre compte bancaire ou portefeuille crypto.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
 
-					{% for testimonial in testimonials %}
-						<div class="col-md-4">
-							<div class="testimonial-card bg-gray-800 p-4 rounded shadow-sm h-100">
-								<div class="d-flex align-items-center mb-3">
-									<img src="https://raw.githubusercontent.com/harissonola/my-cdn/main/users/img/{{ testimonial.avatar }}" class="rounded-circle me-3" width="50" alt="{{ testimonial.name }}"/>
-									<div>
-										<h5 class="mb-0 text-white">{{ testimonial.name }}</h5>
-										<small class="text-muted">Utilisateur vérifié</small>
-									</div>
+	<!-- Products Section -->
+	<section class="py-5 bg-secondary">
+		<div class="container py-4">
+			<div class="text-center mb-5">
+				<h2 class="fw-bold text-white">Nos produits populaires</h2>
+				<p class="lead text-muted">Tous génèrent
+					{{ (app.user.referralRewardRate * 10) }}% de rendement quotidien</p>
+			</div>
+			<div class="row g-4">
+				{% for product in products|slice(0, 6) %}
+					<div class="col-lg-4 col-md-6">
+						<div class="card h-100 product-card shadow-sm bg-dark border-gray-700">
+							{% if date(product.createdAt) > date('-30days') %}
+								<span class="badge bg-success position-absolute top-0 start-0 m-2">Nouveau</span>
+							{% endif %}
+
+							<div class="product-img-container" style="height: 200px;">
+								<img src="{{ asset(product.image) }}" class="card-img-top h-100 w-100 object-fit-cover" alt="{{ product.name }}" loading="lazy"/>
+							</div>
+
+							<div class="card-body">
+								<h3 class="card-title fw-bold text-white">{{ product.name }}</h3>
+								<div class="d-flex justify-content-between align-items-center mb-3">
+									<span class="h4 text-primary">${{ (product.price / 601.51)|number_format(2) }}</span>
+									<span class="badge bg-warning text-dark">{{ (app.user.referralRewardRate * 10) }}% quotidien</span>
 								</div>
-								<p class="mb-0 text-muted">"{{ testimonial.content }}"</p>
-								<div class="mt-3 text-warning">
-									{% for i in 1..5 %}
-										{% if i <= testimonial.rating %}
-											<i class="fas fa-star"></i>
-										{% else %}
-											<i class="far fa-star"></i>
-										{% endif %}
-									{% endfor %}
+								<p class="card-text text-muted">{{ (product.description|slice(0, 100)) ~ '...' }}</p>
+							</div>
+
+							<div class="card-footer bg-gray-800 border-top-0">
+								<div class="d-grid gap-2">
+									<a href="{{ path('app_shop', { slug: product.shop.slug }) }}" class="btn btn-primary">
+										<i class="fas fa-info-circle me-2"></i>Détails</a>
+									{% if app.user %}
+										<a href="{{ path('app_products_sell_product', { slug: product.slug }) }}" class="btn btn-success">
+											<i class="fas fa-shopping-cart me-2"></i>Acheter</a>
+									{% endif %}
 								</div>
 							</div>
 						</div>
-					{% endfor %}
-				</div>
-			</div>
-		</section>
-
-		<!-- CTA Section -->
-		<section class="py-5 bg-dark text-white border-top border-gray-700">
-			<div class="container py-4 text-center">
-				<h2 class="fw-bold mb-4">Prêt à générer des revenus passifs ?</h2>
-				<p class="lead mb-5">Commencez avec {{ (app.user.referralRewardRate * 10) }}% de rendement quotidien sur vos investissements.</p>
-				{% if app.user %}
-					<a href="{{ path('app_profile') }}" class="btn btn-primary btn-lg px-5 me-3">
-						<i class="fas fa-box-open me-2"></i>Investir maintenant</a>
+					</div>
 				{% else %}
-					<a href="{{ path('app_register') }}" class="btn btn-primary btn-lg px-5 me-3">
-						<i class="fas fa-user-plus me-2"></i>S'inscrire gratuitement</a>
-				{% endif %}
-				<a href="{{ path('app_faq') }}" class="btn btn-outline-light btn-lg px-5">
-					<i class="fas fa-question-circle me-2"></i>Questions ?</a>
+					<div class="col-12">
+						<div class="alert alert-info text-center bg-dark text-white border-info">Aucun produit disponible pour le moment.</div>
+					</div>
+				{% endfor %}
 			</div>
-		</section>
-	{% endblock %}
 
-	{% block stylesheets %}
-		{{ parent() }}
-		<style>:root
-		{
-			--bg-dark: #121212;
-			--bg-gray-800: #1e1e1e;
-			--bg-gray-700: #2d2d2d;
-			--bg-gray-900: #0d0d0d;
-			--border-gray-700: #444;
-			--text-primary: #e0e0e0;
-			--text-muted: #a0a0a0;
-		}
+			{% if (products|length) > 6 %}
+				<div class="text-center mt-5">
+					<a href="{{ path('app_products_index') }}" class="btn btn-outline-primary btn-lg px-5">Voir tous les produits ({{ products|length }})</a>
+				</div>
+			{% endif %}
+		</div>
+	</section>
 
-		body {
-			background-color: var(--bg-dark);
-			color: var(--text-primary);
-		}
+	<!-- Testimonials -->
+	<section class="py-5 bg-dark">
+		<div class="container py-4">
+			<div class="text-center mb-5">
+				<h2 class="fw-bold text-white">Ils utilisent DCSM-COMMERCE</h2>
+				<p class="lead text-muted">Ce que nos utilisateurs disent de nous</p>
+			</div>
+			<div class="row g-4">
+				{% set testimonials = [{ name: 'Jean L.', avatar: 'default1.jpg', content: 'Je gagne environ $200 par jour grâce à mes investissements. La plateforme est fiable et les retraits sont rapides.', rating: 5 }, { name: 'Chris L.', avatar: 'default2.jpg', content: "Excellent service client. J'ai pu multiplier mon capital initial par 5 en quelques mois.", rating: 4 }, { name: 'Fabrice G.', avatar: 'default3.jpg', content: "Simple d'utilisation et très rentable. Je recommande à tous ceux qui veulent des revenus passifs.", rating: 5 }] %}
 
-		.bg-dark {
-			background-color: var(--bg-dark) !important;
-		}
+				{% for testimonial in testimonials %}
+					<div class="col-md-4">
+						<div class="testimonial-card bg-gray-800 p-4 rounded shadow-sm h-100">
+							<div class="d-flex align-items-center mb-3">
+								<img src="https://raw.githubusercontent.com/harissonola/my-cdn/main/users/img/{{ testimonial.avatar }}" class="rounded-circle me-3" width="50" alt="{{ testimonial.name }}"/>
+								<div>
+									<h5 class="mb-0 text-white">{{ testimonial.name }}</h5>
+									<small class="text-muted">Utilisateur vérifié</small>
+								</div>
+							</div>
+							<p class="mb-0 text-muted">"{{ testimonial.content }}"</p>
+							<div class="mt-3 text-warning">
+								{% for i in 1..5 %}
+									{% if i <= testimonial.rating %}
+										<i class="fas fa-star"></i>
+									{% else %}
+										<i class="far fa-star"></i>
+									{% endif %}
+								{% endfor %}
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+			</div>
+		</div>
+	</section>
 
-		.bg-secondary,
-		.bg-light,
-		.bg-white {
-			background-color: var(--bg-gray-800) !important;
-		}
-
-		.bg-gray-800 {
-			background-color: var(--bg-gray-800) !important;
-		}
-
-		.bg-gray-900 {
-			background-color: var(--bg-gray-900) !important;
-		}
-
-		.border-gray-700 {
-			border-color: var(--border-gray-700) !important;
-		}
-
-		.text-white {
-			color: var(--text-primary) !important;
-		}
-
-		.text-muted {
-			color: var(--text-muted) !important;
-		}
-
-		.card,
-		.feature-card,
-		.testimonial-card,
-		.stats-card,
-		.product-card,
-		.modal-content,
-		.dropdown-menu {
-			background-color: var(--bg-gray-700);
-			border-color: var(--border-gray-700);
-			color: var(--text-primary);
-		}
-
-		.product-card {
-			transition: all 0.3s ease;
-			border-radius: 10px;
-			overflow: hidden;
-		}
-
-		.product-card:hover {
-			transform: translateY(-5px);
-			box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-		}
-
-		.product-img-container {
-			background: var(--bg-gray-800);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
-
-		.object-fit-cover {
-			object-fit: cover;
-			object-position: center;
-		}
-
-		.form-control,
-		.form-select {
-			background-color: var(--bg-gray-700);
-			border-color: var(--border-gray-700);
-			color: var(--text-primary);
-		}
-
-		.form-control:focus {
-			background-color: #3d3d3d;
-			color: var(--text-primary);
-			border-color: #0d6efd;
-		}
-
-		.btn-outline-light {
-			color: var(--text-primary);
-			border-color: var(--border-gray-700);
-		}
-
-		.btn-outline-light:hover {
-			background-color: var(--border-gray-700);
-			color: #fff;
-		}
-
-		hr {
-			background-color: var(--border-gray-700);
-		}
-	</style>
+	<!-- CTA Section -->
+	<section class="py-5 bg-dark text-white border-top border-gray-700">
+		<div class="container py-4 text-center">
+			<h2 class="fw-bold mb-4">Prêt à générer des revenus passifs ?</h2>
+			<p class="lead mb-5">Commencez avec
+				{{ (app.user.referralRewardRate * 10) }}% de rendement quotidien sur vos investissements.</p>
+			{% if app.user %}
+				<a href="{{ path('app_profile') }}" class="btn btn-primary btn-lg px-5 me-3">
+					<i class="fas fa-box-open me-2"></i>Investir maintenant</a>
+			{% else %}
+				<a href="{{ path('app_register') }}" class="btn btn-primary btn-lg px-5 me-3">
+					<i class="fas fa-user-plus me-2"></i>S'inscrire gratuitement</a>
+			{% endif %}
+			<a href="{{ path('app_faq') }}" class="btn btn-outline-light btn-lg px-5">
+				<i class="fas fa-question-circle me-2"></i>Questions ?</a>
+		</div>
+	</section>
 {% endblock %}
-{% block javascripts %}
+
+{% block stylesheets %}
 	{{ parent() }}
+	<style>:root
+	{
+		--bg-dark: #121212;
+		--bg-gray-800: #1e1e1e;
+		--bg-gray-700: #2d2d2d;
+		--bg-gray-900: #0d0d0d;
+		--border-gray-700: #444;
+		--text-primary: #e0e0e0;
+		--text-muted: #a0a0a0;
+	}
+
+	body {
+		background-color: var(--bg-dark);
+		color: var(--text-primary);
+	}
+
+	.bg-dark {
+		background-color: var(--bg-dark) !important;
+	}
+
+	.bg-secondary,
+	.bg-light,
+	.bg-white {
+		background-color: var(--bg-gray-800) !important;
+	}
+
+	.bg-gray-800 {
+		background-color: var(--bg-gray-800) !important;
+	}
+
+	.bg-gray-900 {
+		background-color: var(--bg-gray-900) !important;
+	}
+
+	.border-gray-700 {
+		border-color: var(--border-gray-700) !important;
+	}
+
+	.text-white {
+		color: var(--text-primary) !important;
+	}
+
+	.text-muted {
+		color: var(--text-muted) !important;
+	}
+
+	.card,
+	.feature-card,
+	.testimonial-card,
+	.stats-card,
+	.product-card,
+	.modal-content,
+	.dropdown-menu {
+		background-color: var(--bg-gray-700);
+		border-color: var(--border-gray-700);
+		color: var(--text-primary);
+	}
+
+	.product-card {
+		transition: all 0.3s ease;
+		border-radius: 10px;
+		overflow: hidden;
+	}
+
+	.product-card:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+	}
+
+	.product-img-container {
+		background: var(--bg-gray-800);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.object-fit-cover {
+		object-fit: cover;
+		object-position: center;
+	}
+
+	.form-control,
+	.form-select {
+		background-color: var(--bg-gray-700);
+		border-color: var(--border-gray-700);
+		color: var(--text-primary);
+	}
+
+	.form-control:focus {
+		background-color: #3d3d3d;
+		color: var(--text-primary);
+		border-color: #0d6efd;
+	}
+
+	.btn-outline-light {
+		color: var(--text-primary);
+		border-color: var(--border-gray-700);
+	}
+
+	.btn-outline-light:hover {
+		background-color: var(--border-gray-700);
+		color: #fff;
+	}
+
+	hr {
+		background-color: var(--border-gray-700);
+	}
+</style>{% endblock %}{% block javascripts %}
+{{ parent() }} <script>
+	    document.addEventListener('DOMContentLoaded', function () {
+	      // Calculateur de gains
+	      const calculateEarnings = () => {
+	        const amount = parseFloat(document.getElementById('investmentAmount').value) || 0
+	        const rate = parseFloat(document.getElementById('earningRate').value)
+	
+	        const daily = ((amount * rate) / 100).toFixed(2)
+	        const monthly = (daily * 30).toFixed(2)
+	        const yearly = (daily * 365).toFixed(2)
+	
+	        document.getElementById('dailyEarnings').textContent = '$' + daily
+	        document.getElementById('monthlyEarnings').textContent = '$' + monthly
+	        document.getElementById('yearlyEarnings').textContent = '$' + yearly
+	      }
+	
+	      if (document.getElementById('calculateBtn')) {
+	        document.getElementById('calculateBtn').addEventListener('click', calculateEarnings)
+	        document.getElementById('investmentAmount').addEventListener('input', calculateEarnings)
+	        document.getElementById('earningRate').addEventListener('change', calculateEarnings)
+	        calculateEarnings()
+	      }
+	
+	      // Smooth scrolling
+	      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+	        anchor.addEventListener('click', function (e) {
+	          e.preventDefault()
+	          document.querySelector(this.getAttribute('href')).scrollIntoView({
+	            behavior: 'smooth'
+	          })
+	        })
+	      })
+	    })
+	  </script>
+
  <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // Calculateur de gains
-      const calculateEarnings = () => {
-        const amount = parseFloat(document.getElementById('investmentAmount').value) || 0
-        const rate = parseFloat(document.getElementById('earningRate').value)
-
-        const daily = ((amount * rate) / 100).toFixed(2)
-        const monthly = (daily * 30).toFixed(2)
-        const yearly = (daily * 365).toFixed(2)
-
-        document.getElementById('dailyEarnings').textContent = '$' + daily
-        document.getElementById('monthlyEarnings').textContent = '$' + monthly
-        document.getElementById('yearlyEarnings').textContent = '$' + yearly
-      }
-
-      if (document.getElementById('calculateBtn')) {
-        document.getElementById('calculateBtn').addEventListener('click', calculateEarnings)
-        document.getElementById('investmentAmount').addEventListener('input', calculateEarnings)
-        document.getElementById('earningRate').addEventListener('change', calculateEarnings)
-        calculateEarnings()
-      }
-
-      // Smooth scrolling
-      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-        anchor.addEventListener('click', function (e) {
-          e.preventDefault()
-          document.querySelector(this.getAttribute('href')).scrollIntoView({
-            behavior: 'smooth'
-          })
-        })
-      })
-    })
-  </script>
-
-	 <script>
 	    document.addEventListener('DOMContentLoaded', function () {
 	      // Sélectionnez tous les boutons d'achat
 	      document.querySelectorAll('a.btn-success').forEach(function (button) {
@@ -408,5 +418,4 @@
 	        })
 	      })
 	    })
-	  </script>
-{% endblock %}
+	  </script>{% endblock %}

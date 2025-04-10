@@ -67,7 +67,7 @@
 
 							{% set total_usd = 0 %}
 							{% for product in app.user.product %}
-								{% set total_usd = total_usd + (product.price / 601.51) %}
+								{% set total_usd = total_usd + ((product.price / 601.51) * (app.user.referralRewardRate / 100)) %}
 							{% endfor %}
 							<div class="stats-number fs-3 fw-bold">
 								${{ total_usd|number_format(2) }}

@@ -133,12 +133,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $lastReferralRewardAt = null;
 
-    /**
-     * @var Collection<int, ReferralCount>
-     */
-    #[ORM\OneToMany(targetEntity: ReferralCount::class, mappedBy: 'user')]
-    private Collection $referralCounts;
-
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -146,7 +140,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->product = new ArrayCollection();
         $this->balance = 0.00;  // Valeur par défaut dans le constructeur
         $this->EmailNotifications = false;  // Valeur par défaut dans le constructeur
-        $this->referralCounts = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -582,36 +575,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastReferralRewardAt(?\DateTimeImmutable $lastReferralRewardAt): static
     {
         $this->lastReferralRewardAt = $lastReferralRewardAt;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, ReferralCount>
-     */
-    public function getReferralCounts(): Collection
-    {
-        return $this->referralCounts;
-    }
-
-    public function addReferralCount(ReferralCount $referralCount): static
-    {
-        if (!$this->referralCounts->contains($referralCount)) {
-            $this->referralCounts->add($referralCount);
-            $referralCount->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeReferralCount(ReferralCount $referralCount): static
-    {
-        if ($this->referralCounts->removeElement($referralCount)) {
-            // set the owning side to null (unless already changed)
-            if ($referralCount->getUser() === $this) {
-                $referralCount->setUser(null);
-            }
-        }
 
         return $this;
     }

@@ -12,15 +12,15 @@
 				<div class="col-lg-6">
 					<h1 class="display-4 fw-bold mb-4">
 						Gagnez
-						<span class="text-warning">4%</span>
+						<span class="text-warning">{{ (app.user.referralRewardRate * 10) }}%</span>
 						sur vos produits
 					</h1>
-					<p class="lead mb-4">Chaque produit acheté vous rapporte automatiquement 4% de sa valeur actuelle quotidiennement.</p>
+					<p class="lead mb-4">Chaque produit acheté vous rapporte automatiquement {{ (app.user.referralRewardRate * 10) }}% de sa valeur actuelle quotidiennement.</p>
 					<div class="d-flex flex-wrap gap-3">
 						{% if app.user %}
 							<a href="{{ path('app_products_index') }}" class="btn btn-light btn-lg px-4">Voir les produits</a>
 						{% else %}
-							<a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4">Commencer à 4%</a>
+							<a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4">Commencer à {{ (app.user.referralRewardRate * 10) }}%</a>
 						{% endif %}
 						<a href="#how-it-works" class="btn btn-outline-light btn-lg px-4">
 							<i class="fas fa-play me-2"></i>Comment ça marche</a>
@@ -48,7 +48,7 @@
 					<div class="col-md-3">
 						<div class="stats-card bg-dark p-3 rounded text-center">
 							<i class="fas fa-coins text-primary mb-2 fs-4"></i>
-							<div class="stats-number fs-3 fw-bold">{{ app.user.balance|default(0)|format_currency('USD') }}</div>
+							<div class="stats-number fs-3 fw-bold">${{ app.user.balance|default(0)|number_format(2) }}</div>
 							<div class="stats-label text-muted">Solde actuel</div>
 						</div>
 					</div>
@@ -63,7 +63,7 @@
 						<div class="stats-card bg-dark p-3 rounded text-center">
 							<i class="fas fa-money-bill-wave text-primary mb-2 fs-4"></i>
               
-								<div class="stats-number fs-3 fw-bold">{# utiliser ici le prix la somme du prix des produits que possedent le User au lieu du solde du User #}{{ ((app.user.balance|default(0)) * app.user.referralRewardRate)|format_currency('USD') }}</div>
+								<div class="stats-number fs-3 fw-bold">{# utiliser ici le prix la somme du prix des produits que possedent le User au lieu du solde du User #}${{ ((app.user.balance|default(0)) * app.user.referralRewardRate)|number_format(2) }}</div>
 								<div class="stats-label text-muted">Gains quotidiens</div>
 							</div>
 						</div>
@@ -76,7 +76,7 @@
 		<section id="how-it-works" class="py-5 bg-dark">
 			<div class="container py-4">
 				<div class="text-center mb-5">
-					<h2 class="fw-bold text-white">Comment fonctionnent vos 4% ?</h2>
+					<h2 class="fw-bold text-white">Comment fonctionnent vos {{ (app.user.referralRewardRate * 10) }}% ?</h2>
 					<p class="lead text-muted">Un système simple et transparent</p>
 				</div>
 				<div class="row g-4">
@@ -94,8 +94,8 @@
 							<div class="feature-icon text-primary mb-3 fs-2">
 								<i class="fas fa-chart-line"></i>
 							</div>
-							<h3 class="fw-bold text-white">2. Recevez vos 4%</h3>
-							<p class="text-muted">Chaque jour, vous gagnez 4% de la valeur actuelle de chaque produit.</p>
+							<h3 class="fw-bold text-white">2. Recevez vos {{ (app.user.referralRewardRate * 10) }}%</h3>
+							<p class="text-muted">Chaque jour, vous gagnez {{ (app.user.referralRewardRate * 10) }}% de la valeur actuelle de chaque produit.</p>
 						</div>
 					</div>
 					<div class="col-md-4">
@@ -116,7 +116,7 @@
 			<div class="container py-4">
 				<div class="text-center mb-5">
 					<h2 class="fw-bold text-white">Nos produits populaires</h2>
-					<p class="lead text-muted">Tous génèrent 4% de rendement quotidien</p>
+					<p class="lead text-muted">Tous génèrent {{ (app.user.referralRewardRate * 10) }}% de rendement quotidien</p>
 				</div>
 				<div class="row g-4">
 					{% for product in products|slice(0, 6) %}
@@ -133,8 +133,8 @@
 								<div class="card-body">
 									<h3 class="card-title fw-bold text-white">{{ product.name }}</h3>
 									<div class="d-flex justify-content-between align-items-center mb-3">
-										<span class="h4 text-primary">{{ (product.price / 601.51)|format_currency('USD') }}</span>
-										<span class="badge bg-warning text-dark">4% quotidien</span>
+										<span class="h4 text-primary">${{ (product.price / 601.51)|number_format(2) }}</span>
+										<span class="badge bg-warning text-dark">{{ (app.user.referralRewardRate * 10) }}% quotidien</span>
 									</div>
 									<p class="card-text text-muted">{{ (product.description|slice(0, 100)) ~ '...' }}</p>
 								</div>
@@ -207,7 +207,7 @@
 		<section class="py-5 bg-dark text-white border-top border-gray-700">
 			<div class="container py-4 text-center">
 				<h2 class="fw-bold mb-4">Prêt à générer des revenus passifs ?</h2>
-				<p class="lead mb-5">Commencez avec 4% de rendement quotidien sur vos investissements.</p>
+				<p class="lead mb-5">Commencez avec {{ (app.user.referralRewardRate * 10) }}% de rendement quotidien sur vos investissements.</p>
 				{% if app.user %}
 					<a href="{{ path('app_profile') }}" class="btn btn-primary btn-lg px-5 me-3">
 						<i class="fas fa-box-open me-2"></i>Investir maintenant</a>

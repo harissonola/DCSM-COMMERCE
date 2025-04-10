@@ -11,7 +11,7 @@
             </a>
 
             <!-- Boutiques -->
-            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_shop_index' ? 'active' }}" 
+            <a class="nav-link d-flex flex-column align-items-center {{ app.current_route == 'app_shop_index' or app.current_route == 'app_shop' ? 'active' }}" 
                href="{{ path('app_shop_index') }}">
                 <div class="nav-icon-wrapper">
                     <i class="bx bxs-store fs-5"></i>

@@ -268,8 +268,8 @@ class ProductsController extends AbstractController
                 return $this->redirectToRoute('app_dashboard');
             }
 
-            // Utiliser la même logique que {{ prod.price|format_currency('USD') }}
-            $formattedPrice = $numberFormatter->formatCurrency(($product->getPrice() / 601.50), 'USD');
+            // Utiliser la même logique que {{ (prod.price/601.50) }}
+            $formattedPrice = (($product->getPrice() / 601.50));
             // Convertir la chaîne formatée en nombre sans le symbole $
             $priceUSD = $formattedPrice;
 

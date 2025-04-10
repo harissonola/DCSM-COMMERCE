@@ -133,6 +133,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $lastReferralRewardAt = null;
 
+    #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'referrals')]
+    private ?self $referrer = null;
+
+    /**
+     * @var Collection<int, self>
+     */
+    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'referrer')]
+    private Collection $referrals;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -140,6 +149,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->product = new ArrayCollection();
         $this->balance = 0.00;  // Valeur par défaut dans le constructeur
         $this->EmailNotifications = false;  // Valeur par défaut dans le constructeur
+        $this->referrals = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -575,6 +585,48 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastReferralRewardAt(?\DateTimeImmutable $lastReferralRewardAt): static
     {
         $this->lastReferralRewardAt = $lastReferralRewardAt;
+
+        return $this;
+    }
+
+    public function getReferrer(): ?self
+    {
+        return $this->referrer;
+    }
+
+    public function setReferrer(?self $referrer): static
+    {
+        $this->referrer = $referrer;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, self>
+     */
+    public function getReferrals(): Collection
+    {
+        return $this->referrals;
+    }
+
+    public function addReferral(self $referral): static
+    {
+        if (!$this->referrals->contains($referral)) {
+            $this->referrals->add($referral);
+            $referral->setReferrer($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReferral(self $referral): static
+    {
+        if ($this->referrals->removeElement($referral)) {
+            // set the owning side to null (unless already changed)
+            if ($referral->getReferrer() === $this) {
+                $referral->setReferrer(null);
+            }
+        }
 
         return $this;
     }

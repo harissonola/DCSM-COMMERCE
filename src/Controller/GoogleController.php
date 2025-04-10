@@ -117,18 +117,23 @@ class GoogleController extends AbstractController
 
     private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
     {
+        // Récupération du code de parrainage depuis la query string
         $referredBy = $request->query->get('ref');
         if ($referredBy) {
+            // On recherche le parrain (User) grâce au code de referral
             $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
             if ($referrer) {
-                $user->setReferredBy($referredBy);
-                $referrer->setReferralCount($referrer->getReferralCount() + 1);
+                // Lien bi-directionnel : on ajoute l'utilisateur dans les referrals du parrain.
+                $referrer->addReferral($user);
+                // On met à jour les récompenses du parrain en fonction du nombre de filleuls
                 $this->updateReferrerRewards($referrer, $entityManager);
+
                 $entityManager->persist($referrer);
                 $entityManager->flush();
             }
         }
     }
+
 
     private function generateAndSaveQrCode(
         User $user,
@@ -262,7 +267,9 @@ class GoogleController extends AbstractController
 
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
     {
-        $count = $referrer->getReferralCount();
+        // Calculer le nombre de filleuls depuis la relation
+        $count = count($referrer->getReferrals());
+
         if ($count >= 40) {
             $referrer->setReferralRewardRate(0.13)
                 ->setBalance($referrer->getBalance() + 10);
@@ -273,6 +280,7 @@ class GoogleController extends AbstractController
         } elseif ($count >= 5) {
             $referrer->setReferralRewardRate(0.6);
         }
+
         $entityManager->persist($referrer);
         $entityManager->flush();
     }

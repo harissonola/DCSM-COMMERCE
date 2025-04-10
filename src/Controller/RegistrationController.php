@@ -256,20 +256,25 @@ class RegistrationController extends AbstractController
         }
     }
 
-    private function handleReferralSystem(User $user, $form, EntityManagerInterface $entityManager): void
+    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
     {
-        $referredBy = $form->get('referredBy')->getData();
+        // Récupération du code de parrainage depuis la query string
+        $referredBy = $request->query->get('ref');
         if ($referredBy) {
+            // On recherche le parrain (User) grâce au code de referral
             $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
             if ($referrer) {
-                $user->setReferredBy($referredBy);
-                $referrer->setReferralCount($referrer->getReferralCount() + 1);
+                // Lien bi-directionnel : on ajoute l'utilisateur dans les referrals du parrain.
+                $referrer->addReferral($user);
+                // On met à jour les récompenses du parrain en fonction du nombre de filleuls
                 $this->updateReferrerRewards($referrer, $entityManager);
+
                 $entityManager->persist($referrer);
                 $entityManager->flush();
             }
         }
     }
+
 
     /**
      * Gestion de l'upload de l'image de profil.

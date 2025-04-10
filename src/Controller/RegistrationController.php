@@ -358,7 +358,9 @@ class RegistrationController extends AbstractController
 
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
     {
-        $count = $referrer->getReferralCount();
+        // Calculer le nombre de filleuls depuis la relation
+        $count = count($referrer->getReferrals());
+
         if ($count >= 40) {
             $referrer->setReferralRewardRate(0.13)
                 ->setBalance($referrer->getBalance() + 10);
@@ -369,6 +371,7 @@ class RegistrationController extends AbstractController
         } elseif ($count >= 5) {
             $referrer->setReferralRewardRate(0.6);
         }
+
         $entityManager->persist($referrer);
         $entityManager->flush();
     }

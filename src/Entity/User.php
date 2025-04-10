@@ -16,8 +16,8 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_USERNAME', fields: ['username'])]
-#[UniqueEntity(fields: ['username'], message: "Ce nom d'utilisateur existe deja")]
-#[UniqueEntity(fields: ['email'], message: "Cette adresse mail existe deja")]
+#[UniqueEntity(fields: ['username'], message: "Ce nom d'utilisateur existe déjà")]
+#[UniqueEntity(fields: ['email'], message: "Cette adresse mail existe déjà")]
 #[Vich\Uploadable]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -134,6 +134,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $lastReferralRewardAt = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'referrals')]
+    #[ORM\JoinColumn(nullable: true)]  // Permettre que la colonne referrer_id soit NULL
     private ?self $referrer = null;
 
     /**
@@ -165,7 +166,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setUsername(string $username): static
     {
         $this->username = $username;
-
         return $this;
     }
 
@@ -187,9 +187,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
+        // garantit que chaque utilisateur a au moins ROLE_USER
         $roles[] = 'ROLE_USER';
-
         return array_unique($roles);
     }
 
@@ -199,7 +198,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
-
         return $this;
     }
 
@@ -214,7 +212,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
         return $this;
     }
 
@@ -223,8 +220,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
+        // Effacer les données sensibles temporaires si nécessaire
     }
 
     public function getFname(): ?string
@@ -235,7 +231,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setFname(string $fname): static
     {
         $this->fname = $fname;
-
         return $this;
     }
 
@@ -247,7 +242,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLname(string $lname): static
     {
         $this->lname = $lname;
-
         return $this;
     }
 
@@ -259,7 +253,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCountry(string $country): static
     {
         $this->country = $country;
-
         return $this;
     }
 
@@ -271,7 +264,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 
@@ -283,7 +275,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
@@ -295,7 +286,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPhoto(?string $photo): static
     {
         $this->photo = $photo;
-
         return $this;
     }
 
@@ -307,7 +297,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setVerified(bool $isVerified): static
     {
         $this->isVerified = $isVerified;
-
         return $this;
     }
 
@@ -325,19 +314,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $this->transactions->add($transaction);
             $transaction->setUser($this);
         }
-
         return $this;
     }
 
     public function removeTransaction(Transactions $transaction): static
     {
         if ($this->transactions->removeElement($transaction)) {
-            // set the owning side to null (unless already changed)
             if ($transaction->getUser() === $this) {
                 $transaction->setUser(null);
             }
         }
-
         return $this;
     }
 
@@ -355,19 +341,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $this->investissements->add($investissement);
             $investissement->setUser($this);
         }
-
         return $this;
     }
 
     public function removeInvestissement(Investissement $investissement): static
     {
         if ($this->investissements->removeElement($investissement)) {
-            // set the owning side to null (unless already changed)
             if ($investissement->getUser() === $this) {
                 $investissement->setUser(null);
             }
         }
-
         return $this;
     }
 
@@ -384,14 +367,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if (!$this->product->contains($product)) {
             $this->product->add($product);
         }
-
         return $this;
     }
 
     public function removeProduct(Product $product): static
     {
         $this->product->removeElement($product);
-
         return $this;
     }
 
@@ -403,7 +384,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setMiningBotActive(bool $isMiningBotActive): static
     {
         $this->isMiningBotActive = $isMiningBotActive;
-
         return $this;
     }
 
@@ -415,7 +395,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRefCode(?string $refCode): static
     {
         $this->refCode = $refCode;
-
         return $this;
     }
 
@@ -427,7 +406,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setQrCodePath(?string $qrCodePath): static
     {
         $this->qrCodePath = $qrCodePath;
-
         return $this;
     }
 
@@ -439,7 +417,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReferredBy(?string $referredBy): static
     {
         $this->referredBy = $referredBy;
-
         return $this;
     }
 
@@ -451,7 +428,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReferralCode(?string $referralCode): static
     {
         $this->referralCode = $referralCode;
-
         return $this;
     }
 
@@ -463,7 +439,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setBalance(?float $balance): static
     {
         $this->balance = $balance;
-
         return $this;
     }
 
@@ -475,7 +450,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEmailNotifications(?bool $EmailNotifications): static
     {
         $this->EmailNotifications = $EmailNotifications;
-
         return $this;
     }
 
@@ -487,7 +461,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setGoogleId(?string $googleId): static
     {
         $this->googleId = $googleId;
-
         return $this;
     }
 
@@ -499,7 +472,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReward(?float $reward): static
     {
         $this->reward = $reward;
-
         return $this;
     }
 
@@ -511,7 +483,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastMiningTime(?\DateTimeInterface $lastMiningTime): static
     {
         $this->lastMiningTime = $lastMiningTime;
-
         return $this;
     }
 
@@ -523,7 +494,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setImageFile(?string $imageFile): static
     {
         $this->imageFile = $imageFile;
-
         return $this;
     }
 
@@ -535,7 +505,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReferralRewardRate(float $referralRewardRate): static
     {
         $this->referralRewardRate = $referralRewardRate;
-
         return $this;
     }
 
@@ -547,10 +516,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastReferralRewards(?array $lastReferralRewards): static
     {
         $this->lastReferralRewards = $lastReferralRewards;
-
         return $this;
     }
-
 
     /**
      * Retourne la date de la dernière récompense pour un produit donné.
@@ -570,10 +537,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastReferralRewardTimeForProduct(Product $product, \DateTimeInterface $date): self
     {
         $lastReferralRewards = $this->getLastReferralRewards() ?? [];
-        // Stocke la date au format ISO 8601 (par exemple)
+        // Stocke la date au format ISO 8601
         $lastReferralRewards[$product->getId()] = $date->format('c');
         $this->setLastReferralRewards($lastReferralRewards);
-
         return $this;
     }
 
@@ -585,7 +551,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLastReferralRewardAt(?\DateTimeImmutable $lastReferralRewardAt): static
     {
         $this->lastReferralRewardAt = $lastReferralRewardAt;
-
         return $this;
     }
 
@@ -597,7 +562,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setReferrer(?self $referrer): static
     {
         $this->referrer = $referrer;
-
         return $this;
     }
 
@@ -615,19 +579,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $this->referrals->add($referral);
             $referral->setReferrer($this);
         }
-
         return $this;
     }
 
     public function removeReferral(self $referral): static
     {
         if ($this->referrals->removeElement($referral)) {
-            // set the owning side to null (unless already changed)
             if ($referral->getReferrer() === $this) {
                 $referral->setReferrer(null);
             }
         }
-
         return $this;
     }
 }

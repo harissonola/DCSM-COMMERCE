@@ -6,30 +6,72 @@
     <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
 
-    <!-- Meta SEO -->
-    <meta name="description" content="DCSM-COMMERCE : Plateforme d'investissement sécurisée"/>
-    <meta name="keywords" content="dcsm-commerce, investissement"/>
+    <!-- Meta SEO de base -->
+    <meta name="description" content="DCSM-COMMERCE : Plateforme d'investissement sécurisée pour particuliers et professionnels. Accompagnement expert, rendements optimisés et outils innovants de gestion de portefeuille. Démarrez dès maintenant avec un minimum de $50 !"/>
+    <meta name="keywords" content="dcsm-commerce, dcsm, commerce, kristel, DCSM-COMMERCE, dcsm commerce, investissement, plateforme investissement, site investissement"/>
     <meta name="cryptomus" content="9d277104"/>
     <meta name="msvalidate.01" content="445050916EC3B5746F08E70D30CCB983"/>
+    <meta name="turbo-cache-control" content="no-cache"/>
 
-    <title>{% block title %}{% endblock %} | DCSM-COMMERCE</title>
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://dcsm-commerce.alwaysdata.net">
+    <meta property="og:title" content="DCSM-COMMERCE - Plateforme d'investissement">
+    <meta property="og:description" content="Plateforme d'investissement transparente avec suivi de performance en temps réel. Investissez dans l'immobilier, crypto-monnaies et marchés financiers avec un accompagnement personnalisé 7j/7, 24h/24.">
+    <meta property="og:image" content="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/banner-og.jpg">
+    <meta property="og:site_name" content="DCSM-COMMERCE">
+    <meta property="fb:app_id" content="61554875637061">
 
-    <!-- Favicon -->
+    <title>
+        {% block title %}{% endblock %}
+        | DCSM-COMMERCE
+    </title>
+
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "DCSM-COMMERCE",
+      "url": "https://dcsm-commerce.alwaysdata.net",
+      "logo": "https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-logo.svg",
+      "description": "Plateforme d'investissement leader en Afrique.",
+      "sameAs": [
+        "https://www.facebook.com/groups/3790076244599049",
+        "https://www.facebook.com/profile.php?id=61554875637061",
+        "https://twitter.com/votrecompte",
+        "https://www.linkedin.com/company/votresociete"
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "150"
+      }
+    }
+    </script>
+
     <link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
 
     {% block stylesheets %}
-        <!-- Fonts -->
+        <!-- CDN for CSS and JS -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css">
         
-        <!-- Sneat Core CSS -->
+        <!-- Sneat CSS -->
         <link rel="stylesheet" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/fonts/boxicons.css"/>
-        <link rel="stylesheet" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/css/core.css"/>
-        <link rel="stylesheet" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/css/theme-default.css"/>
+        <link rel="stylesheet" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/css/core.css" class="template-customizer-core-css"/>
+        <link rel="stylesheet" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/css/theme-default.css" class="template-customizer-theme-css"/>
         <link rel="stylesheet" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/css/demo.css"/>
         
         <!-- AOS Animation -->
         <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
+    {% endblock %}
+
+    {% block javascripts %}
+        {% block importmap %}
+            {{ importmap('app') }}
+        {% endblock %}
     {% endblock %}
 </head>
 
@@ -42,47 +84,55 @@
 
     {% block body %}{% endblock %}
 
-    <!-- Spinner -->
+    <!-- LOADER PERSONNALISÉ (SPINNER) -->
     <div id="custom-spinner" class="spinner hidden">
         <div class="spinner-circle"></div>
     </div>
 
-    {% block javascripts %}
-        <!-- Sneat JS -->
-        <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/libs/jquery/jquery.js"></script>
-        <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/libs/popper/popper.js"></script>
-        <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/js/bootstrap.js"></script>
-        <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-        <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/js/menu.js"></script>
-        <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/js/main.js"></script>
-        
-        <!-- AOS Animation -->
-        <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-        
-        <!-- Custom Scripts -->
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                AOS.init();
-                
-                // Initialize Sneat
-                if (typeof window.TemplateCustomizer !== 'undefined') {
-                    window.TemplateCustomizer.init();
-                }
+    {% block customScript %}{% endblock %}
 
-                // Turbo events for spinner
-                document.addEventListener('turbo:visit', () => {
-                    document.getElementById('custom-spinner')?.classList.remove('hidden');
-                });
+    <!-- Sneat JS -->
+    <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/libs/popper/popper.js"></script>
+    <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/js/bootstrap.js"></script>
+    <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/vendor/js/menu.js"></script>
+    <script src="https://raw.githubusercontent.com/harissonola/my-cdn/main/assets/js/main.js"></script>
+    
+    <!-- AOS Animation -->
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    
+    <!-- Tidio Chat -->
+    <script src="//code.tidio.co/1ke8d6pi5gzmnbfqlibfj63nxob1djzm.js" async></script>
 
-                document.addEventListener('turbo:load', () => {
-                    document.getElementById('custom-spinner')?.classList.add('hidden');
-                });
-            });
-        </script>
-    {% endblock %}
+    <script>
+        $(document).ready(function () {
+            AOS.init();
+            
+            // Initialisation du menu Sneat
+            if (typeof window.TemplateCustomizer !== 'undefined') {
+                window.TemplateCustomizer.init();
+            }
+        });
+
+        // Gestion du spinner avec Turbo
+        document.addEventListener('turbo:visit', () => {
+            const spinner = document.getElementById('custom-spinner');
+            if (spinner) {
+                spinner.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('turbo:load', () => {
+            const spinner = document.getElementById('custom-spinner');
+            if (spinner) {
+                spinner.classList.add('hidden');
+            }
+        });
+    </script>
 
     <style>
-        /* Spinner Styles */
+        /* Styles pour le loader (spinner) */
         .spinner {
             position: fixed;
             top: 0;
@@ -95,7 +145,9 @@
             justify-content: center;
             z-index: 9999;
         }
-        .spinner.hidden { display: none; }
+        .spinner.hidden {
+            display: none;
+        }
         .spinner-circle {
             width: 50px;
             height: 50px;
@@ -104,9 +156,13 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
         
-        /* Dark Mode Enforcement */
+        /* Assurer que le body est toujours en dark mode */
         body {
             color-scheme: dark;
             background-color: #2b2c40;

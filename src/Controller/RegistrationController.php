@@ -32,18 +32,15 @@ class RegistrationController extends AbstractController
     private EmailVerifier $emailVerifier;
     private Client $githubClient;
     private Filesystem $filesystem;
-    private string $githubToken;
 
     public function __construct(
         EmailVerifier $emailVerifier,
         Client $githubClient,
-        Filesystem $filesystem,
-        string $githubToken
+        Filesystem $filesystem
     ) {
         $this->emailVerifier = $emailVerifier;
         $this->githubClient = $githubClient;
         $this->filesystem = $filesystem;
-        $this->githubToken = $githubToken;
     }
 
     #[Route('/register', name: 'app_register')]
@@ -87,8 +84,7 @@ class RegistrationController extends AbstractController
                     $userPasswordHasher,
                     $entityManager,
                     $urlGenerator,
-                    $mailer,
-                    $request  // Passage de l'objet Request ici
+                    $mailer
                 );
 
                 return $security->login($user, AppAuthenticator::class, 'main');
@@ -123,8 +119,7 @@ class RegistrationController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer,
-        Request $request   // Ajout de Request dans la signature
+        MailerInterface $mailer
     ): void {
         // Génération d'un referralCode sans point
         $referralCode = uniqid('ref_', false);
@@ -139,8 +134,8 @@ class RegistrationController extends AbstractController
         // Upload de l'image de profil
         $this->handleProfileImageUpload($user, $form);
 
-        // Gestion du système de parrainage (on passe désormais l'objet Request)
-        $this->handleReferralSystem($user, $request, $entityManager);
+        // Gestion du système de parrainage
+        $this->handleReferralSystem($user, $form, $entityManager);
 
         // Sauvegarde en base
         $entityManager->persist($user);
@@ -212,8 +207,8 @@ class RegistrationController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification avec le token GitHub injecté via le constructeur
-            $this->githubClient->authenticate("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", null, Client::AUTH_ACCESS_TOKEN);
+            // Authentification avec le token GitHub
+            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
             // Récupérer la référence de la branche
             $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);
@@ -279,6 +274,7 @@ class RegistrationController extends AbstractController
             }
         }
     }
+
 
     /**
      * Gestion de l'upload de l'image de profil.

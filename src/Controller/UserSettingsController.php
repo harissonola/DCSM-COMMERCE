@@ -261,7 +261,7 @@ final class UserSettingsController extends AbstractController
 
         try {
             // Authentification via le token GitHub
-            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+            $this->githubClient->authenticate("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", null, Client::AUTH_ACCESS_TOKEN);
 
             // Récupérer la référence de la branche
             $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);

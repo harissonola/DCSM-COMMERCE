@@ -1,19 +1,11 @@
 parameters:
+    # Paramètres éventuels
     app.site_name: "DCSM-COMMERCE"
 
 services:
     _defaults:
         autowire: true
         autoconfigure: true
-
-    # On bind la variable d'environnement aux contrôleurs spécifiques
-    App\Controller\GoogleController:
-        bind:
-            $githubToken: '%env(GITHUB_TOKEN)%'
-        
-    App\Controller\RegistrationController:
-        bind:
-            $githubToken: '%env(GITHUB_TOKEN)%'
 
     App\Service\CryptoService:
         arguments:
@@ -22,10 +14,11 @@ services:
 
     NumberFormatter:
         class: 'NumberFormatter'
-        arguments:
-            - 'fr'
-            - 1
-
+        arguments: 
+            - 'fr'  # Changed from 'fr' to 'en'
+            - 1     # NumberFormatter::CURRENCY constant value is 1
+        
+    
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }

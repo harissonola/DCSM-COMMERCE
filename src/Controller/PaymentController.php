@@ -18,6 +18,28 @@ use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 
 class PaymentController extends AbstractController
 {
+    /**
+     * Calcule les frais de retrait en fonction du montant demandé
+     */
+    private function calculateWithdrawalFees(float $amount): float
+    {
+        // Structure tarifaire pour les retraits
+        if ($amount <= 20) {
+            $feePercentage = 0.05; // 5% pour $2-$20
+        } elseif ($amount <= 100) {
+            $feePercentage = 0.03; // 3% pour $20.01-$100
+        } elseif ($amount <= 500) {
+            $feePercentage = 0.02; // 2% pour $100.01-$500
+        } else {
+            $feePercentage = 0.01; // 1% pour $500.01+
+        }
+
+        $fee = $amount * $feePercentage;
+
+        // Frais minimum de $1
+        return max($fee, 1.0);
+    }
+
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
     public function withdraw(Request $request, EntityManagerInterface $em): Response
     {
@@ -31,8 +53,8 @@ class PaymentController extends AbstractController
         $address = trim($request->request->get('recipient'));
 
         // Validation de base
-        if ($amountUsd <= 0 || $amountUsd > $user->getBalance()) {
-            $this->addFlash('danger', 'Le montant demandé est invalide ou votre solde est insuffisant.');
+        if ($amountUsd <= 0) {
+            $this->addFlash('danger', 'Le montant demandé est invalide.');
             return $this->redirectToRoute('app_profile');
         }
         if ($amountUsd < 2) {
@@ -44,21 +66,41 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_profile');
         }
 
+        // Calcul des frais de retrait
+        $fees = $this->calculateWithdrawalFees($amountUsd);
+        $totalAmount = $amountUsd + $fees;
+
+        // Vérifier si l'utilisateur a suffisamment de fonds (montant + frais)
+        if ($totalAmount > $user->getBalance()) {
+            $this->addFlash('danger', sprintf(
+                'Solde insuffisant. Le retrait de %.2f USD nécessite %.2f USD de frais, soit un total de %.2f USD.',
+                $amountUsd,
+                $fees,
+                $totalAmount
+            ));
+            return $this->redirectToRoute('app_profile');
+        }
+
         // Création de la transaction en statut "pending"
         $transaction = (new Transactions())
             ->setUser($user)
             ->setType('withdrawal')
             ->setAmount($amountUsd)
+            ->setFees($fees)  // Stockage des frais dans un champ 'fees'
             ->setMethod("Crypto ($currency)")
             ->setStatus('pending')
             ->setCreatedAt(new \DateTimeImmutable());
         $em->persist($transaction);
+
+        // Déduire immédiatement le montant total (montant + frais) du solde de l'utilisateur
+        $user->setBalance($user->getBalance() - $totalAmount);
+        $em->persist($user);
         $em->flush();
 
         try {
             // Envoi de la demande de retrait
             $params = [
-                'amount'       => $amountUsd,      // Montant en USD
+                'amount'       => $amountUsd,      // Montant en USD (sans les frais)
                 'currency'     => $currency,       // Devise cible (crypto)
                 'currency2'    => 'USD',           // Devise source
                 'address'      => $address,
@@ -70,12 +112,16 @@ class PaymentController extends AbstractController
             if ($response['error'] !== 'ok') {
                 throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
             }
+
             $this->addFlash('success', sprintf(
-                'Votre demande de retrait de %.2f USD a été enregistrée. La conversion en %s sera effectuée dans les plus brefs délais.',
+                'Votre demande de retrait de %.2f USD a été enregistrée. Des frais de %.2f USD ont été appliqués. La conversion en %s sera effectuée dans les plus brefs délais.',
                 $amountUsd,
+                $fees,
                 $currency
             ));
         } catch (\Exception $e) {
+            // En cas d'erreur, on rembourse l'utilisateur et on marque la transaction comme échouée
+            $user->setBalance($user->getBalance() + $totalAmount);
             $transaction->setStatus('failed');
             $em->flush();
             $this->addFlash('danger', 'Désolé, une erreur est survenue lors du traitement de votre demande de retrait. Veuillez réessayer ultérieurement.');
@@ -102,17 +148,7 @@ class PaymentController extends AbstractController
 
             if ($transaction && $transaction->getStatus() !== 'completed') {
                 $transaction->setStatus('completed');
-                $user = $transaction->getUser();
-
-                if ($user) {
-                    // Vérifier que le montant n'a pas déjà été soustrait
-                    if ($user->getBalance() >= $transaction->getAmount()) {
-                        $user->setBalance($user->getBalance() - $transaction->getAmount());
-                    } else {
-                        file_put_contents(__DIR__ . '/../../var/log/withdrawal_error.log', "Solde insuffisant pour l'utilisateur #" . $user->getId() . "\n", FILE_APPEND);
-                    }
-                    $em->persist($user);
-                }
+                // Nous ne modifions plus le solde de l'utilisateur ici car il a déjà été déduit lors de la création
                 $em->flush();
             }
         }
@@ -348,9 +384,6 @@ class PaymentController extends AbstractController
         $result = json_decode($data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \Exception("Réponse API invalide");
-        }
-        if (!isset($result['error']) || $result['error'] !== 'ok') {
-            throw new \Exception($result['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
         }
         return $result;
     }

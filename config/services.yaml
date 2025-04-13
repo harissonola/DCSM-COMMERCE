@@ -6,21 +6,26 @@ services:
         autowire: true
         autoconfigure: true
 
+    # On bind la variable d'environnement aux contrôleurs spécifiques
+    App\Controller\GoogleController:
+        bind:
+            $githubToken: '%env(GITHUB_TOKEN)%'
+        
+    App\Controller\RegistrationController:
+        bind:
+            $githubToken: '%env(GITHUB_TOKEN)%'
+
     App\Service\CryptoService:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
-        
-    App\Controller\RegistrationController:
-        arguments:
-            $githubToken: '%env(GITHUB_TOKEN)%'
 
     NumberFormatter:
         class: 'NumberFormatter'
-        arguments: 
+        arguments:
             - 'fr'
             - 1
-        
+
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }

@@ -84,7 +84,8 @@ class RegistrationController extends AbstractController
                     $userPasswordHasher,
                     $entityManager,
                     $urlGenerator,
-                    $mailer
+                    $mailer,
+                    $request  // Passage de l'objet Request ici
                 );
 
                 return $security->login($user, AppAuthenticator::class, 'main');
@@ -119,7 +120,8 @@ class RegistrationController extends AbstractController
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer
+        MailerInterface $mailer,
+        Request $request   // Ajout de Request dans la signature
     ): void {
         // Génération d'un referralCode sans point
         $referralCode = uniqid('ref_', false);
@@ -134,8 +136,8 @@ class RegistrationController extends AbstractController
         // Upload de l'image de profil
         $this->handleProfileImageUpload($user, $form);
 
-        // Gestion du système de parrainage
-        $this->handleReferralSystem($user, $form, $entityManager);
+        // Gestion du système de parrainage (on passe désormais l'objet Request)
+        $this->handleReferralSystem($user, $request, $entityManager);
 
         // Sauvegarde en base
         $entityManager->persist($user);
@@ -274,7 +276,6 @@ class RegistrationController extends AbstractController
             }
         }
     }
-
 
     /**
      * Gestion de l'upload de l'image de profil.

@@ -110,20 +110,31 @@
       });
     </script>
     <script src="//code.tidio.co/1ke8d6pi5gzmnbfqlibfj63nxob1djzm.js" async></script>
-
-    <!-- Gestion du spinner avec Turbo -->
+	
+	{# Désactivation de la barre de progression Turbo et gestion du spinner #}
     <script type="module">
-      import { setProgressBarDelay } from '@hotwired/turbo';
-      setProgressBarDelay(999999);
-      document.addEventListener('turbo:visit', () => {
-        const spinner = document.getElementById('custom-spinner');
-        if (spinner) spinner.classList.remove('hidden');
-      });
-      document.addEventListener('turbo:load', () => {
-        const spinner = document.getElementById('custom-spinner');
-        if (spinner) spinner.classList.add('hidden');
-      });
+        import { setProgressBarDelay } from '@hotwired/turbo';
+
+        // On met un délai très élevé pour la barre de progression Turbo
+        setProgressBarDelay(999999);
+
+        // Affichage du spinner lors du début de la navigation
+        document.addEventListener('turbo:visit', () => {
+            const spinner = document.getElementById('custom-spinner');
+            if (spinner) {
+                spinner.classList.remove('hidden');
+            }
+        });
+
+        // Masquage du spinner lorsque la page est entièrement chargée
+        document.addEventListener('turbo:load', () => {
+            const spinner = document.getElementById('custom-spinner');
+            if (spinner) {
+                spinner.classList.add('hidden');
+            }
+        });
     </script>
+    
 
     <style>
       /* Styles pour le loader (spinner) */

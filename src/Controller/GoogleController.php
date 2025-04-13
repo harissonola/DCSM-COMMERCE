@@ -62,7 +62,11 @@ class GoogleController extends AbstractController
             $username = strtolower($email);
         }
 
+<<<<<<< HEAD
         // Vérification de l'existence de l'utilisateur
+=======
+        // Vérification de l'existence
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
         $existingUser = $entityManager->getRepository(User::class)
             ->findOneBy(['googleId' => $googleId])
             ?? $entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
@@ -76,9 +80,15 @@ class GoogleController extends AbstractController
             return $authenticator->authenticateUser($existingUser, $appAuthenticator, $request);
         }
 
+<<<<<<< HEAD
         // Création du nouvel utilisateur
         $user = new User();
         $referralCode = uniqid('ref_', false); // Code de parrainage sans point
+=======
+        // Création de l'utilisateur
+        $user = new User();
+        $referralCode = uniqid('ref_', false); // Sans point pour éviter les erreurs de nommage
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
 
         try {
             // Configuration de l'utilisateur
@@ -95,7 +105,11 @@ class GoogleController extends AbstractController
                 ->setVerified(true)
                 ->setReferralCode($referralCode);
 
+<<<<<<< HEAD
             // Gestion du système de parrainage en passant l'objet Request
+=======
+            // Gestion du parrainage
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $this->handleReferralSystem($user, $request, $entityManager);
 
             // Génération et upload du QR Code
@@ -105,7 +119,11 @@ class GoogleController extends AbstractController
             $entityManager->persist($user);
             $entityManager->flush();
 
+<<<<<<< HEAD
             // Envoi de l'email de parrainage
+=======
+            // Envoi de l'email
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $this->sendReferralEmail($user, $user->getReferralCode(), $user->getQrCodePath(), $mailer);
 
             return $authenticator->authenticateUser($user, $appAuthenticator, $request);
@@ -116,6 +134,7 @@ class GoogleController extends AbstractController
         }
     }
 
+<<<<<<< HEAD
     /**
      * Récupère le code de parrainage depuis l'URL et le lie à l'utilisateur, en mettant à jour les récompenses du parrain.
      */
@@ -126,6 +145,19 @@ class GoogleController extends AbstractController
             $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
             if ($referrer) {
                 $referrer->addReferral($user);
+=======
+    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
+    {
+        // Récupération du code de parrainage depuis la query string
+        $referredBy = $request->query->get('ref');
+        if ($referredBy) {
+            // On recherche le parrain (User) grâce au code de referral
+            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
+            if ($referrer) {
+                // Lien bi-directionnel : on ajoute l'utilisateur dans les referrals du parrain.
+                $referrer->addReferral($user);
+                // On met à jour les récompenses du parrain en fonction du nombre de filleuls
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
                 $this->updateReferrerRewards($referrer, $entityManager);
 
                 $entityManager->persist($referrer);
@@ -134,9 +166,13 @@ class GoogleController extends AbstractController
         }
     }
 
+<<<<<<< HEAD
     /**
      * Génère le QR Code du lien d'affiliation, l'upload sur GitHub et stocke l'URL dans l'entité User.
      */
+=======
+
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
     private function generateAndSaveQrCode(
         User $user,
         UrlGeneratorInterface $urlGenerator,
@@ -152,8 +188,13 @@ class GoogleController extends AbstractController
             // Génération du QR Code
             $qrCode = new QrCode($referralLink);
             $writer = new PngWriter([
+<<<<<<< HEAD
                 'errorCorrectionLevel' => 'L',
                 'size' => 300
+=======
+                'errorCorrectionLevel' => 'L', // Correction faible
+                'size' => 300 // 300x300 pixels
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             ]);
             $qrResult = $writer->write($qrCode);
 
@@ -165,10 +206,17 @@ class GoogleController extends AbstractController
             $tempFilePath = $tempDir . $user->getReferralCode() . '.png';
             $qrResult->saveToFile($tempFilePath);
 
+<<<<<<< HEAD
             // Lecture du contenu binaire du fichier
             $fileContent = file_get_contents($tempFilePath);
 
             // Upload sur GitHub
+=======
+            // Récupération du contenu binaire de l'image
+            $fileContent = file_get_contents($tempFilePath);
+
+            // Upload sur GitHub avec le chemin complet
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $filePath = "uploads/qrcodes/{$user->getReferralCode()}.png";
             $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
 
@@ -183,8 +231,12 @@ class GoogleController extends AbstractController
     }
 
     /**
+<<<<<<< HEAD
      * Upload l'image sur GitHub en utilisant l'API Git Data pour créer un blob, un arbre, un commit,
      * et mettre à jour la référence de la branche.
+=======
+     * Upload l'image sur GitHub en utilisant l'API Git Data pour créer un blob, un arbre, un commit, et mettre à jour la référence.
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
      */
     private function uploadToGitHub(string $filePath, string $content, string $message): string
     {
@@ -196,6 +248,7 @@ class GoogleController extends AbstractController
             // Authentification avec le token GitHub
             $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
 
+<<<<<<< HEAD
             // Récupération de la référence de la branche
             $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);
             $currentCommitSha = $reference['object']['sha'];
@@ -205,12 +258,27 @@ class GoogleController extends AbstractController
             $treeSha = $commit['tree']['sha'];
 
             // Création d'un blob avec le contenu encodé en base64
+=======
+            // Récupérer la référence de la branche
+            $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);
+            $currentCommitSha = $reference['object']['sha'];
+
+            // Récupérer le commit courant pour obtenir l'arbre de base
+            $commit = $this->githubClient->api('git')->commits()->show($repoOwner, $repoName, $currentCommitSha);
+            $treeSha = $commit['tree']['sha'];
+
+            // Créer un blob avec le contenu binaire encodé en base64
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $blob = $this->githubClient->api('git')->blobs()->create($repoOwner, $repoName, [
                 'content' => base64_encode($content),
                 'encoding' => 'base64'
             ]);
 
+<<<<<<< HEAD
             // Création d'un nouvel arbre en ajoutant le blob
+=======
+            // Créer un nouvel arbre en ajoutant le blob
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $tree = $this->githubClient->api('git')->trees()->create($repoOwner, $repoName, [
                 'base_tree' => $treeSha,
                 'tree' => [
@@ -223,28 +291,43 @@ class GoogleController extends AbstractController
                 ]
             ]);
 
+<<<<<<< HEAD
             // Création d'un nouveau commit avec le nouvel arbre
+=======
+            // Créer un nouveau commit avec le nouvel arbre
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $newCommit = $this->githubClient->api('git')->commits()->create($repoOwner, $repoName, [
                 'message' => $message,
                 'tree' => $tree['sha'],
                 'parents' => [$currentCommitSha]
             ]);
 
+<<<<<<< HEAD
             // Mise à jour de la référence de la branche
+=======
+            // Mettre à jour la référence de la branche pour pointer sur le nouveau commit
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             $this->githubClient->api('git')->references()->update($repoOwner, $repoName, 'heads/' . $branch, [
                 'sha' => $newCommit['sha']
             ]);
 
+<<<<<<< HEAD
             // Retour de l'URL raw du fichier stocké sur GitHub
+=======
+            // Retourner l'URL raw du fichier stocké sur GitHub
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
             return "https://raw.githubusercontent.com/{$repoOwner}/{$repoName}/{$branch}/{$filePath}";
         } catch (Exception $e) {
             throw new Exception("Échec de l'upload sur GitHub : " . $e->getMessage());
         }
     }
 
+<<<<<<< HEAD
     /**
      * Envoi d'un email de parrainage contenant le lien d'affiliation et le QR Code.
      */
+=======
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
     private function sendReferralEmail(
         User $user,
         string $referralCode,
@@ -269,6 +352,7 @@ class GoogleController extends AbstractController
         } catch (\Exception $e) {
             $this->addFlash('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
         }
+<<<<<<< HEAD
     }
 
     /**
@@ -276,6 +360,28 @@ class GoogleController extends AbstractController
      */
     private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
     {
+        $count = count($referrer->getReferrals());
+
+        if ($count >= 40) {
+            $referrer->setReferralRewardRate(0.13)
+                ->setBalance($referrer->getBalance() + 10);
+        } elseif ($count >= 20) {
+            $referrer->setReferralRewardRate(0.10);
+        } elseif ($count >= 10) {
+            $referrer->setReferralRewardRate(0.7);
+        } elseif ($count >= 5) {
+            $referrer->setReferralRewardRate(0.6);
+        }
+
+        $entityManager->persist($referrer);
+        $entityManager->flush();
+=======
+>>>>>>> 123355c65d6f12e7b362c6b16583e60eff445d37
+    }
+
+    private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
+    {
+        // Calculer le nombre de filleuls depuis la relation
         $count = count($referrer->getReferrals());
 
         if ($count >= 40) {

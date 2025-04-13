@@ -1,6 +1,8 @@
 parameters:
     # Paramètres éventuels
     app.site_name: "DCSM-COMMERCE"
+    github_token: '%env(GITHUB_TOKEN)%'
+    
 
 services:
     _defaults:
@@ -11,6 +13,14 @@ services:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
+    
+    App\Controller\GoogleController:
+        arguments:
+            $githubToken: '%github_token%'
+        
+    App\Controller\RegistrationController:
+        arguments:
+            $githubToken: '%github_token%'
 
     NumberFormatter:
         class: 'NumberFormatter'

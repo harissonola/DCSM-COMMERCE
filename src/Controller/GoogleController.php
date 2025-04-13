@@ -26,11 +26,13 @@ class GoogleController extends AbstractController
 {
     private Client $githubClient;
     private Filesystem $filesystem;
+    private string $githubToken;
 
-    public function __construct(Client $githubClient, Filesystem $filesystem)
+    public function __construct(Client $githubClient, Filesystem $filesystem, string $githubToken)
     {
         $this->githubClient = $githubClient;
         $this->filesystem = $filesystem;
+        $this->githubToken = $githubToken;
     }
 
     #[Route('/connect/google', name: 'connect_google_start')]
@@ -193,8 +195,8 @@ class GoogleController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification avec le token GitHub
-            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+            // Authentification avec le token GitHub injecté
+            $this->githubClient->authenticate($this->githubToken, null, Client::AUTH_ACCESS_TOKEN);
 
             // Récupération de la référence de la branche
             $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);

@@ -32,15 +32,18 @@ class RegistrationController extends AbstractController
     private EmailVerifier $emailVerifier;
     private Client $githubClient;
     private Filesystem $filesystem;
+    private string $githubToken;
 
     public function __construct(
         EmailVerifier $emailVerifier,
         Client $githubClient,
-        Filesystem $filesystem
+        Filesystem $filesystem,
+        string $githubToken
     ) {
         $this->emailVerifier = $emailVerifier;
         $this->githubClient = $githubClient;
         $this->filesystem = $filesystem;
+        $this->githubToken = $githubToken;
     }
 
     #[Route('/register', name: 'app_register')]
@@ -209,8 +212,8 @@ class RegistrationController extends AbstractController
         $branch = 'main';
 
         try {
-            // Authentification avec le token GitHub
-            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+            // Authentification avec le token GitHub injecté via le constructeur
+            $this->githubClient->authenticate($this->githubToken, null, Client::AUTH_ACCESS_TOKEN);
 
             // Récupérer la référence de la branche
             $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);

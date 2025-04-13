@@ -10,10 +10,6 @@ services:
         arguments:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
-
-    App\Controller\GoogleController:
-        arguments:
-            $githubToken: '%env(GITHUB_TOKEN)%'
         
     App\Controller\RegistrationController:
         arguments:

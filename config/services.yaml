@@ -28,7 +28,6 @@ services:
             - 'fr'  # Changed from 'fr' to 'en'
             - 1     # NumberFormatter::CURRENCY constant value is 1
         
-    
     App\Middleware\ForceIndexRobotsTagMiddleware:
         tags:
             - { name: 'kernel.event_subscriber' }

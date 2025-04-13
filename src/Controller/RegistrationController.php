@@ -210,7 +210,7 @@ class RegistrationController extends AbstractController
 
         try {
             // Authentification avec le token GitHub
-            $this->githubClient->authenticate($_ENV['GITHUB_TOKEN'], null, Client::AUTH_ACCESS_TOKEN);
+            $this->githubClient->authenticate($_ENV['GH_TOKEN_BASE64'], null, Client::AUTH_ACCESS_TOKEN);
 
             // Récupérer la référence de la branche
             $reference = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);

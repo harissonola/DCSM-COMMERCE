@@ -19,20 +19,23 @@
 	<div class="col-md-6">
 		{{ form_row(form.country) }}
 	</div>
-	<div class="col-md-6">
-		{{ form_row(form.balance) }}
-	</div>
+	{% if app.current_route != "admin_user_new" %}
+		<div class="col-md-6">
+			{{ form_row(form.balance) }}
+		</div>
+	{% endif %}
+
+	{% if app.current_route == "admin_user_new" %}
+		<div class="col-12">
+			{{ form_row(form.plainPassword) }}
+		</div>
+	{% endif %}
 	<div class="col-12">
 		{{ form_row(form.roles) }}
 	</div>
 	<div class="col-12">
 		{{ form_row(form.isVerified) }}
 	</div>
-	{% if app.current_route == "admin_user_new" %}
-		<div class="col-12">
-			{{ form_row(form.plainPassword) }}
-		</div>
-	{% endif %}
 
 </div>
 <div class="mt-3">

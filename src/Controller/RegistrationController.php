@@ -324,7 +324,7 @@ class RegistrationController extends AbstractController
             'app_verify_email',
             $user,
             (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
                 ->to((string) $user->getEmail())
                 ->subject('Confirmation de votre adresse email')
                 ->htmlTemplate('registration/confirmation_email.html.twig')
@@ -338,7 +338,7 @@ class RegistrationController extends AbstractController
     ): void {
         try {
             $email = (new TemplatedEmail())
-                ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
                 ->to($user->getEmail())
                 ->subject('Votre QR Code et lien d\'affiliation')
                 ->htmlTemplate('emails/referral_email.html.twig')
@@ -402,7 +402,7 @@ class RegistrationController extends AbstractController
                 'app_verify_email',
                 $user,
                 (new TemplatedEmail())
-                    ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+                    ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
                     ->to((string) $user->getEmail())
                     ->subject('Nouvelle confirmation de votre email')
                     ->htmlTemplate('registration/confirmation_email.html.twig')

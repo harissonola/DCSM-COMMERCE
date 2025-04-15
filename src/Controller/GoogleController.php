@@ -248,7 +248,7 @@ class GoogleController extends AbstractController
         $referralLink = $this->generateUrl('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@dcsm-commerce.com', 'DCSM COMMERCE'))
+            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
             ->to($user->getEmail())
             ->subject('Votre QR Code et lien d\'affiliation')
             ->htmlTemplate('emails/referral_email.html.twig')

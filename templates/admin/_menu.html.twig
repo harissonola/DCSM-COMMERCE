@@ -1,4 +1,4 @@
-<aside id="layout-menu" class="layout-menu menu-vertical menu bg-dark">
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
         <a href="{{ path('admin_dashboard') }}" class="app-brand-link">
             <span class="app-brand-text demo menu-text fw-bold ms-2">Administration</span>
@@ -8,6 +8,7 @@
     <div class="menu-inner-shadow"></div>
 
     <ul class="menu-inner py-1">
+        <!-- Dashboard -->
         <li class="menu-item {{ app.request.get('_route') == 'admin_dashboard' ? 'active' : '' }}">
             <a href="{{ path('admin_dashboard') }}" class="menu-link">
                 <i class="menu-icon mdi mdi-home-outline"></i>
@@ -15,6 +16,7 @@
             </a>
         </li>
 
+        <!-- Utilisateurs -->
         <li class="menu-item {{ app.request.get('_route') starts with 'admin_user_' ? 'active open' : '' }}">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon mdi mdi-account-multiple"></i>
@@ -30,6 +32,7 @@
             </ul>
         </li>
 
+        <!-- Boutique -->
         <li class="menu-item {{ app.request.get('_route') starts with 'admin_shop_' ? 'active open' : '' }}">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon mdi mdi-store"></i>
@@ -45,6 +48,7 @@
             </ul>
         </li>
 
+        <!-- Produits -->
         <li class="menu-item {{ app.request.get('_route') starts with 'admin_product_' ? 'active open' : '' }}">
             <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon mdi mdi-package-variant"></i>
@@ -60,8 +64,9 @@
             </ul>
         </li>
 
-        <li class="menu-item {{ app.request.get('_route') starts with 'admin_transactions_' ? 'active' : '' }}">
-            <a href="{{ path('admin_transactions_index') }}" class="menu-link">
+        <!-- Transactions -->
+        <li class="menu-item {{ app.request.get('_route') starts with 'admin_transaction_' ? 'active' : '' }}">
+            <a href="{{ path('admin_transaction_index') }}" class="menu-link">
                 <i class="menu-icon mdi mdi-cash-multiple"></i>
                 <div>Transactions</div>
             </a>

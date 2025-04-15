@@ -19,7 +19,8 @@
 	<div class="col-md-6">
 		{{ form_row(form.country) }}
 	</div>
-	{% if app.current_route != "admin_user_new" %}
+	{% if app.current_route == "admin_user_new" %}
+		{% else %}
 		<div class="col-md-6">
 			{{ form_row(form.balance) }}
 		</div>

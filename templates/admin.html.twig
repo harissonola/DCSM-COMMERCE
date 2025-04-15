@@ -47,7 +47,11 @@
 	</head>
 
 	<body
-		data-bs-theme=dark>
+		data-bs-theme="dark">
+		{# --- LOADER PERSONNALISÉ (SPINNER) --- #}
+		<div id="custom-spinner" class="spinner hidden">
+			<div class="spinner-circle"></div>
+		</div>
 		<!-- Layout wrapper -->
 		<div class="layout-wrapper layout-content-navbar">
 			<div
@@ -90,68 +94,118 @@
 			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
 
 			<!-- Main JS -->
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
-
-             
-             {% block customScript %}{% endblock %}
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>{% block customScript %}
+		{% endblock %}
 
 			<!-- SweetAlert2 JS -->
 		 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 			<!-- Flash Messages Handler -->
 			 <script>
-			            document.addEventListener('turbo:load', function() {
-			                // Configuration globale de SweetAlert2 pour les toasts
-			                const Toast = Swal.mixin({
-			                    toast: true,
-			                    position: 'top-end',
-			                    showConfirmButton: false,
-			                    timer: 5000,
-			                    timerProgressBar: true,
-			                    background: 'var(--bs-body-bg)',
-			                    color: 'var(--bs-body-color)',
-			                    didOpen: (toast) => {
-			                        toast.addEventListener('mouseenter', Swal.stopTimer);
-			                        toast.addEventListener('mouseleave', Swal.resumeTimer);
-			                    }
-			                });
+							document.addEventListener('turbo:load', function () { // Configuration globale de SweetAlert2 pour les toasts
+			const Toast = Swal.mixin({
+			toast: true,
+			position: 'top-end',
+			showConfirmButton: false,
+			timer: 5000,
+			timerProgressBar: true,
+			background: 'var(--bs-body-bg)',
+			color: 'var(--bs-body-color)',
+			didOpen: (toast) => {
+			toast.addEventListener('mouseenter', Swal.stopTimer);
+			toast.addEventListener('mouseleave', Swal.resumeTimer);
+			}
+			});
 			
-			                // Gestion des messages flash Symfony
-			                {% for type, messages in app.flashes %}
-			                    {% for message in messages %}
-			                        Toast.fire({
-			                            icon: '{{ type }}',
-			                            title: '{{ message|raw }}'
-			                        });
-			                    {% endfor %}
-			                {% endfor %}
-			            });
+			// Gestion des messages flash Symfony
+			{% for type, messages in app.flashes %}
+			{% for message in messages %}Toast.fire({icon: '{{ type }}', title: '{{ message|raw }}'});{% endfor %}
+			{% endfor %}
+			});
 			
-			            // Fonction globale pour les confirmations de suppression
-			            function confirmDelete(event) {
-			                event.preventDefault();
-			                const form = event.target.closest('form');
-			                
-			                Swal.fire({
-			                    title: 'Êtes-vous sûr ?',
-			                    text: "Cette action est irréversible !",
-			                    icon: 'warning',
-			                    showCancelButton: true,
-			                    confirmButtonColor: '#696cff',
-			                    cancelButtonColor: '#ff3e1d',
-			                    confirmButtonText: 'Oui, supprimer !',
-			                    cancelButtonText: 'Annuler',
-			                    customClass: {
-			                        confirmButton: 'btn btn-primary me-2',
-			                        cancelButton: 'btn btn-label-danger'
-			                    },
-			                    buttonsStyling: false
-			                }).then((result) => {
-			                    if (result.isConfirmed) {
-			                        form.submit();
-			                    }
-			                });
-			            }
-			        </script>
-		</body>
-	</html>
+			// Fonction globale pour les confirmations de suppression
+			function confirmDelete(event) {
+			event.preventDefault();
+			const form = event.target.closest('form');
+			
+			Swal.fire({
+			title: 'Êtes-vous sûr ?',
+			text: "Cette action est irréversible !",
+			icon: 'warning',
+			showCancelButton: true,
+			confirmButtonColor: '#696cff',
+			cancelButtonColor: '#ff3e1d',
+			confirmButtonText: 'Oui, supprimer !',
+			cancelButtonText: 'Annuler',
+			customClass: {
+			confirmButton: 'btn btn-primary me-2',
+			cancelButton: 'btn btn-label-danger'
+			},
+			buttonsStyling: false
+			}).then((result) => {
+			if (result.isConfirmed) {
+			form.submit();
+			}
+			});
+			}
+						</script>
+
+			{# Désactivation de la barre de progression Turbo et gestion du spinner #}
+			 <script type="module">
+							import {setProgressBarDelay} from '@hotwired/turbo';
+			
+			// On met un délai très élevé pour la barre de progression Turbo
+			setProgressBarDelay(999999);
+			
+			// Affichage du spinner lors du début de la navigation
+			document.addEventListener('turbo:visit', () => {
+			const spinner = document.getElementById('custom-spinner');
+			if (spinner) {
+			spinner.classList.remove('hidden');
+			}
+			});
+			
+			// Masquage du spinner lorsque la page est entièrement chargée
+			document.addEventListener('turbo:load', () => {
+			const spinner = document.getElementById('custom-spinner');
+			if (spinner) {
+			spinner.classList.add('hidden');
+			}
+			});
+						</script>
+		{% endblock %}
+
+
+		<style>
+			/* Styles pour le loader (spinner) */
+			.spinner {
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background-color: rgba(0, 0, 0, 0.3);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				z-index: 9999;
+			}
+			.spinner.hidden {
+				display: none;
+			}
+			.spinner-circle {
+				width: 50px;
+				height: 50px;
+				border: 6px solid #eee;
+				border-top-color: #6366f1; /* Couleur de la rotation */
+				border-radius: 50%;
+				animation: spin 1s linear infinite;
+			}
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+		</style>
+	</body>
+</html>

@@ -35,6 +35,12 @@
 
         <!-- Icons -->
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+
+        {% block javascripts %}
+			{% block importmap %}
+				{{ importmap('app') }}
+			{% endblock %}
+		{% endblock %}
     </head>
 
     <body>
@@ -138,8 +144,5 @@
                 });
             }
         </script>
-
-        <!-- Page-specific JS -->
-        {% block javascripts %}{% endblock %}
     </body>
 </html>

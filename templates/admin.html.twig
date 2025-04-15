@@ -1,148 +1,157 @@
 {# templates/admin.html.twig #}
 <!DOCTYPE html>
 <html lang="fr" class="dark-style layout-menu-fixed" dir="ltr" data-theme="theme-default">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>
-            {% block title %}Admin Panel
-            {% endblock %}
-        </title>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>
+			{% block title %}Admin Panel
+			{% endblock %}
+		</title>
 
-        <!-- Favicon -->
-        <link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
+		<!-- Favicon -->
+		<link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
 
-        <!-- CDN Sneat -->
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+		<!-- CDN Sneat -->
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com"> <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link
+		href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
 
-        <!-- Core CSS -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css">
+		<!-- Core CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css">
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css">
 
-        <!-- Vendor CSS -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
+		<!-- Vendor CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
-        <!-- SweetAlert2 CSS -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+		<!-- SweetAlert2 CSS -->
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
-        <!-- Page-specific CSS -->
-        {% block stylesheets %}{% endblock %}
+		<!-- Page-specific CSS -->
+		{% block stylesheets %}{% endblock %}
 
-        <!-- Icons -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+		<!-- Icons -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
 
-        {% block javascripts %}
+		{% block javascripts %}
 			{% block importmap %}
 				{{ importmap('app') }}
 			{% endblock %}
 		{% endblock %}
-    </head>
+	</head>
 
-    <body data-bs-theme=dark>
-        <!-- Layout wrapper -->
-        <div class="layout-wrapper layout-content-navbar">
-            <div class="layout-container">
-                <!-- Menu -->
-                {% include 'admin/_menu.html.twig' %}
+	<body
+		data-bs-theme="dark">
+		<!-- Layout wrapper -->
+		<div class="layout-wrapper layout-content-navbar">
+			<div
+				class="layout-container">
+				<!-- Menu -->
+				{% include 'admin/_menu.html.twig' %}
 
-                <!-- Layout container -->
-                <div class="layout-page">
-                    <!-- Navbar -->
-                    {% include 'admin/_navbar.html.twig' %}
+				<!-- Layout container -->
+				<div
+					class="layout-page">
+					<!-- Navbar -->
+					{% include 'admin/_navbar.html.twig' %}
 
-                    <!-- Content wrapper -->
-                    <div class="content-wrapper">
-                        <!-- Content -->
-                        <div class="container-xxl flex-grow-1 container-p-y">
-                            {% block body %}{% endblock %}
-                        </div>
-                        <!-- / Content -->
+					<!-- Content wrapper -->
+					<div
+						class="content-wrapper">
+						<!-- Content -->
+						<div class="container-xxl flex-grow-1 container-p-y"> {% block body %}{% endblock %}
+							</div>
+							<!-- / Content -->
 
-                        <!-- Footer -->
-                        {% include 'admin/_footer.html.twig' %}
-                    </div>
-                    <!-- Content wrapper -->
-                </div>
-                <!-- / Layout page -->
-            </div>
-        </div>
-        <!-- / Layout wrapper -->
+							<!-- Footer -->
+							{% include 'admin/_footer.html.twig' %}
+						</div>
+						<!-- Content wrapper -->
+					</div>
+					<!-- / Layout page -->
+				</div>
+			</div>
+			<!-- / Layout wrapper -->
 
-        <!-- Core JS -->
-        <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
-		<script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
-        <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
+			<!-- Core JS -->
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
 
-        <!-- Vendor JS -->
-        <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-        <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+			<!-- Vendor JS -->
+			 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
 
-        <!-- Main JS -->
-        <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
+			<!-- Main JS -->
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
 
-        <!-- SweetAlert2 JS -->
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+             
+             {% block customScript %}{% endblock %}
 
-        <!-- Flash Messages Handler -->
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Configuration globale de SweetAlert2 pour les toasts
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 5000,
-                    timerProgressBar: true,
-                    background: 'var(--bs-body-bg)',
-                    color: 'var(--bs-body-color)',
-                    didOpen: (toast) => {
-                        toast.addEventListener('mouseenter', Swal.stopTimer);
-                        toast.addEventListener('mouseleave', Swal.resumeTimer);
-                    }
-                });
+			<!-- SweetAlert2 JS -->
+		 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-                // Gestion des messages flash Symfony
-                {% for type, messages in app.flashes %}
-                    {% for message in messages %}
-                        Toast.fire({
-                            icon: '{{ type }}',
-                            title: '{{ message|raw }}'
-                        });
-                    {% endfor %}
-                {% endfor %}
-            });
-
-            // Fonction globale pour les confirmations de suppression
-            function confirmDelete(event) {
-                event.preventDefault();
-                const form = event.target.closest('form');
-                
-                Swal.fire({
-                    title: 'Êtes-vous sûr ?',
-                    text: "Cette action est irréversible !",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#696cff',
-                    cancelButtonColor: '#ff3e1d',
-                    confirmButtonText: 'Oui, supprimer !',
-                    cancelButtonText: 'Annuler',
-                    customClass: {
-                        confirmButton: 'btn btn-primary me-2',
-                        cancelButton: 'btn btn-label-danger'
-                    },
-                    buttonsStyling: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        form.submit();
-                    }
-                });
-            }
-        </script>
-    </body>
-</html>
+			<!-- Flash Messages Handler -->
+			 <script>
+			            document.addEventListener('turbo:load', function() {
+			                // Configuration globale de SweetAlert2 pour les toasts
+			                const Toast = Swal.mixin({
+			                    toast: true,
+			                    position: 'top-end',
+			                    showConfirmButton: false,
+			                    timer: 5000,
+			                    timerProgressBar: true,
+			                    background: 'var(--bs-body-bg)',
+			                    color: 'var(--bs-body-color)',
+			                    didOpen: (toast) => {
+			                        toast.addEventListener('mouseenter', Swal.stopTimer);
+			                        toast.addEventListener('mouseleave', Swal.resumeTimer);
+			                    }
+			                });
+			
+			                // Gestion des messages flash Symfony
+			                {% for type, messages in app.flashes %}
+			                    {% for message in messages %}
+			                        Toast.fire({
+			                            icon: '{{ type }}',
+			                            title: '{{ message|raw }}'
+			                        });
+			                    {% endfor %}
+			                {% endfor %}
+			            });
+			
+			            // Fonction globale pour les confirmations de suppression
+			            function confirmDelete(event) {
+			                event.preventDefault();
+			                const form = event.target.closest('form');
+			                
+			                Swal.fire({
+			                    title: 'Êtes-vous sûr ?',
+			                    text: "Cette action est irréversible !",
+			                    icon: 'warning',
+			                    showCancelButton: true,
+			                    confirmButtonColor: '#696cff',
+			                    cancelButtonColor: '#ff3e1d',
+			                    confirmButtonText: 'Oui, supprimer !',
+			                    cancelButtonText: 'Annuler',
+			                    customClass: {
+			                        confirmButton: 'btn btn-primary me-2',
+			                        cancelButton: 'btn btn-label-danger'
+			                    },
+			                    buttonsStyling: false
+			                }).then((result) => {
+			                    if (result.isConfirmed) {
+			                        form.submit();
+			                    }
+			                });
+			            }
+			        </script>
+		</body>
+	</html>

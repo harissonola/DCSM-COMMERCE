@@ -1,5 +1,4 @@
 <?php
-// src/Controller/Admin/UserController.php
 namespace App\Controller\Admin;
 
 use App\Entity\User;
@@ -27,18 +26,17 @@ class UserController extends AbstractController
     public function new(Request $request, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher): Response
     {
         $user = new User();
-        $form = $this->createForm(UserType::class, $user);
+        $form = $this->createForm(UserType::class, $user, ['is_new' => true]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Hash du mot de passe
             $user->setPassword(
                 $passwordHasher->hashPassword(
                     $user,
                     $form->get('plainPassword')->getData()
                 )
             );
-            
+
             $entityManager->persist($user);
             $entityManager->flush();
 
@@ -63,19 +61,11 @@ class UserController extends AbstractController
     #[Route('/{id}/edit', name: 'admin_user_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, User $user, EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher): Response
     {
-        $form = $this->createForm(UserType::class, $user);
+        $form = $this->createForm(UserType::class, $user, ['is_new' => false]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if ($form->get('plainPassword')->getData()) {
-                $user->setPassword(
-                    $passwordHasher->hashPassword(
-                        $user,
-                        $form->get('plainPassword')->getData()
-                    )
-                );
-            }
-            
+            // Pas de modification du mot de passe ici car le champ n'est pas affiché
             $entityManager->flush();
 
             $this->addFlash('success', 'Utilisateur mis à jour avec succès');
@@ -102,15 +92,15 @@ class UserController extends AbstractController
         switch ($action) {
             case 'add':
                 $user->setBalance($user->getBalance() + $amount);
-                $message = sprintf('%.2f € ajoutés au solde', $amount);
+                $message = sprintf('%.2f $ ajoutés au solde', $amount);
                 break;
             case 'subtract':
                 $user->setBalance($user->getBalance() - $amount);
-                $message = sprintf('%.2f € retirés du solde', $amount);
+                $message = sprintf('%.2f $ retirés du solde', $amount);
                 break;
             case 'set':
                 $user->setBalance($amount);
-                $message = 'Solde défini à '.sprintf('%.2f €', $amount);
+                $message = 'Solde défini à ' . sprintf('%.2f $', $amount);
                 break;
         }
 
@@ -123,7 +113,7 @@ class UserController extends AbstractController
     #[Route('/{id}', name: 'admin_user_delete', methods: ['POST'])]
     public function delete(Request $request, User $user, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $user->getId(), $request->request->get('_token'))) {
             $entityManager->remove($user);
             $entityManager->flush();
             $this->addFlash('success', 'Utilisateur supprimé avec succès');

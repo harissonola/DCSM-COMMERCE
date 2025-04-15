@@ -33,7 +33,7 @@ class TransactionsType extends AbstractType
             ])
             ->add('amount', MoneyType::class, [
                 'label' => 'Montant',
-                'currency' => 'EUR',
+                'currency' => 'USD',
                 'required' => false
             ])
             ->add('status', ChoiceType::class, [

@@ -20,7 +20,7 @@
                     {% for product in shop.products %}
                         <li class="list-group-item">
                             <a href="{{ path('admin_product_show', {'id': product.id}) }}">
-                                {{ product.name }} ({{ product.price|format_currency('EUR') }})
+                                {{ product.name }} ({{ product.price|format_currency('USD') }})
                             </a>
                         </li>
                     {% endfor %}

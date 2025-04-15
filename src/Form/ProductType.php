@@ -26,7 +26,7 @@ class ProductType extends AbstractType
             ])
             ->add('price', MoneyType::class, [
                 'label' => 'Prix',
-                'currency' => 'EUR'
+                'currency' => 'USD'
             ])
             ->add('shop', EntityType::class, [
                 'class' => Shop::class,

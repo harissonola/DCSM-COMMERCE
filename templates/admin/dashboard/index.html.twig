@@ -83,7 +83,7 @@
                         <h3 class="card-title mb-2">{{ transactions_count }}</h3>
                         <small class="text-success fw-semibold">
                             <i class="mdi mdi-arrow-up"></i> 
-                            {{ transactions_amount|format_currency('EUR') }} ce mois
+                            {{ transactions_amount|format_currency('USD') }} ce mois
                         </small>
                     </div>
                     <div class="avatar">
@@ -123,7 +123,7 @@
                                 <td>{{ transaction.id }}</td>
                                 <td>{{ transaction.user.email }}</td>
                                 <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }}">
-                                    {{ transaction.amount|format_currency('EUR') }}
+                                    {{ transaction.amount|format_currency('USD') }}
                                 </td>
                                 <td>{{ transaction.method }}</td>
                                 <td>
@@ -162,7 +162,7 @@
                             <h6 class="mb-1">{{ product.name }}</h6>
                             <small>{{ product.createdAt|date('d/m/Y') }}</small>
                         </div>
-                        <p class="mb-1">{{ product.price|format_currency('EUR') }}</p>
+                        <p class="mb-1">{{ product.price|format_currency('USD') }}</p>
                         <small>{{ product.shop ? product.shop.name : 'Aucune boutique' }}</small>
                     </a>
                     {% else %}

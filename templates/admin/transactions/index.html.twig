@@ -31,7 +31,7 @@
                             </a>
                         </td>
                         <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }}">
-                            {{ (transaction.type == 'withdrawal' ? '-' : '') ~ transaction.amount|format_currency('EUR') }}
+                            {{ (transaction.type == 'withdrawal' ? '-' : '') ~ transaction.amount|format_currency('USD') }}
                         </td>
                         <td>
                             {% set method_icons = {

@@ -1,36 +1,42 @@
 {# admin/user/_form.html.twig #}
 {{ form_start(form) }}
-    <div class="row">
-        <div class="col-md-6">
-            {{ form_row(form.email) }}
-        </div>
-        <div class="col-md-6">
-            {{ form_row(form.username) }}
-        </div>
-        
-        {# Le champ password est géré directement dans UserType.php #}
-        
-        <div class="col-md-6">
-            {{ form_row(form.fname) }}
-        </div>
-        <div class="col-md-6">
-            {{ form_row(form.lname) }}
-        </div>
-        <div class="col-md-6">
-            {{ form_row(form.country) }}
-        </div>
-        <div class="col-md-6">
-            {{ form_row(form.balance) }}
-        </div>
-        <div class="col-12">
-            {{ form_row(form.roles) }}
-        </div>
-        <div class="col-12">
-            {{ form_row(form.isVerified) }}
-        </div>
-    </div>
-    <div class="mt-3">
-        <button class="btn btn-primary">{{ button_label|default('Enregistrer') }}</button>
-        <a href="{{ path('admin_user_index') }}" class="btn btn-label-secondary">Annuler</a>
-    </div>
+<div class="row">
+	<div class="col-md-6">
+		{{ form_row(form.email) }}
+	</div>
+	<div class="col-md-6">
+		{{ form_row(form.username) }}
+	</div>
+
+	{# Le champ password est géré directement dans UserType.php #}
+
+	<div class="col-md-6">
+		{{ form_row(form.fname) }}
+	</div>
+	<div class="col-md-6">
+		{{ form_row(form.lname) }}
+	</div>
+	<div class="col-md-6">
+		{{ form_row(form.country) }}
+	</div>
+	<div class="col-md-6">
+		{{ form_row(form.balance) }}
+	</div>
+	<div class="col-12">
+		{{ form_row(form.roles) }}
+	</div>
+	<div class="col-12">
+		{{ form_row(form.isVerified) }}
+	</div>
+	{% if app.current_route == "admin_user_new" %}
+		<div class="col-12">
+			{{ form_row(form.plainPassword) }}
+		</div>
+	{% endif %}
+
+</div>
+<div class="mt-3">
+	<button class="btn btn-primary">{{ button_label|default('Enregistrer') }}</button>
+	<a href="{{ path('admin_user_index') }}" class="btn btn-label-secondary">Annuler</a>
+</div>
 {{ form_end(form) }}

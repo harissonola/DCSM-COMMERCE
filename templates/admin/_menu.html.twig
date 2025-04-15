@@ -60,8 +60,8 @@
             </ul>
         </li>
 
-        <li class="menu-item {{ app.request.get('_route') starts with 'admin_transaction_' ? 'active' : '' }}">
-            <a href="{{ path('admin_transaction_index') }}" class="menu-link">
+        <li class="menu-item {{ app.request.get('_route') starts with 'admin_transactions_' ? 'active' : '' }}">
+            <a href="{{ path('admin_transactions_index') }}" class="menu-link">
                 <i class="menu-icon mdi mdi-cash-multiple"></i>
                 <div>Transactions</div>
             </a>

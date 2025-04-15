@@ -16,28 +16,43 @@ class TransactionsRepository extends ServiceEntityRepository
         parent::__construct($registry, Transactions::class);
     }
 
-    //    /**
-    //     * @return Transactions[] Returns an array of Transactions objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('t')
-    //            ->andWhere('t.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('t.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function sumThisMonth(): float
+    {
+        $result = $this->createQueryBuilder('t')
+            ->select('SUM(t.amount)')
+            ->where('t.createdAt >= :date')
+            ->andWhere('t.status = :status')
+            ->setParameter('date', new \DateTime('first day of this month'))
+            ->setParameter('status', 'completed')
+            ->getQuery()
+            ->getSingleScalarResult();
 
-    //    public function findOneBySomeField($value): ?Transactions
-    //    {
-    //        return $this->createQueryBuilder('t')
-    //            ->andWhere('t.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        return $result ?? 0;
+    }
+
+    public function findByUser($userId, int $limit = null): array
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->where('t.user = :userId')
+            ->setParameter('userId', $userId)
+            ->orderBy('t.createdAt', 'DESC');
+
+        if ($limit) {
+            $qb->setMaxResults($limit);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function getMonthlyStats(): array
+    {
+        return $this->createQueryBuilder('t')
+            ->select("DATE_FORMAT(t.createdAt, '%Y-%m') as month, SUM(t.amount) as total")
+            ->where('t.status = :status')
+            ->setParameter('status', 'completed')
+            ->groupBy('month')
+            ->orderBy('month', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

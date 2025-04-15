@@ -1,0 +1,210 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block body %}
+<div class="row">
+    <!-- Statistique Utilisateurs -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-semibold d-block mb-1">Utilisateurs</span>
+                        <h3 class="card-title mb-2">{{ users_count }}</h3>
+                        <small class="text-success fw-semibold">
+                            <i class="mdi mdi-arrow-up"></i> 
+                            {{ new_users_last_month }} ce mois
+                        </small>
+                    </div>
+                    <div class="avatar">
+                        <span class="avatar-initial rounded bg-label-primary">
+                            <i class="mdi mdi-account-multiple"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistique Produits -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-semibold d-block mb-1">Produits</span>
+                        <h3 class="card-title mb-2">{{ products_count }}</h3>
+                        <small class="text-success fw-semibold">
+                            <i class="mdi mdi-arrow-up"></i> 
+                            {{ new_products_last_month }} ajoutés
+                        </small>
+                    </div>
+                    <div class="avatar">
+                        <span class="avatar-initial rounded bg-label-success">
+                            <i class="mdi mdi-package-variant"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistique Boutiques -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-semibold d-block mb-1">Boutiques</span>
+                        <h3 class="card-title mb-2">{{ shops_count }}</h3>
+                        <small class="text-success fw-semibold">
+                            <i class="mdi mdi-arrow-up"></i> 
+                            {{ active_shops }} actives
+                        </small>
+                    </div>
+                    <div class="avatar">
+                        <span class="avatar-initial rounded bg-label-info">
+                            <i class="mdi mdi-store"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistique Transactions -->
+    <div class="col-md-6 col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-semibold d-block mb-1">Transactions</span>
+                        <h3 class="card-title mb-2">{{ transactions_count }}</h3>
+                        <small class="text-success fw-semibold">
+                            <i class="mdi mdi-arrow-up"></i> 
+                            {{ transactions_amount|format_currency('EUR') }} ce mois
+                        </small>
+                    </div>
+                    <div class="avatar">
+                        <span class="avatar-initial rounded bg-label-warning">
+                            <i class="mdi mdi-cash-multiple"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dernières Transactions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Dernières Transactions</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Utilisateur</th>
+                                <th>Montant</th>
+                                <th>Méthode</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>{{ transaction.id }}</td>
+                                <td>{{ transaction.user.email }}</td>
+                                <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }}">
+                                    {{ transaction.amount|format_currency('EUR') }}
+                                </td>
+                                <td>{{ transaction.method }}</td>
+                                <td>
+                                    <span class="badge bg-{{ transaction.status == 'completed' ? 'success' : 'warning' }}">
+                                        {{ transaction.status }}
+                                    </span>
+                                </td>
+                                <td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Aucune transaction récente</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Derniers Produits -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Derniers Produits</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for product in recent_products %}
+                    <a href="{{ path('admin_product_show', {'id': product.id}) }}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ product.name }}</h6>
+                            <small>{{ product.createdAt|date('d/m/Y') }}</small>
+                        </div>
+                        <p class="mb-1">{{ product.price|format_currency('EUR') }}</p>
+                        <small>{{ product.shop ? product.shop.name : 'Aucune boutique' }}</small>
+                    </a>
+                    {% else %}
+                    <div class="list-group-item">
+                        Aucun produit récent
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Derniers Utilisateurs -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Derniers Utilisateurs</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for user in recent_users %}
+                    <a href="{{ path('admin_user_show', {'id': user.id}) }}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ user.email }}</h6>
+                            <small>{{ user.createdAt|date('d/m/Y') }}</small>
+                        </div>
+                        <p class="mb-1">{{ user.fname }} {{ user.lname }}</p>
+                        <small>
+                            {% for role in user.roles %}
+                                <span class="badge bg-primary me-1">{{ role }}</span>
+                            {% endfor %}
+                        </small>
+                    </a>
+                    {% else %}
+                    <div class="list-group-item">
+                        Aucun utilisateur récent
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -16,28 +16,34 @@ class ShopRepository extends ServiceEntityRepository
         parent::__construct($registry, Shop::class);
     }
 
-    //    /**
-    //     * @return Shop[] Returns an array of Shop objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('s.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function countActive(): int
+    {
+        return $this->createQueryBuilder('s')
+            ->select('COUNT(DISTINCT s.id)')
+            ->innerJoin('s.products', 'p')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 
-    //    public function findOneBySomeField($value): ?Shop
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function findWithProductsCount(): array
+    {
+        return $this->createQueryBuilder('s')
+            ->select('s, COUNT(p.id) as productsCount')
+            ->leftJoin('s.products', 'p')
+            ->groupBy('s.id')
+            ->orderBy('productsCount', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function searchByName(string $query): array
+    {
+        return $this->createQueryBuilder('s')
+            ->where('s.name LIKE :query')
+            ->setParameter('query', '%'.$query.'%')
+            ->orderBy('s.name', 'ASC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+    }
 }

@@ -21,10 +21,20 @@ class DashboardController extends AbstractController
         TransactionsRepository $transactionsRepository
     ): Response {
         return $this->render('admin/dashboard/index.html.twig', [
-            'user_count' => $userRepository->count([]),
-            'product_count' => $productRepository->count([]),
-            'shop_count' => $shopRepository->count([]),
+            // Statistiques principales
+            'users_count' => $userRepository->count([]),
+            'new_users_last_month' => $userRepository->countLastMonth(),
+            'products_count' => $productRepository->count([]),
+            'new_products_last_month' => $productRepository->countLastMonth(),
+            'shops_count' => $shopRepository->count([]),
+            'active_shops' => $shopRepository->countActive(),
+            'transactions_count' => $transactionsRepository->count([]),
+            'transactions_amount' => $transactionsRepository->sumThisMonth(),
+
+            // Données récentes
             'recent_transactions' => $transactionsRepository->findBy([], ['createdAt' => 'DESC'], 5),
+            'recent_products' => $productRepository->findBy([], ['createdAt' => 'DESC'], 5),
+            'recent_users' => $userRepository->findBy([], ['createdAt' => 'DESC'], 5),
         ]);
     }
 }

@@ -1,0 +1,20 @@
+{{ form_start(form) }}
+    <div class="row">
+        <div class="col-md-6">
+            {{ form_row(form.name) }}
+        </div>
+        <div class="col-md-6">
+            {{ form_row(form.slug) }}
+        </div>
+        <div class="col-12">
+            {{ form_row(form.image) }}
+        </div>
+        <div class="col-12">
+            {{ form_row(form.description) }}
+        </div>
+    </div>
+    <div class="mt-3">
+        <button class="btn btn-primary">{{ button_label|default('Enregistrer') }}</button>
+        <a href="{{ path('admin_shop_index') }}" class="btn btn-label-secondary">Annuler</a>
+    </div>
+{{ form_end(form) }}

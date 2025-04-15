@@ -1,0 +1,82 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Transactions{% endblock %}
+
+{% block body %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Historique des transactions</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Utilisateur</th>
+                        <th>Montant</th>
+                        <th>Méthode</th>
+                        <th>Statut</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.id }}</td>
+                        <td>
+                            <a href="{{ path('admin_user_show', {'id': transaction.user.id}) }}">
+                                {{ transaction.user.email }}
+                            </a>
+                        </td>
+                        <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }}">
+                            {{ (transaction.type == 'withdrawal' ? '-' : '') ~ transaction.amount|format_currency('EUR') }}
+                        </td>
+                        <td>
+                            {% set method_icons = {
+                                'card': 'mdi-credit-card',
+                                'paypal': 'mdi-paypal',
+                                'transfer': 'mdi-bank-transfer',
+                                'crypto': 'mdi-currency-btc'
+                            } %}
+                            <i class="mdi {{ method_icons[transaction.method] ?? 'mdi-cash' }} me-1"></i>
+                            {{ transaction.method|capitalize }}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ transaction.status == 'completed' ? 'success' : 
+                                (transaction.status == 'failed' ? 'danger' : 'warning') }}">
+                                {{ transaction.status|capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ transaction.type|capitalize }}</td>
+                        <td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">Aucune transaction trouvée</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+    $(document).ready(function() {
+        $('.datatable').DataTable({
+            responsive: true,
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+            },
+            order: [[6, 'desc']], // Tri par date décroissante
+            dom: '<"top"f>rt<"bottom"lip><"clear">',
+            pageLength: 25
+        });
+    });
+</script>
+{% endblock %}

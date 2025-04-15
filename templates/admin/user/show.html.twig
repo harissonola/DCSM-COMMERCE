@@ -1,0 +1,69 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Détails Utilisateur - {{ user.username }}{% endblock %}
+
+{% block body %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Détails de l'utilisateur</h5>
+        <div>
+            <a href="{{ path('admin_user_edit', {'id': user.id}) }}" class="btn btn-warning me-2">
+                <i class="mdi mdi-pencil"></i> Modifier
+            </a>
+            <a href="{{ path('admin_user_index') }}" class="btn btn-label-secondary">
+                <i class="mdi mdi-arrow-left"></i> Retour
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tr>
+                        <th>ID</th>
+                        <td>{{ user.id }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nom d'utilisateur</th>
+                        <td>{{ user.username }}</td>
+                    </tr>
+                    <tr>
+                        <th>Email</th>
+                        <td>{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nom complet</th>
+                        <td>{{ user.fname }} {{ user.lname }}</td>
+                    </tr>
+                    <tr>
+                        <th>Pays</th>
+                        <td>{{ user.country }}</td>
+                    </tr>
+                    <tr>
+                        <th>Vérifié</th>
+                        <td>
+                            {% if user.isVerified %}
+                                <span class="badge bg-label-success">Oui</span>
+                            {% else %}
+                                <span class="badge bg-label-danger">Non</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Rôles</h6>
+                <div class="mb-4">
+                    {% for role in user.roles %}
+                        <span class="badge bg-primary me-1">{{ role }}</span>
+                    {% endfor %}
+                </div>
+
+                {% if user.photo %}
+                    <img src="{{ user.photo }}" alt="{{ user.username }}" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

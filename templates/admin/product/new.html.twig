@@ -1,0 +1,17 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Nouveau Produit{% endblock %}
+
+{% block body %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Créer un nouveau produit</h5>
+        <a href="{{ path('admin_product_index') }}" class="btn btn-label-secondary">
+            <i class="mdi mdi-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+    <div class="card-body">
+        {% include 'admin/product/_form.html.twig' with {'button_label': 'Créer'} %}
+    </div>
+</div>
+{% endblock %}

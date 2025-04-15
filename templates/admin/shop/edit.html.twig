@@ -1,0 +1,32 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Modifier Boutique - {{ shop.name }}{% endblock %}
+
+{% block body %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Modifier Boutique</h5>
+        <a href="{{ path('admin_shop_index') }}" class="btn btn-label-secondary">
+            <i class="mdi mdi-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+    <div class="card-body">
+        {% include 'admin/shop/_form.html.twig' with {'button_label': 'Mettre à jour'} %}
+        
+        {% if shop.products|length > 0 %}
+            <div class="mt-4">
+                <h6>Produits associés ({{ shop.products|length }})</h6>
+                <ul class="list-group">
+                    {% for product in shop.products %}
+                        <li class="list-group-item">
+                            <a href="{{ path('admin_product_show', {'id': product.id}) }}">
+                                {{ product.name }} ({{ product.price|format_currency('EUR') }})
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

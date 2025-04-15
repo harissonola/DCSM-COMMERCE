@@ -1,0 +1,75 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Gestion des produits{% endblock %}
+
+{% block body %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Liste des produits</h5>
+        <a href="{{ path('admin_product_new') }}" class="btn btn-primary">
+            <i class="mdi mdi-plus me-1"></i> Nouveau produit
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Nom</th>
+                        <th>Prix</th>
+                        <th>Boutique</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for product in products %}
+                    <tr>
+                        <td>{{ product.id }}</td>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.price|format_currency('EUR') }}</td>
+                        <td>{{ product.shop ? product.shop.name : 'Aucune' }}</td>
+                        <td>
+                            <div class="d-flex">
+                                <a href="{{ path('admin_product_show', {'id': product.id}) }}" class="btn btn-sm btn-info me-2">
+                                    <i class="mdi mdi-eye"></i>
+                                </a>
+                                <a href="{{ path('admin_product_edit', {'id': product.id}) }}" class="btn btn-sm btn-warning me-2">
+                                    <i class="mdi mdi-pencil"></i>
+                                </a>
+                                <form method="post" action="{{ path('admin_product_delete', {'id': product.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ product.id) }}">
+                                    <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">Aucun produit trouvé</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('.datatable').DataTable({
+            responsive: true,
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+            }
+        });
+    });
+</script>
+{% endblock %}

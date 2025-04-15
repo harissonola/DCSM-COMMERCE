@@ -1,0 +1,71 @@
+{% extends 'admin.html.twig' %}
+
+{% block title %}Liste des Boutiques{% endblock %}
+
+{% block body %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Boutiques</h5>
+        <a href="{{ path('admin_shop_new') }}" class="btn btn-primary">
+            <i class="mdi mdi-plus me-1"></i> Nouvelle boutique
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover datatable">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Nom</th>
+                        <th>Produits</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for shop in shops %}
+                    <tr>
+                        <td>{{ shop.id }}</td>
+                        <td>{{ shop.name }}</td>
+                        <td>{{ shop.products|length }}</td>
+                        <td>
+                            <div class="d-flex">
+                                <a href="{{ path('admin_shop_show', {'id': shop.id}) }}" class="btn btn-sm btn-info me-2">
+                                    <i class="mdi mdi-eye"></i>
+                                </a>
+                                <a href="{{ path('admin_shop_edit', {'id': shop.id}) }}" class="btn btn-sm btn-warning me-2">
+                                    <i class="mdi mdi-pencil"></i>
+                                </a>
+                                <form method="post" action="{{ path('admin_shop_delete', {'id': shop.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ shop.id) }}">
+                                    <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">Aucune boutique trouvée</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+    $(document).ready(function() {
+        $('.datatable').DataTable({
+            responsive: true,
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+            }
+        });
+    });
+</script>
+{% endblock %}

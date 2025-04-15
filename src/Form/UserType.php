@@ -1,5 +1,4 @@
 <?php
-// src/Form/UserType.php
 namespace App\Form;
 
 use App\Entity\User;
@@ -20,20 +19,6 @@ class UserType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $passwordConstraints = [];
-        if ($options['is_new']) {
-            $passwordConstraints = [
-                new NotBlank([
-                    'message' => 'Veuillez entrer un mot de passe',
-                ]),
-                new Length([
-                    'min' => 6,
-                    'minMessage' => 'Votre mot de passe doit contenir au moins {{ limit }} caractères',
-                    'max' => 4096,
-                ]),
-            ];
-        }
-
         $builder
             ->add('email', EmailType::class, [
                 'label' => 'Email',
@@ -42,14 +27,29 @@ class UserType extends AbstractType
             ->add('username', TextType::class, [
                 'label' => 'Nom d\'utilisateur',
                 'attr' => ['placeholder' => 'Nom d\'utilisateur']
-            ])
-            ->add('plainPassword', PasswordType::class, [
+            ]);
+
+        // Ajouter le champ password seulement pour la création
+        if ($options['is_new']) {
+            $builder->add('plainPassword', PasswordType::class, [
                 'label' => 'Mot de passe',
                 'mapped' => false,
-                'required' => $options['is_new'],
+                'required' => true,
                 'attr' => ['autocomplete' => 'new-password'],
-                'constraints' => $passwordConstraints,
-            ])
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Veuillez entrer un mot de passe',
+                    ]),
+                    new Length([
+                        'min' => 6,
+                        'minMessage' => 'Votre mot de passe doit contenir au moins {{ limit }} caractères',
+                        'max' => 4096,
+                    ]),
+                ],
+            ]);
+        }
+
+        $builder
             ->add('fname', TextType::class, [
                 'label' => 'Prénom',
                 'attr' => ['placeholder' => 'Prénom']
@@ -61,6 +61,15 @@ class UserType extends AbstractType
             ->add('country', CountryType::class, [
                 'label' => 'Pays',
                 'placeholder' => 'Sélectionnez un pays'
+            ])
+            ->add('balance', NumberType::class, [
+                'label' => 'Solde',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Solde de l\'utilisateur',
+                    'step' => '0.01'
+                ],
+                'html5' => true
             ])
             ->add('roles', ChoiceType::class, [
                 'label' => 'Rôles',
@@ -74,15 +83,6 @@ class UserType extends AbstractType
             ->add('isVerified', CheckboxType::class, [
                 'label' => 'Email vérifié ?',
                 'required' => false
-            ])
-            ->add('balance', NumberType::class, [
-                'label' => 'Solde',
-                'required' => false,
-                'attr' => [
-                    'placeholder' => 'Solde de l\'utilisateur',
-                    'step' => '0.01'
-                ],
-                'html5' => true
             ]);
     }
 

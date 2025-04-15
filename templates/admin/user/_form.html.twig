@@ -7,11 +7,9 @@
         <div class="col-md-6">
             {{ form_row(form.username) }}
         </div>
-        {% if form.plainPassword is defined %}
-        <div class="col-md-6">
-            {{ form_row(form.plainPassword) }}
-        </div>
-        {% endif %}
+        
+        {# Le champ password est géré directement dans UserType.php #}
+        
         <div class="col-md-6">
             {{ form_row(form.fname) }}
         </div>

@@ -30,7 +30,7 @@
                         <td>{{ user.id }}</td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.fname }} {{ user.lname }}</td>
-                        <td>{{ user.balance|format_currency('EUR') }}</td>
+                        <td>{{ user.balance|format_currency('USD') }}</td>
                         <td>
                             {% for role in user.roles %}
                                 <span class="badge bg-label-primary">{{ role }}</span>

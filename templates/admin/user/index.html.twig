@@ -1,3 +1,4 @@
+{# admin/user/index.html.twig #}
 {% extends 'admin.html.twig' %}
 
 {% block title %}Liste des Utilisateurs{% endblock %}
@@ -18,6 +19,7 @@
                         <th>Id</th>
                         <th>Email</th>
                         <th>Nom</th>
+                        <th>Solde</th>
                         <th>Rôles</th>
                         <th>Actions</th>
                     </tr>
@@ -28,6 +30,7 @@
                         <td>{{ user.id }}</td>
                         <td>{{ user.email }}</td>
                         <td>{{ user.fname }} {{ user.lname }}</td>
+                        <td>{{ user.balance|format_currency('EUR') }}</td>
                         <td>
                             {% for role in user.roles %}
                                 <span class="badge bg-label-primary">{{ role }}</span>
@@ -52,7 +55,7 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="5" class="text-center">Aucun utilisateur trouvé</td>
+                        <td colspan="6" class="text-center">Aucun utilisateur trouvé</td>
                     </tr>
                 {% endfor %}
                 </tbody>

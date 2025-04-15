@@ -8,6 +8,7 @@ use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CountryType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -73,6 +74,15 @@ class UserType extends AbstractType
             ->add('isVerified', CheckboxType::class, [
                 'label' => 'Email vérifié ?',
                 'required' => false
+            ])
+            ->add('balance', NumberType::class, [
+                'label' => 'Solde',
+                'required' => false,
+                'attr' => [
+                    'placeholder' => 'Solde de l\'utilisateur',
+                    'step' => '0.01'
+                ],
+                'html5' => true
             ]);
     }
 

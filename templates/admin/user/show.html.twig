@@ -1,3 +1,4 @@
+{# admin/user/show.html.twig #}
 {% extends 'admin.html.twig' %}
 
 {% block title %}Détails Utilisateur - {{ user.username }}{% endblock %}
@@ -40,6 +41,10 @@
                         <td>{{ user.country }}</td>
                     </tr>
                     <tr>
+                        <th>Solde</th>
+                        <td>{{ user.balance|format_currency('EUR') }}</td>
+                    </tr>
+                    <tr>
                         <th>Vérifié</th>
                         <td>
                             {% if user.isVerified %}
@@ -57,6 +62,30 @@
                     {% for role in user.roles %}
                         <span class="badge bg-primary me-1">{{ role }}</span>
                     {% endfor %}
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6>Gestion du solde</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ path('admin_user_update_balance', {'id': user.id}) }}">
+                            <div class="input-group mb-3">
+                                <select class="form-select" name="action" style="max-width: 120px;">
+                                    <option value="add">Ajouter</option>
+                                    <option value="subtract">Retirer</option>
+                                    <option value="set">Définir</option>
+                                </select>
+                                <input type="number" class="form-control" name="amount" step="0.01" min="0" required>
+                                <button class="btn btn-primary" type="submit">Appliquer</button>
+                            </div>
+                            <input type="hidden" name="_token" value="{{ csrf_token('update_balance' ~ user.id) }}">
+                        </form>
+                        
+                        <div class="alert alert-info mt-3">
+                            Solde actuel: <strong>{{ user.balance|format_currency('USD') }}</strong>
+                        </div>
+                    </div>
                 </div>
 
                 {% if user.photo %}

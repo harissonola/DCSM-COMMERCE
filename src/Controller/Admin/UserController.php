@@ -88,6 +88,38 @@ class UserController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/update-balance', name: 'admin_user_update_balance', methods: ['POST'])]
+    public function updateBalance(Request $request, User $user, EntityManagerInterface $entityManager): Response
+    {
+        $amount = (float) $request->request->get('amount');
+        $action = $request->request->get('action');
+
+        if (!in_array($action, ['add', 'subtract', 'set'])) {
+            $this->addFlash('error', 'Action invalide');
+            return $this->redirectToRoute('admin_user_show', ['id' => $user->getId()]);
+        }
+
+        switch ($action) {
+            case 'add':
+                $user->setBalance($user->getBalance() + $amount);
+                $message = sprintf('%.2f € ajoutés au solde', $amount);
+                break;
+            case 'subtract':
+                $user->setBalance($user->getBalance() - $amount);
+                $message = sprintf('%.2f € retirés du solde', $amount);
+                break;
+            case 'set':
+                $user->setBalance($amount);
+                $message = 'Solde défini à '.sprintf('%.2f €', $amount);
+                break;
+        }
+
+        $entityManager->flush();
+
+        $this->addFlash('success', $message);
+        return $this->redirectToRoute('admin_user_show', ['id' => $user->getId()]);
+    }
+
     #[Route('/{id}', name: 'admin_user_delete', methods: ['POST'])]
     public function delete(Request $request, User $user, EntityManagerInterface $entityManager): Response
     {

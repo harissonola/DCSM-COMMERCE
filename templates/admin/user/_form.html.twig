@@ -19,8 +19,8 @@
 	<div class="col-md-6">
 		{{ form_row(form.country) }}
 	</div>
-	{% if app.current_route == "admin_user_new" %}
-		{% else %}
+	{# Le champ balance est maintenant géré dans UserType.php #}
+	{% if form.balance is defined %}
 		<div class="col-md-6">
 			{{ form_row(form.balance) }}
 		</div>

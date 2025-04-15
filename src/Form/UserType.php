@@ -1,4 +1,5 @@
 <?php
+// src/Form/UserType.php
 namespace App\Form;
 
 use App\Entity\User;
@@ -35,7 +36,10 @@ class UserType extends AbstractType
                 'label' => 'Mot de passe',
                 'mapped' => false,
                 'required' => true,
-                'attr' => ['autocomplete' => 'new-password'],
+                'attr' => [
+                    'autocomplete' => 'new-password',
+                    'placeholder' => 'Mot de passe'
+                ],
                 'constraints' => [
                     new NotBlank([
                         'message' => 'Veuillez entrer un mot de passe',
@@ -61,16 +65,22 @@ class UserType extends AbstractType
             ->add('country', CountryType::class, [
                 'label' => 'Pays',
                 'placeholder' => 'Sélectionnez un pays'
-            ])
-            ->add('balance', NumberType::class, [
-                'label' => 'Solde',
+            ]);
+
+        // Ajouter le champ balance seulement pour l'édition
+        if (!$options['is_new']) {
+            $builder->add('balance', NumberType::class, [
+                'label' => 'Solde (USD)',
                 'required' => false,
                 'attr' => [
-                    'placeholder' => 'Solde de l\'utilisateur',
+                    'placeholder' => 'Montant en USD',
                     'step' => '0.01'
                 ],
                 'html5' => true
-            ])
+            ]);
+        }
+
+        $builder
             ->add('roles', ChoiceType::class, [
                 'label' => 'Rôles',
                 'choices' => [

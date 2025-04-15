@@ -1,12 +1,11 @@
-{# templates/admin/_footer.html.twig #}
-<footer class="content-footer footer bg-footer-theme">
+<footer class="content-footer footer bg-dark">
     <div class="container-xxl d-flex flex-wrap justify-content-between py-2 flex-md-row flex-column">
-        <div class="mb-2 mb-md-0">
-            © {% block customScript %}<script>document.write(new Date().getFullYear())</script>{% endblock %}
-            , made with <span class="text-danger"><i class="mdi mdi-heart"></i></span> by Your Company
+        <div class="mb-2 mb-md-0 text-white">
+            © <script>document.write(new Date().getFullYear())</script>
+            , made with <span class="text-danger"><i class="mdi mdi-heart"></i></span> by DCSM
         </div>
         <div>
-            <a href="{{ path('app_faq') }}" class="footer-link">Contact</a>
+            <a href="{{ path('app_faq') }}" class="footer-link text-white">Contact</a>
         </div>
     </div>
 </footer>

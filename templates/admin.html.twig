@@ -1,210 +1,171 @@
-{# templates/admin.html.twig #}
 <!DOCTYPE html>
-<html lang="fr" class="layout-navbar-fixed layout-menu-fixed " dir="ltr" data-skin="default" data-bs-theme="dark">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>
-			{% block title %}Admin Panel
-			{% endblock %}
-		</title>
+<html lang="fr" class="layout-navbar-fixed layout-menu-fixed" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
 
-		<!-- Favicon -->
-		<link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css">
 
-		<!-- CDN Sneat -->
-		<!-- Fonts -->
-		<link rel="preconnect" href="https://fonts.googleapis.com"> <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link
-		href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <!-- Vendor CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
-		<!-- Core CSS -->
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css">
-		<link
-		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
-		<!-- Vendor CSS -->
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
-		<link
-		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
 
-		<!-- SweetAlert2 CSS -->
-		<link
-		rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        :root {
+            --bs-body-bg: #2b2c40;
+            --bs-body-color: #a3a4cc;
+            --bs-dark: #283144;
+            --bs-light: #3a3b5a;
+        }
+        
+        body {
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+        }
+        
+        .card, .modal-content, .dropdown-menu {
+            background-color: var(--bs-dark);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--bs-body-color);
+            --bs-table-border-color: rgba(255, 255, 255, 0.1);
+        }
 
-		<!-- Page-specific CSS -->
-		{% block stylesheets %}{% endblock %}
-
-		<!-- Icons -->
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
-
+        /* Spinner */
+        .spinner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .spinner.hidden {
+            display: none;
+        }
+        .spinner-circle {
+            width: 50px;
+            height: 50px;
+            border: 6px solid #eee;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    {% block stylesheets %}{% endblock %}
 		{% block javascripts %}
 			{% block importmap %}
 				{{ importmap('app') }}
 			{% endblock %}
 		{% endblock %}
-	</head>
+</head>
 
-	<body
-		data-bs-theme="dark">
-		{# --- LOADER PERSONNALISÉ (SPINNER) --- #}
-		<div id="custom-spinner" class="spinner hidden">
-			<div class="spinner-circle"></div>
-		</div>
-		<!-- Layout wrapper -->
-		<div class="layout-wrapper layout-content-navbar">
-			<div
-				class="layout-container">
-				<!-- Menu -->
-				{% include 'admin/_menu.html.twig' %}
+<body>
+    <div id="custom-spinner" class="spinner hidden">
+        <div class="spinner-circle"></div>
+    </div>
+    
+    <div class="layout-wrapper layout-content-navbar">
+        <div class="layout-container">
+            {% include 'admin/_menu.html.twig' %}
+            
+            <div class="layout-page">
+                {% include 'admin/_navbar.html.twig' %}
+                
+                <div class="content-wrapper">
+                    <div class="container-xxl flex-grow-1 container-p-y">
+                        {% block body %}{% endblock %}
+                    </div>
+                    {% include 'admin/_footer.html.twig' %}
+                </div>
+            </div>
+        </div>
+    </div>
 
-				<!-- Layout container -->
-				<div
-					class="layout-page">
-					<!-- Navbar -->
-					{% include 'admin/_navbar.html.twig' %}
+    <!-- Core JS -->
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
 
-					<!-- Content wrapper -->
-					<div
-						class="content-wrapper">
-						<!-- Content -->
-						<div class="container-xxl flex-grow-1 container-p-y"> {% block body %}{% endblock %}
-							</div>
-							<!-- / Content -->
+    <!-- Vendor JS -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
 
-							<!-- Footer -->
-							{% include 'admin/_footer.html.twig' %}
-						</div>
-						<!-- Content wrapper -->
-					</div>
-					<!-- / Layout page -->
-				</div>
-			</div>
-			<!-- / Layout wrapper -->
+    <!-- Main JS -->
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-			<!-- Core JS -->
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
+    <script>
+        document.addEventListener('turbo:load', function() {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 5000,
+                timerProgressBar: true,
+                background: 'var(--bs-dark)',
+                color: 'var(--bs-body-color)',
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+            
+            {% for type, messages in app.flashes %}
+                {% for message in messages %}
+                    Toast.fire({ icon: '{{ type }}', title: '{{ message|raw }}' });
+                {% endfor %}
+            {% endfor %}
+        });
 
-			<!-- Vendor JS -->
-			 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
-
-			<!-- Main JS -->
-			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>{% block customScript %}
-		{% endblock %}
-
-			<!-- SweetAlert2 JS -->
-		 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-			<!-- Flash Messages Handler -->
-			 <script>
-							document.addEventListener('turbo:load', function () { // Configuration globale de SweetAlert2 pour les toasts
-			const Toast = Swal.mixin({
-			toast: true,
-			position: 'top-end',
-			showConfirmButton: false,
-			timer: 5000,
-			timerProgressBar: true,
-			background: 'var(--bs-body-bg)',
-			color: 'var(--bs-body-color)',
-			didOpen: (toast) => {
-			toast.addEventListener('mouseenter', Swal.stopTimer);
-			toast.addEventListener('mouseleave', Swal.resumeTimer);
-			}
-			});
-			
-			// Gestion des messages flash Symfony
-			{% for type, messages in app.flashes %}
-			{% for message in messages %}Toast.fire({icon: '{{ type }}', title: '{{ message|raw }}'});{% endfor %}
-			{% endfor %}
-			});
-			
-			// Fonction globale pour les confirmations de suppression
-			function confirmDelete(event) {
-			event.preventDefault();
-			const form = event.target.closest('form');
-			
-			Swal.fire({
-			title: 'Êtes-vous sûr ?',
-			text: "Cette action est irréversible !",
-			icon: 'warning',
-			showCancelButton: true,
-			confirmButtonColor: '#696cff',
-			cancelButtonColor: '#ff3e1d',
-			confirmButtonText: 'Oui, supprimer !',
-			cancelButtonText: 'Annuler',
-			customClass: {
-			confirmButton: 'btn btn-primary me-2',
-			cancelButton: 'btn btn-label-danger'
-			},
-			buttonsStyling: false
-			}).then((result) => {
-			if (result.isConfirmed) {
-			form.submit();
-			}
-			});
-			}
-						</script>
-
-			{# Désactivation de la barre de progression Turbo et gestion du spinner #}
-			 <script type="module">
-							import {setProgressBarDelay} from '@hotwired/turbo';
-			
-			// On met un délai très élevé pour la barre de progression Turbo
-			setProgressBarDelay(999999);
-			
-			// Affichage du spinner lors du début de la navigation
-			document.addEventListener('turbo:visit', () => {
-			const spinner = document.getElementById('custom-spinner');
-			if (spinner) {
-			spinner.classList.remove('hidden');
-			}
-			});
-			
-			// Masquage du spinner lorsque la page est entièrement chargée
-			document.addEventListener('turbo:load', () => {
-			const spinner = document.getElementById('custom-spinner');
-			if (spinner) {
-			spinner.classList.add('hidden');
-			}
-			});
-						</script>
-
-
-		<style>
-			/* Styles pour le loader (spinner) */
-			.spinner {
-				position: fixed;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background-color: rgba(0, 0, 0, 0.3);
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				z-index: 9999;
-			}
-			.spinner.hidden {
-				display: none;
-			}
-			.spinner-circle {
-				width: 50px;
-				height: 50px;
-				border: 6px solid #eee;
-				border-top-color: #6366f1; /* Couleur de la rotation */
-				border-radius: 50%;
-				animation: spin 1s linear infinite;
-			}
-			@keyframes spin {
-				to {
-					transform: rotate(360deg);
-				}
-			}
-		</style>
-	</body>
+        function confirmDelete(event) {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            
+            Swal.fire({
+                title: 'Êtes-vous sûr ?',
+                text: "Cette action est irréversible !",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#696cff',
+                cancelButtonColor: '#ff3e1d',
+                confirmButtonText: 'Oui, supprimer !',
+                cancelButtonText: 'Annuler',
+                background: 'var(--bs-dark)',
+                color: 'var(--bs-body-color)',
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) form.submit();
+            });
+        }
+    </script>
+    {% block javascripts %}{% endblock %}
+</body>
 </html>

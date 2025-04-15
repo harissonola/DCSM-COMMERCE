@@ -138,10 +138,12 @@
 				<i class="fas fa-sign-out-alt"></i>
 				Déconnexion
 			</a>
-			<a href="{{ path("admin_dashboard") }}" class="btn btn-primary btn-sm mt-2">
-				<i class="fa-solid fa-table-columns fa-fade"></i>
-				Administration
-			</a>
+			{% if is_granted('ROLE_ADMIN') %}
+				<a href="{{ path("admin_dashboard") }}" class="btn btn-primary btn-sm mt-2">
+					<i class="fa-solid fa-table-columns fa-fade me-2"></i>
+					Administration
+				</a>
+			{% endif %}
 		</div>
 		<div class="d-flex flex-wrap gap-4 justify-content-center justify-content-md-start">
 			<div class="stats-card">
@@ -287,15 +289,15 @@
 										Voir
 									</a>
 									{# Dans le template twig, remplacer le lien de suppression par un formulaire #}
-								<form method="post" action="{{ path('app_user_remove_product', {'id': product.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce produit ? Vous serez remboursé de ${{ (product.price / 601.51)|number_format(2) }}');" data-turbo="true">
-									<input type="hidden" name="_token" value="{{ csrf_token('delete-product-' ~ product.id) }}">
-									<button type="submit" class="btn btn-danger btn-sm">
-										<i class="fas fa-trash-alt"></i>
-										Supprimer
-									</button>
-								</form>
+									<form method="post" action="{{ path('app_user_remove_product', {'id': product.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce produit ? Vous serez remboursé de ${{ (product.price / 601.51)|number_format(2) }}');" data-turbo="true">
+										<input type="hidden" name="_token" value="{{ csrf_token('delete-product-' ~ product.id) }}">
+										<button type="submit" class="btn btn-danger btn-sm">
+											<i class="fas fa-trash-alt"></i>
+											Supprimer
+										</button>
+									</form>
 								</div>
-								
+
 							</div>
 						</div>
 					</div>

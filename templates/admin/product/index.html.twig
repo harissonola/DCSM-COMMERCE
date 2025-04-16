@@ -10,14 +10,19 @@
             <a href="{{ path('admin_product_new') }}" class="btn btn-primary me-2">
                 <i class="mdi mdi-plus me-1"></i> Nouveau produit
             </a>
-            <button class="btn btn-success" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="mdi mdi-export me-1"></i> Exporter
+            <button class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="mdi mdi-filter me-1"></i> Filtrer
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
-                <li><a class="dropdown-item export-btn" href="#" data-type="csv"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
-                <li><a class="dropdown-item export-btn" href="#" data-type="excel"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
-                <li><a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
-            </ul>
+            <div class="btn-group">
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="mdi mdi-export me-1"></i> Exporter
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item dt-button-export-csv" href="#"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item dt-button-export-excel" href="#"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item dt-button-export-pdf" href="#"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
+                </ul>
+            </div>
         </div>
     </div>
     <div class="card-body">
@@ -41,16 +46,16 @@
                         <td>{{ product.shop ? product.shop.name : 'Aucune' }}</td>
                         <td>
                             <div class="d-flex">
-                                <a href="{{ path('admin_product_show', {'id': product.id}) }}" class="btn btn-sm btn-info me-2">
-                                    <i class="mdi mdi-eye"></i>
+                                <a href="{{ path('admin_product_show', {'id': product.id}) }}" class="btn btn-sm btn-icon btn-outline-info me-2" title="Voir détails">
+                                    <i class="mdi mdi-eye-outline"></i>
                                 </a>
-                                <a href="{{ path('admin_product_edit', {'id': product.id}) }}" class="btn btn-sm btn-warning me-2">
-                                    <i class="mdi mdi-pencil"></i>
+                                <a href="{{ path('admin_product_edit', {'id': product.id}) }}" class="btn btn-sm btn-icon btn-outline-warning me-2" title="Modifier">
+                                    <i class="mdi mdi-pencil-outline"></i>
                                 </a>
                                 <form method="post" action="{{ path('admin_product_delete', {'id': product.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ product.id) }}">
-                                    <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
-                                        <i class="mdi mdi-delete"></i>
+                                    <button class="btn btn-sm btn-icon btn-outline-danger" title="Supprimer" onclick="return confirmDelete(event)">
+                                        <i class="mdi mdi-delete-outline"></i>
                                     </button>
                                 </form>
                             </div>
@@ -66,36 +71,68 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de filtrage -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filtrer les produits</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label class="form-label">Prix minimum</label>
+                        <input type="number" class="form-control" name="minPrice" placeholder="$">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Prix maximum</label>
+                        <input type="number" class="form-control" name="maxPrice" placeholder="$">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Boutique</label>
+                        <select class="form-select" name="shop">
+                            <option value="">Toutes</option>
+                            {% for shop in shops %}
+                                <option value="{{ shop.name }}">{{ shop.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script>
     $(document).ready(function() {
-        // Initialisation de DataTables
+        // Initialisation de DataTables avec les fonctionnalités avancées
         if (!$.fn.DataTable.isDataTable('.datatable')) {
             var table = $('.datatable').DataTable({
                 responsive: true,
                 language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
                 },
-                dom: '<"top"f>rt<"bottom"lip><"clear">',
-                pageLength: 25,
+                dom: '<"row mx-1"<"col-md-6"l><"col-md-6 d-flex justify-content-end"f>>t<"row mx-1"<"col-md-6"i><"col-md-6"p>>',
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
                 buttons: [
                     {
                         extend: 'csv',
-                        text: '<i class="mdi mdi-file-delimited"></i> CSV',
-                        className: 'btn btn-outline-primary me-2',
+                        text: '<i class="mdi mdi-file-delimited me-1"></i> CSV',
+                        className: 'btn btn-label-primary me-2',
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
-                                    // Nettoyer le texte pour l'export
+                                body: function(data) {
                                     return data.replace(/<[^>]*>/g, '').trim();
                                 }
                             }
@@ -103,12 +140,12 @@
                     },
                     {
                         extend: 'excel',
-                        text: '<i class="mdi mdi-file-excel"></i> Excel',
-                        className: 'btn btn-outline-success me-2',
+                        text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
+                        className: 'btn btn-label-success me-2',
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
+                                body: function(data) {
                                     return data.replace(/<[^>]*>/g, '').trim();
                                 }
                             }
@@ -116,19 +153,19 @@
                     },
                     {
                         extend: 'pdf',
-                        text: '<i class="mdi mdi-file-pdf"></i> PDF',
-                        className: 'btn btn-outline-danger',
+                        text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
+                        className: 'btn btn-label-danger',
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
+                                body: function(data) {
                                     return data.replace(/<[^>]*>/g, '').trim();
                                 }
                             }
                         },
                         customize: function(doc) {
-                            doc.defaultStyle.fontSize = 8;
-                            doc.styles.tableHeader.fontSize = 9;
+                            doc.defaultStyle.fontSize = 9;
+                            doc.styles.tableHeader.fontSize = 10;
                             doc.pageMargins = [10, 10, 10, 10];
                         }
                     }
@@ -136,50 +173,70 @@
                 columnDefs: [
                     { 
                         orderable: false, 
-                        targets: [4] // Désactive le tri sur la colonne Actions
+                        targets: [4],
+                        searchable: false
+                    },
+                    {
+                        type: 'num',
+                        targets: 0
+                    },
+                    {
+                        type: 'currency',
+                        targets: 2
                     }
-                ]
-            });
-
-            // Gestion du menu déroulant d'export
-            $('.export-btn').click(function(e) {
-                e.preventDefault();
-                var type = $(this).data('type');
-                if (type === 'csv') {
-                    table.button('.buttons-csv').trigger();
-                } else if (type === 'excel') {
-                    table.button('.buttons-excel').trigger();
-                } else if (type === 'pdf') {
-                    table.button('.buttons-pdf').trigger();
+                ],
+                initComplete: function() {
+                    // Ajout des boutons d'export masqués
+                    this.api().buttons().container()
+                        .appendTo('.datatable_wrapper .col-md-6:eq(1)')
+                        .addClass('d-none');
+                    
+                    // Gestion des tooltips
+                    $('[title]').tooltip();
                 }
             });
 
-            // Ajout des boutons d'export dans le DOM (masqués)
-            table.buttons().container()
-                .appendTo('.datatable_wrapper .col-md-6:eq(0)')
-                .addClass('d-none');
-        }
+            // Gestion des exports via le menu déroulant
+            $('.dt-button-export-csv').click(function() {
+                table.button('.buttons-csv').trigger();
+            });
+            $('.dt-button-export-excel').click(function() {
+                table.button('.buttons-excel').trigger();
+            });
+            $('.dt-button-export-pdf').click(function() {
+                table.button('.buttons-pdf').trigger();
+            });
 
-        function confirmDelete(event) {
-            event.preventDefault();
-            var form = event.target.closest('form');
-            
-            Swal.fire({
-                title: 'Confirmer la suppression',
-                text: "Êtes-vous sûr de vouloir supprimer ce produit?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Oui, supprimer',
-                cancelButtonText: 'Annuler',
-                customClass: {
-                    confirmButton: 'btn btn-primary me-3',
-                    cancelButton: 'btn btn-label-secondary'
-                },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit();
+            // Gestion des filtres
+            $('#applyFilters').click(function() {
+                var minPrice = $('input[name="minPrice"]').val();
+                var maxPrice = $('input[name="maxPrice"]').val();
+                var shop = $('select[name="shop"]').val();
+                
+                // Filtre par boutique
+                table.column(3).search(shop).draw();
+                
+                // Filtre par plage de prix
+                if (minPrice || maxPrice) {
+                    $.fn.dataTable.ext.search.push(
+                        function(settings, data, dataIndex) {
+                            var price = parseFloat(data[2].replace(/[^\d.-]/g, '')) || 0;
+                            var min = minPrice ? parseFloat(minPrice) : 0;
+                            var max = maxPrice ? parseFloat(maxPrice) : Number.MAX_VALUE;
+                            
+                            return price >= min && price <= max;
+                        }
+                    );
+                    table.draw();
+                    $.fn.dataTable.ext.search.pop();
                 }
+                
+                $('#filterModal').modal('hide');
+            });
+
+            // Réinitialisation des filtres
+            $('#filterModal').on('hidden.bs.modal', function() {
+                $('#filterForm')[0].reset();
             });
         }
     });

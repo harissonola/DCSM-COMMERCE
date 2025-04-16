@@ -3,19 +3,18 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-      {% block title %}Admin Panel{% endblock %}
-    </title>
+    <title>{% block title %}Admin Panel{% endblock %}</title>
 
     <!-- Favicon -->
     <link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
 
-    <!-- CDN Sneat -->
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+
     <!-- Fonts -->
-	<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Core CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
@@ -26,61 +25,61 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+
     <!-- SweetAlert2 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-
-    <!-- Page-specific CSS -->
-    {% block stylesheets %}{% endblock %}
 
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
 
     <style>
       :root {
-          --bs-body-bg: #2b2c40;
-          --bs-body-color: #a3a4cc;
-          --bs-dark: #283144;
-          --bs-light: #3a3b5a;
+        --bs-body-bg: #2b2c40;
+        --bs-body-color: #a3a4cc;
+        --bs-dark: #283144;
+        --bs-light: #3a3b5a;
       }
       body {
-          background-color: var(--bs-body-bg);
-          color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
       }
       .card,
       .modal-content,
       .dropdown-menu {
-          background-color: var(--bs-dark);
-          border-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--bs-dark);
+        border-color: rgba(255, 255, 255, 0.1);
       }
       .table {
-          --bs-table-bg: transparent;
-          --bs-table-color: var(--bs-body-color);
-          --bs-table-border-color: rgba(255, 255, 255, 0.1);
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--bs-body-color);
+        --bs-table-border-color: rgba(255, 255, 255, 0.1);
       }
-      /* Style personnalisé pour SweetAlert2 */
       .swal2-popup {
-          background-color: var(--bs-dark) !important;
-          color: var(--bs-body-color) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: var(--bs-dark) !important;
+        color: var(--bs-body-color) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
       }
       .swal2-title,
       .swal2-content {
-          color: var(--bs-body-color) !important;
+        color: var(--bs-body-color) !important;
       }
       .swal2-icon.swal2-success .swal2-success-ring {
-          border-color: rgba(105, 108, 255, 0.3) !important;
+        border-color: rgba(105, 108, 255, 0.3) !important;
       }
       .swal2-icon.swal2-success [class^=swal2-success-line] {
-          background-color: #696cff !important;
+        background-color: #696cff !important;
       }
       .swal2-icon.swal2-error {
-          border-color: #ff3e1d !important;
+        border-color: #ff3e1d !important;
       }
       .swal2-icon.swal2-error [class^=swal2-x-mark-line] {
-          background-color: #ff3e1d !important;
+        background-color: #ff3e1d !important;
       }
     </style>
 
+    {% block stylesheets %}{% endblock %}
     {% block javascripts %}
       {% block importmap %}
         {{ importmap('app') }}
@@ -88,7 +87,7 @@
     {% endblock %}
   </head>
   <body>
-    {# --- LOADER PERSONNALISÉ (SPINNER) --- #}
+    <!-- Spinner -->
     <div id="custom-spinner" class="spinner hidden">
       <div class="spinner-circle"></div>
     </div>
@@ -96,60 +95,43 @@
     <!-- Layout wrapper -->
     <div class="layout-wrapper layout-content-navbar">
       <div class="layout-container">
-        <!-- Menu -->
         {% include 'admin/_menu.html.twig' %}
-
-        <!-- Layout container -->
         <div class="layout-page">
-          <!-- Navbar -->
           {% include 'admin/_navbar.html.twig' %}
-
-          <!-- Content wrapper -->
           <div class="content-wrapper">
-            <!-- Content -->
             <div class="container-xxl flex-grow-1 container-p-y">
               {% block body %}{% endblock %}
             </div>
-            <!-- / Content -->
-
-            <!-- Footer -->
             {% include 'admin/_footer.html.twig' %}
           </div>
-          <!-- / Content wrapper -->
         </div>
-        <!-- / Layout page -->
       </div>
     </div>
-    <!-- / Layout wrapper -->
 
-    <!-- Scripts critiques (chargés une seule fois) -->
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
-
-    <!-- Librairies tierces -->
-    <!-- Si besoin, ajoute ici DataTables ou d'autres plugins jQuery en vérifiant qu'ils sont chargés après jQuery -->
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
-
-    <!-- Script principal -->
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
+    <!-- Bootstrap & Sneat Core Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
 
     <!-- SweetAlert2 -->
-    <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- Initialisations et gestion des événements Turbo -->
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+    <!-- Initialisation JS -->
     <script>
-      document.addEventListener('turbo:load', function() {
-        // Masquer le spinner
+      document.addEventListener('turbo:load', function () {
+        // Spinner
         const spinner = document.getElementById('custom-spinner');
         if (spinner) {
           clearTimeout(spinner.timeout);
           spinner.classList.add('hidden');
         }
 
-        // Initialisation des messages flash
+        // Flash messages
         const Toast = Swal.mixin({
           toast: true,
           position: 'top-end',
@@ -173,9 +155,16 @@
           {% endfor %}
         {% endfor %}
 
-        // Gestion de la confirmation de suppression pour les formulaires
+        // DataTable
+        if ($.fn.DataTable) {
+          $('#myTable').DataTable(); // ← Assure-toi que ton tableau a bien l'ID "myTable"
+        } else {
+          console.error("DataTable non chargé.");
+        }
+
+        // Confirmation suppression
         document.querySelectorAll('[data-confirm="delete"]').forEach(elem => {
-          elem.addEventListener('click', function(event) {
+          elem.addEventListener('click', function (event) {
             event.preventDefault();
             const form = event.target.closest('form');
             Swal.fire({

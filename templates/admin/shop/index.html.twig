@@ -6,26 +6,18 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Boutiques</h5>
-        <div class="d-flex">
-            <a href="{{ path('admin_shop_new') }}" class="btn btn-primary me-2">
-                <i class="mdi mdi-plus me-1"></i> Nouvelle boutique
-            </a>
-            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal">
-                <i class="mdi mdi-filter me-1"></i> Filtrer
-            </button>
-        </div>
+        <a href="{{ path('admin_shop_new') }}" class="btn btn-primary">
+            <i class="mdi mdi-plus me-1"></i> Nouvelle boutique
+        </a>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover datatable">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>Id</th>
                         <th>Nom</th>
-                        <th>Propriétaire</th>
                         <th>Produits</th>
-                        <th>Statut</th>
-                        <th>Créée le</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -33,47 +25,20 @@
                 {% for shop in shops %}
                     <tr>
                         <td>{{ shop.id }}</td>
-                        <td>
-                            <a href="{{ path('admin_shop_show', {'id': shop.id}) }}" class="text-primary">
-                                {{ shop.name }}
-                            </a>
-                        </td>
-                        <td>
-                            {% if shop.owner %}
-                                <a href="{{ path('admin_user_show', {'id': shop.owner.id}) }}" class="text-info">
-                                    {{ shop.owner.email }}
-                                </a>
-                            {% else %}
-                                <span class="text-muted">Aucun</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-primary rounded-pill">{{ shop.products|length }}</span>
-                        </td>
-                        <td>
-                            <span class="badge bg-{{ shop.isActive ? 'success' : 'danger' }}">
-                                {{ shop.isActive ? 'Active' : 'Inactive' }}
-                            </span>
-                        </td>
-                        <td>{{ shop.createdAt|date('d/m/Y') }}</td>
+                        <td>{{ shop.name }}</td>
+                        <td>{{ shop.products|length }}</td>
                         <td>
                             <div class="d-flex">
-                                <a href="{{ path('admin_shop_show', {'id': shop.id}) }}" 
-                                   class="btn btn-sm btn-icon btn-outline-info me-2"
-                                   title="Voir détails">
-                                    <i class="mdi mdi-eye-outline"></i>
+                                <a href="{{ path('admin_shop_show', {'id': shop.id}) }}" class="btn btn-sm btn-info me-2">
+                                    <i class="mdi mdi-eye"></i>
                                 </a>
-                                <a href="{{ path('admin_shop_edit', {'id': shop.id}) }}" 
-                                   class="btn btn-sm btn-icon btn-outline-warning me-2"
-                                   title="Modifier">
-                                    <i class="mdi mdi-pencil-outline"></i>
+                                <a href="{{ path('admin_shop_edit', {'id': shop.id}) }}" class="btn btn-sm btn-warning me-2">
+                                    <i class="mdi mdi-pencil"></i>
                                 </a>
-                                <form method="post" action="{{ path('admin_shop_delete', {'id': shop.id}) }}"
-                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette boutique?');">
+                                <form method="post" action="{{ path('admin_shop_delete', {'id': shop.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ shop.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-icon btn-outline-danger"
-                                            title="Supprimer">
-                                        <i class="mdi mdi-delete-outline"></i>
+                                    <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
+                                        <i class="mdi mdi-delete"></i>
                                     </button>
                                 </form>
                             </div>
@@ -81,48 +46,11 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">Aucune boutique trouvée</td>
+                        <td colspan="4" class="text-center">Aucune boutique trouvée</td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de filtrage -->
-<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Filtrer les boutiques</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="filterForm">
-                    <div class="mb-3">
-                        <label class="form-label">Statut</label>
-                        <select class="form-select" name="status">
-                            <option value="">Toutes</option>
-                            <option value="active">Actives</option>
-                            <option value="inactive">Inactives</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Nombre de produits</label>
-                        <select class="form-select" name="productsCount">
-                            <option value="">Toutes</option>
-                            <option value="0">Aucun produit</option>
-                            <option value="1-10">1-10 produits</option>
-                            <option value="10+">Plus de 10 produits</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary">Appliquer</button>
-            </div>
         </div>
     </div>
 </div>
@@ -132,43 +60,18 @@
 {{ parent() }}
 <script>
     $(document).ready(function() {
-        // Vérifie si la table est déjà initialisée avant de l'initialiser
+        // Vérifie si la table n'est pas déjà initialisée
         if (!$.fn.DataTable.isDataTable('.datatable')) {
-            const table = $('.datatable').DataTable({
+            $('.datatable').DataTable({
                 responsive: true,
                 language: {
                     url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
                 },
+                order: [[0, 'desc']], // Tri par ID décroissant par défaut
                 dom: '<"top"f>rt<"bottom"lip><"clear">',
                 pageLength: 25
             });
-
-            // Gestion du filtre
-            $('#filterModal .btn-primary').click(function() {
-                const status = $('select[name="status"]').val();
-                const productsCount = $('select[name="productsCount"]').val();
-                
-                // Filtre par statut (colonne 4)
-                table.column(4).search(status === 'active' ? 'Active' : 
-                                     status === 'inactive' ? 'Inactive' : '').draw();
-                
-                // Filtre par nombre de produits (colonne 3)
-                if (productsCount === '0') {
-                    table.column(3).search('^0$', true, false).draw();
-                } else if (productsCount === '1-10') {
-                    table.column(3).search('^[1-9]$|^10$', true, false).draw();
-                } else if (productsCount === '10+') {
-                    table.column(3).search('^1[1-9]$|^[2-9][0-9]$|^[0-9]{3,}$', true, false).draw();
-                } else {
-                    table.column(3).search('').draw();
-                }
-                
-                $('#filterModal').modal('hide');
-            });
         }
-
-        // Activation des tooltips
-        $('[title]').tooltip();
     });
 </script>
 {% endblock %}

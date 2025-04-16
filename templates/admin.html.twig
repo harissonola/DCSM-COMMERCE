@@ -126,12 +126,6 @@
 			background-color: #ff3e1d !important;
 		}
 	</style>
-
-	{% block javascripts %}
-		{% block importmap %}
-			{{ importmap('app') }}
-		{% endblock %}
-	{% endblock %}
 </head>
 
 <body>
@@ -262,13 +256,13 @@
 			             }
 			     
 			             // Gestion des événements Turbo
-			             document.addEventListener('turbo:load', function() {
+			             document.addEventListener('DOMContentLoaded', function() {
 			                 showFlashMessages();
 			                 initDataTables();
 			             });
 			     
 			             // Initialisation au premier chargement
-			             document.addEventListener('turbo:load', function() {
+			             document.addEventListener('DOMContentLoaded', function() {
 			                 showFlashMessages();
 			                 initDataTables();
 			             });

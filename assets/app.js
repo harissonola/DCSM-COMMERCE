@@ -22,13 +22,22 @@ function configureTurbo() {
     });
 }
 
-// Nettoie les scripts avant chaque navigation
-function cleanupScripts() {
+// Marque et désactive les scripts indésirables
+function markScriptsForRemoval() {
     document.querySelectorAll('script[src]').forEach(script => {
         const shouldRemove = !PRESERVED_SCRIPTS.some(term => script.src.includes(term));
         if (shouldRemove) {
-            script.remove();
+            // Marquage pour suppression et désactivation afin de ne pas interférer avec Turbo
+            script.setAttribute('data-should-remove', 'true');
+            script.type = 'text/plain'; // Désactive l'exécution lors du rechargement
         }
+    });
+}
+
+// Supprime définitivement les scripts marqués
+function removeMarkedScripts() {
+    document.querySelectorAll('script[data-should-remove]').forEach(script => {
+        script.remove();
     });
 }
 
@@ -37,7 +46,8 @@ function setupCustomSpinner() {
     let isFirstVisit = true;
 
     document.addEventListener('turbo:before-visit', () => {
-        cleanupScripts(); // Nettoyage avant navigation
+        // Marquer les scripts indésirables juste avant la navigation
+        markScriptsForRemoval();
     });
 
     document.addEventListener('turbo:visit', () => {
@@ -56,6 +66,8 @@ function setupCustomSpinner() {
     });
 
     document.addEventListener('turbo:load', () => {
+        // Une fois la nouvelle page chargée, on supprime définitivement les scripts marqués
+        removeMarkedScripts();
         const spinner = document.getElementById('custom-spinner');
         if (spinner) {
             clearTimeout(spinner.timeout);
@@ -74,7 +86,7 @@ function setupCustomSpinner() {
 
 // Réinitialise les composants JS nécessaires
 function reinitializeComponents() {
-    // Réinitialiser les composants spécifiques ici
+    // Exemple pour recharger un plugin
     if (typeof PerfectScrollbar !== 'undefined') {
         document.querySelectorAll('[data-perfect-scrollbar]').forEach(el => {
             new PerfectScrollbar(el);
@@ -84,21 +96,17 @@ function reinitializeComponents() {
     // Réinitialiser d'autres librairies si nécessaire
 }
 
-// Initialisation
+// Initialisation de Turbo et des fonctionnalités à chaque chargement
 document.addEventListener('turbo:load', () => {
     configureTurbo();
     setupCustomSpinner();
     reinitializeComponents();
-    
-    if (!window.turboLoaded) {
-        window.turboLoaded = true;
-        document.dispatchEvent(new Event('turbo:load'));
-    }
+    // Note : la redéclaration manuelle de l'événement turbo:load a été retirée
 });
 
 // Pour les rechargements manuels
 window.reloadWithSpinner = () => {
-    cleanupScripts();
+    markScriptsForRemoval();
     const spinner = document.getElementById('custom-spinner');
     if (spinner) spinner.classList.remove('hidden');
     window.location.reload();

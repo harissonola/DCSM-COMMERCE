@@ -68,7 +68,7 @@
 
 		<!-- Transactions -->
 		<li class="menu-item {{ app.request.get('_route') starts with 'admin_transactions_' ? 'active' : '' }}">
-			<a href="{{ path('admin_transactions_index') }}" class="menu-link">
+			<a href="{{ path('admin_transactions_index') }}" data-turbo="true" class="menu-link">
 				<i class="menu-icon mdi mdi-cash-multiple"></i>
 				<div>Transactions</div>
 			</a>

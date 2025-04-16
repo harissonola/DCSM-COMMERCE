@@ -13,6 +13,18 @@
             <button class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
                 <i class="mdi mdi-filter me-1"></i> Filtrer
             </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="mdi mdi-download me-1"></i> Exporter
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item export-btn" href="#" data-type="copy"><i class="mdi mdi-content-copy me-2"></i>Copier</a></li>
+                    <li><a class="dropdown-item export-btn" href="#" data-type="excel"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item export-btn" href="#" data-type="csv"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
+                    <li><a class="dropdown-item export-btn" href="#" data-type="print"><i class="mdi mdi-printer me-2"></i>Imprimer</a></li>
+                </ul>
+            </div>
         </div>
     </div>
     <div class="card-body">
@@ -123,25 +135,20 @@
                 url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
             },
             order: [[0, 'desc']],
-            dom: '<"row"<"col-md-6"B><"col-md-6"f>>rt<"row"<"col-md-5"i><"col-md-7"p>>',
+            dom: '<"top"<"row"<"col-md-6"B><"col-md-6"f>>>rt<"bottom"<"row"<"col-md-5"i><"col-md-7"p>>>',
             pageLength: 25,
             lengthMenu: [10, 25, 50, 75, 100],
             buttons: [
                 {
                     extend: 'copy',
                     text: '<i class="mdi mdi-content-copy me-1"></i> Copier',
-                    className: 'btn btn-outline-secondary me-2',
+                    className: 'btn btn-outline-secondary',
                     exportOptions: {
                         columns: ':not(:last-child)',
                         format: {
-                            body: function (data, column, row) {
-                                // Nettoyage du HTML pour l'export
-                                if (column === 3) { // Colonne Solde
-                                    return data.replace(/[^\d.-]/g, '');
-                                }
-                                if (column === 4) { // Colonne Rôles
-                                    return $(data).text().trim();
-                                }
+                            body: function(data, column, row) {
+                                if (column === 3) return data.replace(/[^\d.-]/g, '');
+                                if (column === 4) return $(data).text().trim();
                                 return data;
                             }
                         }
@@ -150,11 +157,26 @@
                 {
                     extend: 'excel',
                     text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
-                    className: 'btn btn-outline-success me-2',
+                    className: 'btn btn-outline-success',
                     exportOptions: {
                         columns: ':not(:last-child)',
                         format: {
-                            body: function (data, column, row) {
+                            body: function(data, column, row) {
+                                if (column === 3) return data.replace(/[^\d.-]/g, '');
+                                if (column === 4) return $(data).text().trim();
+                                return data;
+                            }
+                        }
+                    }
+                },
+                {
+                    extend: 'csv',
+                    text: '<i class="mdi mdi-file-delimited me-1"></i> CSV',
+                    className: 'btn btn-outline-primary',
+                    exportOptions: {
+                        columns: ':not(:last-child)',
+                        format: {
+                            body: function(data, column, row) {
                                 if (column === 3) return data.replace(/[^\d.-]/g, '');
                                 if (column === 4) return $(data).text().trim();
                                 return data;
@@ -165,11 +187,11 @@
                 {
                     extend: 'pdf',
                     text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
-                    className: 'btn btn-outline-danger me-2',
+                    className: 'btn btn-outline-danger',
                     exportOptions: {
                         columns: ':not(:last-child)',
                         format: {
-                            body: function (data, column, row) {
+                            body: function(data, column, row) {
                                 if (column === 3) return data.replace(/[^\d.-]/g, '');
                                 if (column === 4) return $(data).text().trim();
                                 return data;
@@ -189,7 +211,7 @@
                     exportOptions: {
                         columns: ':not(:last-child)',
                         format: {
-                            body: function (data, column, row) {
+                            body: function(data, column, row) {
                                 if (column === 3) return data.replace(/[^\d.-]/g, '');
                                 if (column === 4) return $(data).text().trim();
                                 return data;
@@ -201,52 +223,72 @@
             columnDefs: [
                 { 
                     orderable: false, 
-                    targets: [5], // Désactive le tri sur la colonne Actions
+                    targets: [5],
                     searchable: false
                 },
                 {
                     type: 'num',
-                    targets: [3] // Pour le tri correct des soldes
+                    targets: [3]
                 }
             ],
             initComplete: function() {
-                // Ajout des boutons dans le DOM
-                table.buttons().container().appendTo('.col-md-6:eq(0)');
+                // Masquer les boutons natifs (nous utilisons notre menu déroulant)
+                this.api().buttons().container().addClass('d-none');
             }
         });
+
+        // Gestion des exports via le menu déroulant
+        $('.export-btn').click(function(e) {
+            e.preventDefault();
+            var type = $(this).data('type');
+            if (type === 'copy') {
+                table.button('.buttons-copy').trigger();
+            } else if (type === 'excel') {
+                table.button('.buttons-excel').trigger();
+            } else if (type === 'csv') {
+                table.button('.buttons-csv').trigger();
+            } else if (type === 'pdf') {
+                table.button('.buttons-pdf').trigger();
+            } else if (type === 'print') {
+                table.button('.buttons-print').trigger();
+            }
+        });
+
+        // Variables pour les filtres
+        var minBalanceFilter = '';
+
+        // Fonction de filtrage personnalisée
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                // Filtre par solde minimum
+                if (minBalanceFilter !== '') {
+                    var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
+                    if (balance < minBalanceFilter) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        );
 
         // Gestion des filtres
         $('#applyFilters').click(function() {
             var role = $('select[name="role"]').val();
-            var minBalance = $('input[name="minBalance"]').val();
+            minBalanceFilter = $('input[name="minBalance"]').val() ? parseFloat($('input[name="minBalance"]').val()) : '';
 
             // Filtre par rôle
-            if (role) {
-                table.column(4).search(role).draw();
-            } else {
-                table.column(4).search('').draw();
-            }
-
-            // Filtre par solde minimum
-            if (minBalance) {
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
-                        return balance >= parseFloat(minBalance);
-                    }
-                );
-                table.draw();
-                $.fn.dataTable.ext.search.pop();
-            } else {
-                table.draw();
-            }
-
+            table.column(4).search(role).draw();
+            
+            // Filtre par solde minimum (via la fonction personnalisée)
+            table.draw();
+            
             $('#filterModal').modal('hide');
         });
 
         // Réinitialisation des filtres
         $('#resetFilters').click(function() {
             $('#filterForm')[0].reset();
+            minBalanceFilter = '';
             table.search('').columns().search('').draw();
             $('#filterModal').modal('hide');
         });

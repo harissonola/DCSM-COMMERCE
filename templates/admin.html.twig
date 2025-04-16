@@ -128,7 +128,7 @@
 		</div>
 		<!-- / Layout wrapper -->
 
-		{% block js2 %}<!-- Scripts critiques : On empêche leur réévaluation via Turbo grâce à data-turbo-eval="false" -->
+		<!-- Scripts critiques : On empêche leur réévaluation via Turbo grâce à data-turbo-eval="false" -->
 			 <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 			 <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
 			 <script data-turbo-eval="false" src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
@@ -200,7 +200,6 @@
 			          });
 			        });
 			      </script>
-		{% endblock %}
 
 		{% block javascripts_end %}{% endblock %}
 	</body>

@@ -18,9 +18,11 @@
                     <i class="mdi mdi-export me-1"></i> Exporter
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item dt-button-export-copy" href="#"><i class="mdi mdi-content-copy me-2"></i>Copier</a></li>
                     <li><a class="dropdown-item dt-button-export-csv" href="#"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
                     <li><a class="dropdown-item dt-button-export-excel" href="#"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
                     <li><a class="dropdown-item dt-button-export-pdf" href="#"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
+                    <li><a class="dropdown-item dt-button-export-print" href="#"><i class="mdi mdi-printer me-2"></i>Imprimer</a></li>
                 </ul>
             </div>
         </div>
@@ -32,7 +34,7 @@
                     <tr>
                         <th>Id</th>
                         <th>Nom</th>
-                        <th>Prix</th>
+                        <th data-order="price">Prix</th>
                         <th>Boutique</th>
                         <th>Actions</th>
                     </tr>
@@ -42,7 +44,7 @@
                     <tr>
                         <td>{{ product.id }}</td>
                         <td>{{ product.name }}</td>
-                        <td>{{ product.price|format_currency('USD') }}</td>
+                        <td data-order="{{ product.price }}">{{ product.price|format_currency('USD') }}</td>
                         <td>{{ product.shop ? product.shop.name : 'Aucune' }}</td>
                         <td>
                             <div class="d-flex">
@@ -84,11 +86,11 @@
                 <form id="filterForm">
                     <div class="mb-3">
                         <label class="form-label">Prix minimum</label>
-                        <input type="number" class="form-control" name="minPrice" placeholder="$">
+                        <input type="number" class="form-control" name="minPrice" placeholder="$" step="0.01">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Prix maximum</label>
-                        <input type="number" class="form-control" name="maxPrice" placeholder="$">
+                        <input type="number" class="form-control" name="maxPrice" placeholder="$" step="0.01">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Boutique</label>
@@ -104,6 +106,9 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
                 <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
+                <button type="button" class="btn btn-outline-danger" id="resetFilters">
+                    <i class="mdi mdi-filter-remove me-1"></i> Réinitialiser
+                </button>
             </div>
         </div>
     </div>
@@ -112,6 +117,15 @@
 
 {% block javascripts %}
 {{ parent() }}
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/currency.js"></script>
+
 <script>
     $(document).ready(function() {
         // Initialisation de DataTables avec les fonctionnalités avancées
@@ -119,12 +133,28 @@
             var table = $('.datatable').DataTable({
                 responsive: true,
                 language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
                 },
-                dom: '<"row mx-1"<"col-md-6"l><"col-md-6 d-flex justify-content-end"f>>t<"row mx-1"<"col-md-6"i><"col-md-6"p>>',
+                order: [[0, 'desc']],
+                dom: '<"row mx-1"<"col-md-6"l><"col-md-6 d-flex justify-content-end"fB>><"row mx-1"<"col-md-12"tr>><"row mx-1"<"col-md-5"i><"col-md-7"p>>',
                 pageLength: 10,
                 lengthMenu: [10, 25, 50, 100],
                 buttons: [
+                    {
+                        extend: 'copy',
+                        text: '<i class="mdi mdi-content-copy me-1"></i> Copier',
+                        className: 'btn btn-label-secondary me-2',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function(data, row, column, node) {
+                                    return column === 2 ? 
+                                        data.replace(/[^\d.-]/g, '') : // Pour la colonne Prix
+                                        $(node).text().trim();
+                                }
+                            }
+                        }
+                    },
                     {
                         extend: 'csv',
                         text: '<i class="mdi mdi-file-delimited me-1"></i> CSV',
@@ -132,8 +162,10 @@
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function(data) {
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return column === 2 ? 
+                                        data.replace(/[^\d.-]/g, '') : 
+                                        $(node).text().trim();
                                 }
                             }
                         }
@@ -145,8 +177,10 @@
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function(data) {
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return column === 2 ? 
+                                        data.replace(/[^\d.-]/g, '') : 
+                                        $(node).text().trim();
                                 }
                             }
                         }
@@ -154,12 +188,14 @@
                     {
                         extend: 'pdf',
                         text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
-                        className: 'btn btn-label-danger',
+                        className: 'btn btn-label-danger me-2',
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function(data) {
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return column === 2 ? 
+                                        data.replace(/[^\d.-]/g, '') : 
+                                        $(node).text().trim();
                                 }
                             }
                         },
@@ -167,6 +203,21 @@
                             doc.defaultStyle.fontSize = 9;
                             doc.styles.tableHeader.fontSize = 10;
                             doc.pageMargins = [10, 10, 10, 10];
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="mdi mdi-printer me-1"></i> Imprimer',
+                        className: 'btn btn-label-info',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function(data, row, column, node) {
+                                    return column === 2 ? 
+                                        data.replace(/[^\d.-]/g, '') : 
+                                        $(node).text().trim();
+                                }
+                            }
                         }
                     }
                 ],
@@ -186,59 +237,106 @@
                     }
                 ],
                 initComplete: function() {
-                    // Ajout des boutons d'export masqués
-                    this.api().buttons().container()
-                        .appendTo('.datatable_wrapper .col-md-6:eq(1)')
-                        .addClass('d-none');
-                    
                     // Gestion des tooltips
                     $('[title]').tooltip();
+                    
+                    // Masquer les boutons d'export standards
+                    $('.dt-buttons').addClass('d-none');
                 }
             });
 
             // Gestion des exports via le menu déroulant
-            $('.dt-button-export-csv').click(function() {
+            $('.dt-button-export-copy').click(function(e) {
+                e.preventDefault();
+                table.button('.buttons-copy').trigger();
+            });
+            $('.dt-button-export-csv').click(function(e) {
+                e.preventDefault();
                 table.button('.buttons-csv').trigger();
             });
-            $('.dt-button-export-excel').click(function() {
+            $('.dt-button-export-excel').click(function(e) {
+                e.preventDefault();
                 table.button('.buttons-excel').trigger();
             });
-            $('.dt-button-export-pdf').click(function() {
+            $('.dt-button-export-pdf').click(function(e) {
+                e.preventDefault();
                 table.button('.buttons-pdf').trigger();
             });
+            $('.dt-button-export-print').click(function(e) {
+                e.preventDefault();
+                table.button('.buttons-print').trigger();
+            });
+
+            // Variables pour les filtres
+            var minPriceFilter = '';
+            var maxPriceFilter = '';
+            var shopFilter = '';
+
+            // Fonction de filtrage personnalisée pour les prix
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    var price = parseFloat(data[2].replace(/[^\d.-]/g, '')) || 0;
+                    
+                    // Filtre par prix
+                    if (minPriceFilter !== '' && price < minPriceFilter) {
+                        return false;
+                    }
+                    if (maxPriceFilter !== '' && price > maxPriceFilter) {
+                        return false;
+                    }
+                    
+                    // Filtre par boutique
+                    if (shopFilter !== '' && data[3].indexOf(shopFilter) === -1) {
+                        return false;
+                    }
+                    
+                    return true;
+                }
+            );
 
             // Gestion des filtres
             $('#applyFilters').click(function() {
-                var minPrice = $('input[name="minPrice"]').val();
-                var maxPrice = $('input[name="maxPrice"]').val();
-                var shop = $('select[name="shop"]').val();
+                minPriceFilter = $('input[name="minPrice"]').val() ? parseFloat($('input[name="minPrice"]').val()) : '';
+                maxPriceFilter = $('input[name="maxPrice"]').val() ? parseFloat($('input[name="maxPrice"]').val()) : '';
+                shopFilter = $('select[name="shop"]').val();
                 
-                // Filtre par boutique
-                table.column(3).search(shop).draw();
-                
-                // Filtre par plage de prix
-                if (minPrice || maxPrice) {
-                    $.fn.dataTable.ext.search.push(
-                        function(settings, data, dataIndex) {
-                            var price = parseFloat(data[2].replace(/[^\d.-]/g, '')) || 0;
-                            var min = minPrice ? parseFloat(minPrice) : 0;
-                            var max = maxPrice ? parseFloat(maxPrice) : Number.MAX_VALUE;
-                            
-                            return price >= min && price <= max;
-                        }
-                    );
-                    table.draw();
-                    $.fn.dataTable.ext.search.pop();
-                }
-                
+                table.draw();
                 $('#filterModal').modal('hide');
             });
 
             // Réinitialisation des filtres
-            $('#filterModal').on('hidden.bs.modal', function() {
+            $('#resetFilters').click(function() {
                 $('#filterForm')[0].reset();
+                minPriceFilter = '';
+                maxPriceFilter = '';
+                shopFilter = '';
+                table.draw();
+                $('#filterModal').modal('hide');
             });
         }
     });
+
+    function confirmDelete(event) {
+        event.preventDefault();
+        var form = event.target.closest('form');
+        
+        Swal.fire({
+            title: 'Confirmer la suppression',
+            text: "Êtes-vous sûr de vouloir supprimer ce produit?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Oui, supprimer',
+            cancelButtonText: 'Annuler',
+            customClass: {
+                confirmButton: 'btn btn-primary me-3',
+                cancelButton: 'btn btn-label-secondary'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    }
 </script>
 {% endblock %}

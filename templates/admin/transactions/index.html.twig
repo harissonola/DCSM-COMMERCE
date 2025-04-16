@@ -15,6 +15,7 @@
                     <i class="mdi mdi-export me-1"></i> Exporter
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item export-action" href="#" data-type="copy"><i class="mdi mdi-content-copy me-2"></i>Copier</a></li>
                     <li><a class="dropdown-item export-action" href="#" data-type="csv"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
                     <li><a class="dropdown-item export-action" href="#" data-type="excel"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
                     <li><a class="dropdown-item export-action" href="#" data-type="pdf"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
@@ -31,11 +32,11 @@
                     <tr>
                         <th>ID</th>
                         <th>Utilisateur</th>
-                        <th>Montant</th>
+                        <th data-order="amount">Montant</th>
                         <th>Méthode</th>
                         <th>Statut</th>
                         <th>Type</th>
-                        <th>Date</th>
+                        <th data-order="date">Date</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -48,10 +49,10 @@
                                 {{ transaction.user.email }}
                             </a>
                         </td>
-                        <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }} fw-bold">
+                        <td data-order="{{ transaction.amount }}" class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }} fw-bold">
                             {{ (transaction.type == 'withdrawal' ? '-' : '+') ~ transaction.amount|format_currency('USD') }}
                         </td>
-                        <td>
+                        <td data-search="{{ transaction.method }}">
                             {% set method_icons = {
                                 'card': 'mdi-credit-card',
                                 'paypal': 'mdi-paypal',
@@ -61,13 +62,13 @@
                             <i class="mdi {{ method_icons[transaction.method] ?? 'mdi-cash' }} me-1"></i>
                             {{ transaction.method|capitalize }}
                         </td>
-                        <td>
+                        <td data-search="{{ transaction.status }}">
                             <span class="badge bg-{{ transaction.status == 'completed' ? 'success' : 
                                 (transaction.status == 'failed' ? 'danger' : 'warning') }}">
                                 {{ transaction.status|capitalize }}
                             </span>
                         </td>
-                        <td>
+                        <td data-search="{{ transaction.type }}">
                             <span class="badge bg-{{ transaction.type == 'deposit' ? 'info' : 'primary' }}">
                                 {{ transaction.type|capitalize }}
                             </span>
@@ -97,7 +98,7 @@
 
 <!-- Modal de filtrage -->
 <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Filtrer les transactions</h5>
@@ -106,7 +107,7 @@
             <div class="modal-body">
                 <form id="filterForm">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Statut</label>
                             <select class="form-select" name="status">
                                 <option value="">Tous les statuts</option>
@@ -115,12 +116,22 @@
                                 <option value="failed">Échoué</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Type</label>
                             <select class="form-select" name="type">
                                 <option value="">Tous les types</option>
                                 <option value="deposit">Dépôt</option>
                                 <option value="withdrawal">Retrait</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Méthode</label>
+                            <select class="form-select" name="method">
+                                <option value="">Toutes les méthodes</option>
+                                <option value="card">Carte</option>
+                                <option value="paypal">PayPal</option>
+                                <option value="transfer">Virement</option>
+                                <option value="crypto">Crypto</option>
                             </select>
                         </div>
                     </div>
@@ -134,21 +145,25 @@
                             <input type="date" class="form-control" name="end_date">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Méthode de paiement</label>
-                        <select class="form-select" name="method">
-                            <option value="">Toutes les méthodes</option>
-                            <option value="card">Carte</option>
-                            <option value="paypal">PayPal</option>
-                            <option value="transfer">Virement</option>
-                            <option value="crypto">Crypto</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Montant minimum</label>
+                            <input type="number" class="form-control" name="min_amount" placeholder="$" step="0.01">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Montant maximum</label>
+                            <input type="number" class="form-control" name="max_amount" placeholder="$" step="0.01">
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" id="resetFilters">Réinitialiser</button>
-                <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
+                <button type="button" class="btn btn-outline-danger" id="resetFilters">
+                    <i class="mdi mdi-filter-remove me-1"></i> Réinitialiser
+                </button>
+                <button type="button" class="btn btn-primary" id="applyFilters">
+                    <i class="mdi mdi-filter-check me-1"></i> Appliquer
+                </button>
             </div>
         </div>
     </div>
@@ -157,25 +172,46 @@
 
 {% block javascripts %}
 {{ parent() }}
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/currency.js"></script>
+<script src="https://cdn.datatables.net/plug-ins/1.13.6/sorting/datetime-moment.js"></script>
+
 <script>
     $(document).ready(function() {
-        // Initialisation de DataTables avec les boutons d'export
+        // Configuration des formats de date pour le tri
+        $.fn.dataTable.moment('DD/MM/YYYY HH:mm');
+        
+        // Initialisation de DataTables
         if (!$.fn.DataTable.isDataTable('.datatable')) {
             var table = $('.datatable').DataTable({
                 responsive: true,
                 language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
                 },
                 order: [[6, 'desc']], // Tri par date décroissante par défaut
-                dom: '<"row"<"col-md-6"B><"col-md-6"f>><"row"<"col-md-12"rt>><"row"<"col-md-5"i><"col-md-7"p>>',
+                dom: '<"row mx-1"<"col-md-6"B><"col-md-6 d-flex justify-content-end"f>><"row mx-1"<"col-md-12"tr>><"row mx-1"<"col-md-5"i><"col-md-7"p>>',
                 pageLength: 25,
+                lengthMenu: [10, 25, 50, 100],
                 buttons: [
+                    {
+                        extend: 'copy',
+                        text: '<i class="mdi mdi-content-copy me-1"></i> Copier',
+                        className: 'btn btn-label-secondary me-2',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function(data, row, column, node) {
+                                    return cleanExportData(data, column);
+                                }
+                            }
+                        }
+                    },
                     {
                         extend: 'csv',
                         text: '<i class="mdi mdi-file-delimited me-1"></i> CSV',
@@ -183,12 +219,10 @@
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
-                                    // Nettoyer le texte pour l'export
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return cleanExportData(data, column);
                                 }
-                            },
-                            orthogonal: 'export'
+                            }
                         },
                         filename: 'transactions_' + new Date().toISOString().slice(0, 10)
                     },
@@ -199,11 +233,10 @@
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return cleanExportData(data, column);
                                 }
-                            },
-                            orthogonal: 'export'
+                            }
                         },
                         filename: 'transactions_' + new Date().toISOString().slice(0, 10),
                         customize: function(xlsx) {
@@ -218,11 +251,10 @@
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return cleanExportData(data, column);
                                 }
-                            },
-                            orthogonal: 'export'
+                            }
                         },
                         filename: 'transactions_' + new Date().toISOString().slice(0, 10),
                         customize: function(doc) {
@@ -250,11 +282,10 @@
                         exportOptions: {
                             columns: ':not(:last-child)',
                             format: {
-                                body: function (data, row, column, node) {
-                                    return data.replace(/<[^>]*>/g, '').trim();
+                                body: function(data, row, column, node) {
+                                    return cleanExportData(data, column);
                                 }
-                            },
-                            orthogonal: 'export'
+                            }
                         },
                         customize: function(win) {
                             $(win.document.body).css('font-size', '10pt');
@@ -271,14 +302,14 @@
                         searchable: false
                     },
                     {
-                        type: 'date-euro',
-                        targets: 6
+                        type: 'currency',
+                        targets: 2
                     },
                     {
-                        targets: 2,
+                        targets: [4, 5],
                         render: function(data, type, row) {
                             if (type === 'export') {
-                                return data.replace(/<[^>]*>/g, '');
+                                return $(data).text().trim();
                             }
                             return data;
                         }
@@ -287,14 +318,29 @@
                 initComplete: function() {
                     // Masquer les boutons d'export natifs (nous utilisons notre menu déroulant)
                     this.api().buttons().container().addClass('d-none');
+                    
+                    // Gestion des tooltips
+                    $('[title]').tooltip();
                 }
             });
+
+            // Fonction pour nettoyer les données à exporter
+            function cleanExportData(data, column) {
+                if (column === 2) { // Colonne Montant
+                    return data.replace(/[^\d.-]/g, '');
+                } else if (column === 6) { // Colonne Date
+                    return data.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1');
+                }
+                return $(data).text().trim() || data;
+            }
 
             // Gestion des exports via le menu déroulant
             $('.export-action').click(function(e) {
                 e.preventDefault();
                 var type = $(this).data('type');
-                if (type === 'csv') {
+                if (type === 'copy') {
+                    table.button('.buttons-copy').trigger();
+                } else if (type === 'csv') {
                     table.button('.buttons-csv').trigger();
                 } else if (type === 'excel') {
                     table.button('.buttons-excel').trigger();
@@ -305,50 +351,67 @@
                 }
             });
 
-            // Gestion des filtres
-            $('#applyFilters').click(function() {
-                var status = $('select[name="status"]').val();
-                var type = $('select[name="type"]').val();
-                var method = $('select[name="method"]').val();
-                var startDate = $('input[name="start_date"]').val();
-                var endDate = $('input[name="end_date"]').val();
-                
-                // Filtre par statut (colonne 4)
-                table.column(4).search(status).draw();
-                
-                // Filtre par type (colonne 5)
-                table.column(5).search(type).draw();
-                
-                // Filtre par méthode (colonne 3)
-                table.column(3).search(method).draw();
-                
-                // Filtre par plage de dates (colonne 6)
-                if (startDate || endDate) {
-                    $.fn.dataTable.ext.search.push(
-                        function(settings, data, dataIndex) {
-                            var date = new Date(data[6]);
-                            var start = startDate ? new Date(startDate) : null;
-                            var end = endDate ? new Date(endDate) : null;
-                            
-                            if ((start === null || date >= start) && 
-                                (end === null || date <= end)) {
-                                return true;
-                            }
+            // Variables pour les filtres personnalisés
+            var minAmountFilter = '';
+            var maxAmountFilter = '';
+            var startDateFilter = '';
+            var endDateFilter = '';
+
+            // Fonction de filtrage personnalisée
+            $.fn.dataTable.ext.search.push(
+                function(settings, data, dataIndex) {
+                    // Filtre par montant
+                    var amount = parseFloat(data[2].replace(/[^\d.-]/g, '')) || 0;
+                    if (minAmountFilter !== '' && amount < minAmountFilter) {
+                        return false;
+                    }
+                    if (maxAmountFilter !== '' && amount > maxAmountFilter) {
+                        return false;
+                    }
+                    
+                    // Filtre par date
+                    if (startDateFilter !== '' || endDateFilter !== '') {
+                        var date = moment(data[6], 'DD/MM/YYYY HH:mm').toDate();
+                        if (startDateFilter !== '' && date < startDateFilter) {
                             return false;
                         }
-                    );
-                    table.draw();
-                    $.fn.dataTable.ext.search.pop();
-                } else {
-                    table.column(6).search('').draw();
+                        if (endDateFilter !== '' && date > endDateFilter) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
                 }
+            );
+
+            // Gestion des filtres
+            $('#applyFilters').click(function() {
+                // Filtres standards
+                table.column(3).search($('select[name="method"]').val());
+                table.column(4).search($('select[name="status"]').val());
+                table.column(5).search($('select[name="type"]').val());
                 
+                // Filtres personnalisés
+                minAmountFilter = $('input[name="min_amount"]').val() ? parseFloat($('input[name="min_amount"]').val()) : '';
+                maxAmountFilter = $('input[name="max_amount"]').val() ? parseFloat($('input[name="max_amount"]').val()) : '';
+                
+                var startDate = $('input[name="start_date"]').val();
+                var endDate = $('input[name="end_date"]').val();
+                startDateFilter = startDate ? new Date(startDate) : '';
+                endDateFilter = endDate ? new Date(endDate) : '';
+                
+                // Appliquer les filtres
+                table.draw();
                 $('#filterModal').modal('hide');
             });
 
             // Réinitialisation des filtres
             $('#resetFilters').click(function() {
                 $('#filterForm')[0].reset();
+                minAmountFilter = '';
+                maxAmountFilter = '';
+                startDateFilter = '';
+                endDateFilter = '';
                 table.search('').columns().search('').draw();
             });
 

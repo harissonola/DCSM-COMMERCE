@@ -1,92 +1,179 @@
 {# admin/user/index.html.twig #}
 {% extends 'admin.html.twig' %}
 
-{% block title %}Liste des Utilisateurs{% endblock %}
+{% block title %}Liste des Utilisateurs
+{% endblock %}
 
 {% block body %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Utilisateurs</h5>
-        <a href="{{ path('admin_user_new') }}" class="btn btn-primary">
-            <i class="mdi mdi-plus me-1"></i> Nouvel utilisateur
-        </a>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover datatable">
-                <thead>
-                    <tr>
-                        <th>Id</th>
-                        <th>Email</th>
-                        <th>Nom</th>
-                        <th>Solde</th>
-                        <th>Rôles</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for user in users %}
-                    <tr>
-                        <td>{{ user.id }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.fname }} {{ user.lname }}</td>
-                        <td>{{ user.balance|format_currency('USD') }}</td>
-                        <td>
-                            {% for role in user.roles %}
-                                <span class="badge bg-{{ role == 'ROLE_ADMIN' ? 'danger' : 'primary' }}">
-                                    {{ role|replace({'ROLE_': ''}) }}
-                                </span>
-                            {% endfor %}
-                        </td>
-                        <td>
-                            <div class="d-flex">
-                                <a href="{{ path('admin_user_show', {'id': user.id}) }}" class="btn btn-sm btn-info me-2">
-                                    <i class="mdi mdi-eye"></i>
-                                </a>
-                                <a href="{{ path('admin_user_edit', {'id': user.id}) }}" class="btn btn-sm btn-warning me-2">
-                                    <i class="mdi mdi-pencil"></i>
-                                </a>
-                                <form method="post" action="{{ path('admin_user_delete', {'id': user.id}) }}"
-                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?');">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="mdi mdi-delete"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center">Aucun utilisateur trouvé</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+	<div class="card">
+		<div class="card-header d-flex justify-content-between align-items-center">
+			<h5 class="mb-0">Utilisateurs</h5>
+			<div class="d-flex">
+				<a href="{{ path('admin_user_new') }}" class="btn btn-primary me-2">
+					<i class="mdi mdi-plus me-1"></i>
+					Nouvel utilisateur
+				</a>
+				<button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal">
+					<i class="mdi mdi-filter me-1"></i>
+					Filtrer
+				</button>
+			</div>
+		</div>
+		<div class="card-body">
+			<div class="table-responsive">
+				<table class="table table-hover datatable">
+					<thead>
+						<tr>
+							<th>Id</th>
+							<th>Email</th>
+							<th>Nom</th>
+							<th>Solde</th>
+							<th>Rôles</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for user in users %}
+							<tr>
+								<td>{{ user.id }}</td>
+								<td>{{ user.email }}</td>
+								<td>{{ user.fname }}
+									{{ user.lname }}</td>
+								<td>{{ user.balance|format_currency('USD') }}</td>
+								<td>
+									{% for role in user.roles %}
+										<span class="badge bg-{{ role == 'ROLE_ADMIN' ? 'danger' : 'primary' }}">
+											{{ role|replace({'ROLE_': ''}) }}
+										</span>
+									{% endfor %}
+								</td>
+								<td>
+									<div class="d-flex">
+										<a href="{{ path('admin_user_show', {'id': user.id}) }}" class="btn btn-sm btn-info me-2">
+											<i class="mdi mdi-eye"></i>
+										</a>
+										<a href="{{ path('admin_user_edit', {'id': user.id}) }}" class="btn btn-sm btn-warning me-2">
+											<i class="mdi mdi-pencil"></i>
+										</a>
+										<form method="post" action="{{ path('admin_user_delete', {'id': user.id}) }}">
+											<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
+											<button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
+												<i class="mdi mdi-delete"></i>
+											</button>
+										</form>
+									</div>
+								</td>
+							</tr>
+						{% else %}
+							<tr>
+								<td colspan="6" class="text-center">Aucun utilisateur trouvé</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal de filtrage -->
+	<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Filtrer les utilisateurs</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form id="filterForm">
+						<div class="mb-3">
+							<label class="form-label">Rôle</label>
+							<select class="form-select" name="role">
+								<option value="">Tous</option>
+								<option value="admin">Administrateur</option>
+								<option value="user">Utilisateur</option>
+							</select>
+						</div>
+						<div class="mb-3">
+							<label class="form-label">Solde minimum</label>
+							<input type="number" class="form-control" name="minBalance" placeholder="$">
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
+					<button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
+				</div>
+			</div>
+		</div>
+	</div>
 {% endblock %}
 
 {% block javascripts %}
-{{ parent() }}
-<script>
-    $(document).ready(function() {
-        // Vérifie si la table n'est pas déjà initialisée
-        if (!$.fn.DataTable.isDataTable('.datatable')) {
-            $('.datatable').DataTable({
-                responsive: true,
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
-                },
-                order: [[0, 'desc']], // Tri par ID décroissant par défaut
-                dom: '<"top"f>rt<"bottom"lip><"clear">',
-                pageLength: 25,
-                columnDefs: [
-                    { orderable: false, targets: [5] } // Désactive le tri sur la colonne Actions
-                ]
-            });
-        }
-    });
-</script>
+	{{ parent() }}
+	 <script>
+	    $(document).ready(function() {
+	        // Initialisation de DataTables
+	        if (!$.fn.DataTable.isDataTable('.datatable')) {
+	            var table = $('.datatable').DataTable({
+	                responsive: true,
+	                language: {
+	                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+	                },
+	                order: [[0, 'desc']],
+	                dom: '<"top"f>rt<"bottom"lip><"clear">',
+	                pageLength: 25,
+	                columnDefs: [
+	                    { orderable: false, targets: [5] } // Désactive le tri sur la colonne Actions
+	                ]
+	            });
+	
+	            // Gestion des filtres
+	            $('#applyFilters').click(function() {
+	                var role = $('select[name="role"]').val();
+	                var minBalance = $('input[name="minBalance"]').val();
+	
+	                // Filtre par rôle
+	                if (role === 'admin') {
+	                    table.column(4).search('ROLE_ADMIN').draw();
+	                } else if (role === 'user') {
+	                    table.column(4).search('ROLE_USER').draw();
+	                } else {
+	                    table.column(4).search('').draw();
+	                }
+	
+	                // Filtre par solde minimum
+	                if (minBalance) {
+	                    table.column(3).search('^\\$?' + minBalance, true, false).draw();
+	                } else {
+	                    table.column(3).search('').draw();
+	                }
+	
+	                $('#filterModal').modal('hide');
+	            });
+	        }
+	    });
+	
+	    function confirmDelete(event) {
+	        event.preventDefault();
+	        var form = event.target.closest('form');
+	        
+	        Swal.fire({
+	            title: 'Confirmer la suppression',
+	            text: "Êtes-vous sûr de vouloir supprimer cet utilisateur?",
+	            icon: 'warning',
+	            showCancelButton: true,
+	            confirmButtonText: 'Oui, supprimer',
+	            cancelButtonText: 'Annuler',
+	            customClass: {
+	                confirmButton: 'btn btn-primary me-3',
+	                cancelButton: 'btn btn-label-secondary'
+	            },
+	            buttonsStyling: false
+	        }).then((result) => {
+	            if (result.isConfirmed) {
+	                form.submit();
+	            }
+	        });
+	    }
+	</script>
 {% endblock %}

@@ -8,10 +8,7 @@
         <h5 class="mb-0">Historique des transactions</h5>
         <div class="d-flex">
             <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
-                <i class="mdi mdi-filter-variant me-1"></i>Filtrer
-            </button>
-            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#exportModal">
-                <i class="mdi mdi-export me-1"></i>Exporter
+                <i class="mdi mdi-filter-variant me-1"></i> Filtrer
             </button>
         </div>
     </div>
@@ -121,45 +118,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary">Appliquer</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal d'export -->
-<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Exporter les transactions</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">Format</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="exportFormat" id="csvFormat" value="csv" checked>
-                        <label class="form-check-label" for="csvFormat">CSV</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="exportFormat" id="excelFormat" value="excel">
-                        <label class="form-check-label" for="excelFormat">Excel</label>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Période</label>
-                    <select class="form-select" name="exportPeriod">
-                        <option value="all">Toutes les transactions</option>
-                        <option value="today">Aujourd'hui</option>
-                        <option value="week">Cette semaine</option>
-                        <option value="month">Ce mois</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-success">Exporter</button>
+                <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
             </div>
         </div>
     </div>
@@ -168,54 +127,132 @@
 
 {% block javascripts %}
 {{ parent() }}
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script>
     $(document).ready(function() {
-        // Utilise la fonction initDataTables déjà définie dans admin.html.twig
-        initDataTables();
-
-        // Personnalisation supplémentaire pour cette table
-        const table = $('.datatable').DataTable();
-        
-        // Gestion des boutons d'action
-        $('.datatable').on('click', '.btn-outline-success', function() {
-            const tr = $(this).closest('tr');
-            const id = table.row(tr).data()[0];
-            
-            Swal.fire({
-                title: 'Confirmer la validation',
-                text: "Voulez-vous vraiment valider cette transaction?",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Oui, valider',
-                cancelButtonText: 'Annuler'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Ici, ajouter l'appel AJAX pour valider la transaction
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'Transaction validée avec succès'
-                    });
-                    tr.find('.badge.bg-warning').removeClass('bg-warning').addClass('bg-success').text('Completed');
-                    $(this).remove();
-                }
+        // Initialisation de DataTables avec les boutons d'export
+        if (!$.fn.DataTable.isDataTable('.datatable')) {
+            var table = $('.datatable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+                },
+                order: [[6, 'desc']], // Tri par date décroissante par défaut
+                dom: '<"row"<"col-md-6"B><"col-md-6"f>><"row"<"col-md-12"rt>><"row"<"col-md-5"i><"col-md-7"p>>',
+                pageLength: 25,
+                buttons: [
+                    {
+                        extend: 'csv',
+                        text: '<i class="mdi mdi-file-delimited me-1"></i> CSV',
+                        className: 'btn btn-outline-primary me-2',
+                        exportOptions: {
+                            columns: ':not(:last-child)', // Exclure la colonne Actions
+                            format: {
+                                body: function (data, row, column, node) {
+                                    // Nettoyer le texte pour l'export
+                                    return data.replace(/<[^>]*>/g, '').trim();
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
+                        className: 'btn btn-outline-success me-2',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function (data, row, column, node) {
+                                    return data.replace(/<[^>]*>/g, '').trim();
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
+                        className: 'btn btn-outline-danger',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function (data, row, column, node) {
+                                    return data.replace(/<[^>]*>/g, '').trim();
+                                }
+                            }
+                        },
+                        customize: function(doc) {
+                            doc.defaultStyle.fontSize = 8;
+                            doc.styles.tableHeader.fontSize = 9;
+                        }
+                    }
+                ],
+                columnDefs: [
+                    { 
+                        orderable: false, 
+                        targets: [7] // Désactive le tri sur la colonne Actions
+                    },
+                    {
+                        type: 'date-eu',
+                        targets: 6 // Spécifie le type de date pour la colonne Date
+                    }
+                ]
             });
-        });
 
-        // Gestion du filtre
-        $('#filterModal .btn-primary').click(function() {
-            const status = $('select[name="status"]').val();
-            const type = $('select[name="type"]').val();
-            
-            table.column(4).search(status).draw();
-            table.column(5).search(type).draw();
-            
-            $('#filterModal').modal('hide');
-        });
+            // Gestion des filtres
+            $('#applyFilters').click(function() {
+                const status = $('select[name="status"]').val();
+                const type = $('select[name="type"]').val();
+                const date = $('input[name="date"]').val();
+                
+                // Filtre par statut (colonne 4)
+                table.column(4).search(status).draw();
+                
+                // Filtre par type (colonne 5)
+                table.column(5).search(type).draw();
+                
+                // Filtre par date (colonne 6)
+                if (date) {
+                    const searchDate = date.split('-').reverse().join('/');
+                    table.column(6).search(searchDate).draw();
+                } else {
+                    table.column(6).search('').draw();
+                }
+                
+                $('#filterModal').modal('hide');
+            });
 
-        // Réinitialisation des filtres
-        $('#filterModal').on('hidden.bs.modal', function() {
-            $('#filterForm')[0].reset();
-        });
+            // Gestion des boutons d'action
+            $('.datatable').on('click', '.btn-outline-success', function() {
+                const tr = $(this).closest('tr');
+                const id = table.row(tr).data()[0];
+                
+                Swal.fire({
+                    title: 'Confirmer la validation',
+                    text: "Voulez-vous vraiment valider cette transaction?",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Oui, valider',
+                    cancelButtonText: 'Annuler'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Ici, ajouter l'appel AJAX pour valider la transaction
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Transaction validée avec succès'
+                        });
+                        tr.find('.badge.bg-warning').removeClass('bg-warning').addClass('bg-success').text('Completed');
+                        $(this).remove();
+                    }
+                });
+            });
+
+            // Ajout des boutons dans le DOM
+            table.buttons().container().appendTo('.datatable_wrapper .col-md-6:eq(0)');
+        }
     });
 </script>
 {% endblock %}

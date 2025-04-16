@@ -6,9 +6,19 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Liste des produits</h5>
-        <a href="{{ path('admin_product_new') }}" class="btn btn-primary">
-            <i class="mdi mdi-plus me-1"></i> Nouveau produit
-        </a>
+        <div class="d-flex">
+            <a href="{{ path('admin_product_new') }}" class="btn btn-primary me-2">
+                <i class="mdi mdi-plus me-1"></i> Nouveau produit
+            </a>
+            <button class="btn btn-success" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="mdi mdi-export me-1"></i> Exporter
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="exportDropdown">
+                <li><a class="dropdown-item export-btn" href="#" data-type="csv"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
+                <li><a class="dropdown-item export-btn" href="#" data-type="excel"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
+                <li><a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
+            </ul>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -60,17 +70,116 @@
 
 {% block javascripts %}
 {{ parent() }}
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script>
     $(document).ready(function() {
-        // Vérifie si la table est déjà initialisée avant de l'initialiser
+        // Initialisation de DataTables
         if (!$.fn.DataTable.isDataTable('.datatable')) {
-            $('.datatable').DataTable({
+            var table = $('.datatable').DataTable({
                 responsive: true,
                 language: {
                     url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
                 },
                 dom: '<"top"f>rt<"bottom"lip><"clear">',
-                pageLength: 25
+                pageLength: 25,
+                buttons: [
+                    {
+                        extend: 'csv',
+                        text: '<i class="mdi mdi-file-delimited"></i> CSV',
+                        className: 'btn btn-outline-primary me-2',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function (data, row, column, node) {
+                                    // Nettoyer le texte pour l'export
+                                    return data.replace(/<[^>]*>/g, '').trim();
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'excel',
+                        text: '<i class="mdi mdi-file-excel"></i> Excel',
+                        className: 'btn btn-outline-success me-2',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function (data, row, column, node) {
+                                    return data.replace(/<[^>]*>/g, '').trim();
+                                }
+                            }
+                        }
+                    },
+                    {
+                        extend: 'pdf',
+                        text: '<i class="mdi mdi-file-pdf"></i> PDF',
+                        className: 'btn btn-outline-danger',
+                        exportOptions: {
+                            columns: ':not(:last-child)',
+                            format: {
+                                body: function (data, row, column, node) {
+                                    return data.replace(/<[^>]*>/g, '').trim();
+                                }
+                            }
+                        },
+                        customize: function(doc) {
+                            doc.defaultStyle.fontSize = 8;
+                            doc.styles.tableHeader.fontSize = 9;
+                            doc.pageMargins = [10, 10, 10, 10];
+                        }
+                    }
+                ],
+                columnDefs: [
+                    { 
+                        orderable: false, 
+                        targets: [4] // Désactive le tri sur la colonne Actions
+                    }
+                ]
+            });
+
+            // Gestion du menu déroulant d'export
+            $('.export-btn').click(function(e) {
+                e.preventDefault();
+                var type = $(this).data('type');
+                if (type === 'csv') {
+                    table.button('.buttons-csv').trigger();
+                } else if (type === 'excel') {
+                    table.button('.buttons-excel').trigger();
+                } else if (type === 'pdf') {
+                    table.button('.buttons-pdf').trigger();
+                }
+            });
+
+            // Ajout des boutons d'export dans le DOM (masqués)
+            table.buttons().container()
+                .appendTo('.datatable_wrapper .col-md-6:eq(0)')
+                .addClass('d-none');
+        }
+
+        function confirmDelete(event) {
+            event.preventDefault();
+            var form = event.target.closest('form');
+            
+            Swal.fire({
+                title: 'Confirmer la suppression',
+                text: "Êtes-vous sûr de vouloir supprimer ce produit?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Oui, supprimer',
+                cancelButtonText: 'Annuler',
+                customClass: {
+                    confirmButton: 'btn btn-primary me-3',
+                    cancelButton: 'btn btn-label-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
             });
         }
     });

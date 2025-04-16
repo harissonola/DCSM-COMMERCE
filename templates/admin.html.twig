@@ -1,182 +1,218 @@
 <!DOCTYPE html>
 <html lang="fr" class="layout-navbar-fixed layout-menu-fixed" dir="ltr" data-skin="default" data-bs-theme="light">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Admin Panel{% endblock %}</title>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>
+			{% block title %}Admin Panel
+			{% endblock %}
+		</title>
 
-    <!-- Favicon -->
-    <link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon" />
+		<!-- Favicon -->
+		<link
+		rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
 
-	<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com"/>
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+		<link
+		href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<!-- Icons -->
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css"/>
 
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css" />
+		<!-- Core CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css" class="template-customizer-core-css"/>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css"/>
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css"/>
 
-    <!-- Core CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css" class="template-customizer-core-css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css" />
+		<!-- Vendor CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css"/>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css"/>
+		<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css"/>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"/>
 
-    <!-- Vendor CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" />
+		<style>:root
+		{
+			--bs-body-bg: #2b2c40;
+			--bs-body-color: #a3a4cc;
+			--bs-dark: #283144;
+			--bs-light: #3a3b5a;
+		}
+		/* ... (votre CSS existant) ... */
+	</style>
 
-    <style>
-      :root {
-        --bs-body-bg: #2b2c40;
-        --bs-body-color: #a3a4cc;
-        --bs-dark: #283144;
-        --bs-light: #3a3b5a;
-      }
-      body {
-        background-color: var(--bs-body-bg);
-        color: var(--bs-body-color);
-      }
-      .card, .modal-content, .dropdown-menu {
-        background-color: var(--bs-dark);
-        border-color: rgba(255, 255, 255, 0.1);
-      }
-      .table {
-        --bs-table-bg: transparent;
-        --bs-table-color: var(--bs-body-color);
-        --bs-table-border-color: rgba(255, 255, 255, 0.1);
-      }
-      .swal2-popup {
-        background-color: var(--bs-dark) !important;
-        color: var(--bs-body-color) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      }
-      .swal2-title, .swal2-content {
-        color: var(--bs-body-color) !important;
-      }
-      .swal2-icon.swal2-success .swal2-success-ring {
-        border-color: rgba(105, 108, 255, 0.3) !important;
-      }
-      .swal2-icon.swal2-success [class^=swal2-success-line] {
-        background-color: #696cff !important;
-      }
-      .swal2-icon.swal2-error {
-        border-color: #ff3e1d !important;
-      }
-      .swal2-icon.swal2-error [class^=swal2-x-mark-line] {
-        background-color: #ff3e1d !important;
-      }
-    </style>
+	{% block stylesheets %}{% endblock %}
+	{% block javascripts %}
+		{% block importmap %}
+			{{ importmap('app') }}
+		{% endblock %}
+	{% endblock %}
+</head>
+<body>
+	<!-- Spinner -->
+	<div id="custom-spinner" class="spinner hidden">
+		<div class="spinner-circle"></div>
+	</div>
 
-    {% block stylesheets %}{% endblock %}
-    {% block javascripts %}
-      {% block importmap %}
-        {{ importmap('app') }}
-      {% endblock %}
-    {% endblock %}
-  </head>
-  <body>
-    <!-- Spinner -->
-    <div id="custom-spinner" class="spinner hidden">
-      <div class="spinner-circle"></div>
-    </div>
+	<!-- Layout wrapper -->
+	<div class="layout-wrapper layout-content-navbar">
+		<div class="layout-container">
+			{% include 'admin/_menu.html.twig' %}
+			<div class="layout-page">
+				{% include 'admin/_navbar.html.twig' %}
+				<div class="content-wrapper">
+					<div class="container-xxl flex-grow-1 container-p-y"> {% block body %}{% endblock %}
+						</div>
+						{% include 'admin/_footer.html.twig' %}
+					</div>
+				</div>
+			</div>
+		</div>
 
-    <!-- Layout wrapper -->
-    <div class="layout-wrapper layout-content-navbar">
-      <div class="layout-container">
-        {% include 'admin/_menu.html.twig' %}
-        <div class="layout-page">
-          {% include 'admin/_navbar.html.twig' %}
-          <div class="content-wrapper">
-            <div class="container-xxl flex-grow-1 container-p-y">
-              {% block body %}{% endblock %}
-            </div>
-            {% include 'admin/_footer.html.twig' %}
-          </div>
-        </div>
-      </div>
-    </div>
+		<!-- Scripts avec gestion Turbo améliorée -->
+		 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+		 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js" defer></script>
+		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js" defer></script>
+		 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+		 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js" defer></script>
 
-    <!-- Core JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js" defer></script>
+		<!-- Initialisation des composants avec support Turbo -->
+		 <script>
+		      // Fonction pour réinitialiser les composants UI
+		      function initUIComponents() {
+		        // PerfectScrollbar
+		        if (typeof PerfectScrollbar !== 'undefined') {
+		          document.querySelectorAll('[data-perfect-scrollbar]').forEach(el => {
+		            new PerfectScrollbar(el);
+		          });
+		        }
+		
+		        // DataTables
+		        const table = document.querySelector('#myTable');
+		        if (table && $.fn.DataTable && !$.fn.DataTable.isDataTable(table)) {
+		          $(table).DataTable();
+		        }
+		
+		        // Confirmations de suppression
+		        document.querySelectorAll('[data-confirm="delete"]').forEach(elem => {
+		          elem.removeEventListener('click', handleDeleteConfirmation); // Nettoyage avant réattachement
+		          elem.addEventListener('click', handleDeleteConfirmation);
+		        });
+		      }
+		
+		      // Gestionnaire de confirmation de suppression
+		      function handleDeleteConfirmation(event) {
+		        event.preventDefault();
+		        const form = event.target.closest('form');
+		        Swal.fire({
+		          title: 'Êtes-vous sûr ?',
+		          text: "Cette action est irréversible !",
+		          icon: 'warning',
+		          showCancelButton: true,
+		          confirmButtonText: 'Oui, supprimer',
+		          cancelButtonText: 'Annuler',
+		          customClass: {
+		            confirmButton: 'btn btn-primary me-3',
+		            cancelButton: 'btn btn-label-secondary'
+		          },
+		          buttonsStyling: false,
+		          background: 'var(--bs-dark)',
+		          color: 'var(--bs-body-color)'
+		        }).then((result) => {
+		          if (result.isConfirmed) form.submit();
+		        });
+		      }
+		
+		      // Gestion des messages flash
+		      function showFlashMessages() {
+		        const Toast = Swal.mixin({
+		          toast: true,
+		          position: 'top-end',
+		          showConfirmButton: false,
+		          timer: 5000,
+		          timerProgressBar: true,
+		          background: 'var(--bs-dark)',
+		          color: 'var(--bs-body-color)',
+		          didOpen: (toast) => {
+		            toast.addEventListener('mouseenter', Swal.stopTimer);
+		            toast.addEventListener('mouseleave', Swal.resumeTimer);
+		          }
+		        });
+		
+		        {% for type, messages in app.flashes %}
+		          {% for message in messages %}
+		            Toast.fire({
+		              icon: '{{ type }}',
+		              title: '{{ message|raw }}'
+		            });
+		          {% endfor %}
+		        {% endfor %}
+		      }
+		
+		      // Gestion du spinner
+		      function setupSpinner() {
+		        const spinner = document.getElementById('custom-spinner');
+		        if (!spinner) return;
+		
+		        let spinnerTimeout;
+		
+		        document.addEventListener('turbo:visit', () => {
+		          spinnerTimeout = setTimeout(() => spinner.classList.remove('hidden'), 100);
+		        });
+		
+		        document.addEventListener('turbo:before-render', () => {
+		          clearTimeout(spinnerTimeout);
+		          spinner.classList.add('hidden');
+		        });
+		
+		        document.addEventListener('turbo:before-fetch-error', () => {
+		          clearTimeout(spinnerTimeout);
+		          spinner.classList.add('hidden');
+		        });
+		      }
+		
+		      // Initialisation au chargement
+		      document.addEventListener('DOMContentLoaded', () => {
+		        setupSpinner();
+		        initUIComponents();
+		        showFlashMessages();
+		      });
+		
+		      // Réinitialisation après chaque navigation Turbo
+		      document.addEventListener('turbo:load', () => {
+		        initUIComponents();
+		        showFlashMessages();
+		      });
+		    </script>
 
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-
-    <!-- DataTables -->
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js" defer></script>
-
-    <!-- Init JS -->
-    <script>
-      document.addEventListener('turbo:load', function () {
-        const spinner = document.getElementById('custom-spinner');
-        if (spinner) {
-          clearTimeout(spinner.timeout);
-          spinner.classList.add('hidden');
-        }
-
-        const Toast = Swal.mixin({
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 5000,
-          timerProgressBar: true,
-          background: 'var(--bs-dark)',
-          color: 'var(--bs-body-color)',
-          didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer);
-            toast.addEventListener('mouseleave', Swal.resumeTimer);
-          }
-        });
-
-        {% for type, messages in app.flashes %}
-          {% for message in messages %}
-            Toast.fire({
-              icon: '{{ type }}',
-              title: '{{ message|raw }}'
-            });
-          {% endfor %}
-        {% endfor %}
-
-        const table = document.querySelector('#myTable');
-        if (table && $.fn.DataTable && !$.fn.DataTable.isDataTable(table)) {
-          $(table).DataTable();
-        }
-
-        document.querySelectorAll('[data-confirm="delete"]').forEach(elem => {
-          elem.addEventListener('click', function (event) {
-            event.preventDefault();
-            const form = event.target.closest('form');
-            Swal.fire({
-              title: 'Êtes-vous sûr ?',
-              text: "Cette action est irréversible !",
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonText: 'Oui, supprimer',
-              cancelButtonText: 'Annuler',
-              customClass: {
-                confirmButton: 'btn btn-primary me-3',
-                cancelButton: 'btn btn-label-secondary'
-              },
-              buttonsStyling: false
-            }).then((result) => {
-              if (result.isConfirmed) {
-                form.submit();
-              }
-            });
-          });
-        });
-      });
-    </script>
-
-    {% block javascripts_end %}{% endblock %}
-  </body>
-</html>
+		<!-- Chargement différé des scripts Sneat -->
+		 <script>
+		      document.addEventListener('turbo:load', () => {
+		        // Charge les scripts Sneat seulement après le premier rendu
+		        if (!window.sneatLoaded) {
+		          window.sneatLoaded = true;
+		          
+		          const loadScript = (src) => new Promise((resolve) => {
+		            const script = document.createElement('script');
+		            script.src = src;
+		            script.onload = resolve;
+		            document.body.appendChild(script);
+		          });
+		
+		          Promise.all([
+		            loadScript('https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js'),
+		            loadScript('https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js'),
+		            loadScript('https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js')
+		          ]).then(() => {
+		            // Réinitialise les composants après chargement
+		            initUIComponents();
+		          });
+		        }
+		      });
+		    </script>{% block javascripts_end %}
+	{% endblock %}
+</body></html>

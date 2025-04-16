@@ -132,37 +132,40 @@
 {{ parent() }}
 <script>
     $(document).ready(function() {
-        // Utilisation de la fonction initDataTables du template parent
-        const table = $('.datatable').DataTable();
-        
-        // Personnalisation supplémentaire
-        table.on('draw', function() {
-            // Réinitialiser les tooltips après chaque redessinage de la table
-            $('[title]').tooltip();
-        });
+        // Vérifie si la table est déjà initialisée avant de l'initialiser
+        if (!$.fn.DataTable.isDataTable('.datatable')) {
+            const table = $('.datatable').DataTable({
+                responsive: true,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+                },
+                dom: '<"top"f>rt<"bottom"lip><"clear">',
+                pageLength: 25
+            });
 
-        // Gestion du filtre
-        $('#filterModal .btn-primary').click(function() {
-            const status = $('select[name="status"]').val();
-            const productsCount = $('select[name="productsCount"]').val();
-            
-            // Filtre par statut (colonne 4)
-            table.column(4).search(status === 'active' ? 'Active' : 
-                                 status === 'inactive' ? 'Inactive' : '').draw();
-            
-            // Filtre par nombre de produits (colonne 3)
-            if (productsCount === '0') {
-                table.column(3).search('^0$', true, false).draw();
-            } else if (productsCount === '1-10') {
-                table.column(3).search('^[1-9]$|^10$', true, false).draw();
-            } else if (productsCount === '10+') {
-                table.column(3).search('^1[1-9]$|^[2-9][0-9]$|^[0-9]{3,}$', true, false).draw();
-            } else {
-                table.column(3).search('').draw();
-            }
-            
-            $('#filterModal').modal('hide');
-        });
+            // Gestion du filtre
+            $('#filterModal .btn-primary').click(function() {
+                const status = $('select[name="status"]').val();
+                const productsCount = $('select[name="productsCount"]').val();
+                
+                // Filtre par statut (colonne 4)
+                table.column(4).search(status === 'active' ? 'Active' : 
+                                     status === 'inactive' ? 'Inactive' : '').draw();
+                
+                // Filtre par nombre de produits (colonne 3)
+                if (productsCount === '0') {
+                    table.column(3).search('^0$', true, false).draw();
+                } else if (productsCount === '1-10') {
+                    table.column(3).search('^[1-9]$|^10$', true, false).draw();
+                } else if (productsCount === '10+') {
+                    table.column(3).search('^1[1-9]$|^[2-9][0-9]$|^[0-9]{3,}$', true, false).draw();
+                } else {
+                    table.column(3).search('').draw();
+                }
+                
+                $('#filterModal').modal('hide');
+            });
+        }
 
         // Activation des tooltips
         $('[title]').tooltip();

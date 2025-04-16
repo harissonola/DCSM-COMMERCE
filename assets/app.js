@@ -4,50 +4,23 @@ import { setProgressBarDelay } from '@hotwired/turbo';
 
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
-// Liste des scripts à conserver (ceux gérés par Webpack/AssetMapper)
-const PRESERVED_SCRIPTS = [
-    'runtime.js',
-    'vendors-node_modules_',
-    'app.js',
-    'controllers/'
-];
-
 // Configuration globale de Turbo
 function configureTurbo() {
     setProgressBarDelay(999999);
-    
+
     document.addEventListener('turbo:load', () => {
         const turboProgress = document.querySelector('.turbo-progress');
         if (turboProgress) turboProgress.style.display = 'none';
     });
 }
 
-// Marque et désactive les scripts indésirables
-function markScriptsForRemoval() {
-    document.querySelectorAll('script[src]').forEach(script => {
-        const shouldRemove = !PRESERVED_SCRIPTS.some(term => script.src.includes(term));
-        if (shouldRemove) {
-            // Marquage pour suppression et désactivation afin de ne pas interférer avec Turbo
-            script.setAttribute('data-should-remove', 'true');
-            script.type = 'text/plain'; // Désactive l'exécution lors du rechargement
-        }
-    });
-}
-
-// Supprime définitivement les scripts marqués
-function removeMarkedScripts() {
-    document.querySelectorAll('script[data-should-remove]').forEach(script => {
-        script.remove();
-    });
-}
-
-// Gestion du spinner personnalisé
+// Gestion du spinner personnalisé sans suppression de scripts
 function setupCustomSpinner() {
     let isFirstVisit = true;
 
+    // À la navigation, on ne touche plus aux scripts afin de préserver Turbo
     document.addEventListener('turbo:before-visit', () => {
-        // Marquer les scripts indésirables juste avant la navigation
-        markScriptsForRemoval();
+        // Si besoin, on peut ajouter ici d'autres opérations avant visite
     });
 
     document.addEventListener('turbo:visit', () => {
@@ -55,7 +28,7 @@ function setupCustomSpinner() {
             isFirstVisit = false;
             return;
         }
-        
+
         const spinner = document.getElementById('custom-spinner');
         if (spinner) {
             spinner.classList.remove('hidden');
@@ -66,8 +39,6 @@ function setupCustomSpinner() {
     });
 
     document.addEventListener('turbo:load', () => {
-        // Une fois la nouvelle page chargée, on supprime définitivement les scripts marqués
-        removeMarkedScripts();
         const spinner = document.getElementById('custom-spinner');
         if (spinner) {
             clearTimeout(spinner.timeout);
@@ -84,29 +55,34 @@ function setupCustomSpinner() {
     });
 }
 
-// Réinitialise les composants JS nécessaires
+// Réinitialise (ou recrée) les composants JS nécessaires
 function reinitializeComponents() {
-    // Exemple pour recharger un plugin
+    // Pour chaque plugin ou librairie qui nécessite une initialisation, vérifie si elle n'a pas déjà été initialisée.
+    // Par exemple, pour PerfectScrollbar :
     if (typeof PerfectScrollbar !== 'undefined') {
         document.querySelectorAll('[data-perfect-scrollbar]').forEach(el => {
-            new PerfectScrollbar(el);
+            // Si l'instance n'est pas encore associée, alors on la crée.
+            if (!el._perfectScrollbarInitialized) {
+                new PerfectScrollbar(el);
+                el._perfectScrollbarInitialized = true;
+            }
         });
     }
-    
-    // Réinitialiser d'autres librairies si nécessaire
+
+    // Ajoute ici d'autres initialisations ou recréations de plugins au besoin.
 }
 
-// Initialisation de Turbo et des fonctionnalités à chaque chargement
+// Initialisation des fonctionnalités à chaque chargement Turbo
 document.addEventListener('turbo:load', () => {
     configureTurbo();
     setupCustomSpinner();
     reinitializeComponents();
-    // Note : la redéclaration manuelle de l'événement turbo:load a été retirée
 });
 
-// Pour les rechargements manuels
+// Pour les rechargements manuels (si nécessaire)
+// Ce rechargement complet est possible via window.location.reload()
+// Cela ne fait pas intervenir la suppression de scripts, Turbo pourra ainsi fonctionner normalement
 window.reloadWithSpinner = () => {
-    markScriptsForRemoval();
     const spinner = document.getElementById('custom-spinner');
     if (spinner) spinner.classList.remove('hidden');
     window.location.reload();

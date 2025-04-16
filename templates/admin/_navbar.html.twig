@@ -1,3 +1,4 @@
+{# templates/admin/_navbar.html.twig #}
 <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
     <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
         <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
@@ -10,21 +11,11 @@
         <div class="navbar-nav align-items-center">
             <div class="nav-item d-flex align-items-center">
                 <i class="mdi mdi-magnify me-2"></i>
-                <input type="text" class="form-control border-0 shadow-none bg-body" placeholder="Rechercher..." aria-label="Search">
+                <input type="text" class="form-control border-0 shadow-none" placeholder="Rechercher..." aria-label="Search">
             </div>
         </div>
 
         <ul class="navbar-nav flex-row align-items-center ms-auto">
-            <!-- Theme Toggle -->
-            <li class="nav-item px-2 theme-toggle">
-                <div class="form-check form-switch mb-0">
-                    <input class="form-check-input" type="checkbox" id="theme-toggle" checked>
-                    <label class="form-check-label" for="theme-toggle">
-                        <i class="mdi mdi-weather-night"></i>
-                    </label>
-                </div>
-            </li>
-
             <!-- User -->
             <li class="nav-item navbar-dropdown dropdown-user dropdown">
                 <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">

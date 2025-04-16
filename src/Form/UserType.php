@@ -90,9 +90,10 @@ class UserType extends AbstractType
                 'multiple' => true,
                 'expanded' => true,
             ])
-            ->add('isVerified', CheckboxType::class, [
+            ->add('verified', CheckboxType::class, [
                 'label' => 'Email vérifié ?',
-                'required' => false
+                'required' => false,
+                'property_path' => 'verified' // Cela utilisera setVerified() au lieu de setIsVerified()
             ]);
     }
 

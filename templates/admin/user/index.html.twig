@@ -41,11 +41,9 @@
 									{{ user.lname }}</td>
 								<td>{{ user.balance|format_currency('USD') }}</td>
 								<td>
-									{% for role in user.roles %}
-										<span class="badge bg-{{ role == 'ROLE_ADMIN' ? 'danger' : 'primary' }}">
-											{{ role|replace({'ROLE_': ''}) }}
-										</span>
-									{% endfor %}
+									<span class="badge bg-{{ role == 'ROLE_ADMIN' ? 'danger' : 'primary' }}">
+										{{ role == 'ROLE_ADMIN' ? 'Administrateur' : 'Utilisateur' }}
+									</span>
 								</td>
 								<td>
 									<div class="d-flex">
@@ -111,69 +109,69 @@
 {% block javascripts %}
 	{{ parent() }}
 	 <script>
-	    $(document).ready(function() {
-	        // Initialisation de DataTables
-	        if (!$.fn.DataTable.isDataTable('.datatable')) {
-	            var table = $('.datatable').DataTable({
-	                responsive: true,
-	                language: {
-	                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
-	                },
-	                order: [[0, 'desc']],
-	                dom: '<"top"f>rt<"bottom"lip><"clear">',
-	                pageLength: 25,
-	                columnDefs: [
-	                    { orderable: false, targets: [5] } // Désactive le tri sur la colonne Actions
-	                ]
-	            });
-	
-	            // Gestion des filtres
-	            $('#applyFilters').click(function() {
-	                var role = $('select[name="role"]').val();
-	                var minBalance = $('input[name="minBalance"]').val();
-	
-	                // Filtre par rôle
-	                if (role === 'admin') {
-	                    table.column(4).search('ROLE_ADMIN').draw();
-	                } else if (role === 'user') {
-	                    table.column(4).search('ROLE_USER').draw();
-	                } else {
-	                    table.column(4).search('').draw();
-	                }
-	
-	                // Filtre par solde minimum
-	                if (minBalance) {
-	                    table.column(3).search('^\\$?' + minBalance, true, false).draw();
-	                } else {
-	                    table.column(3).search('').draw();
-	                }
-	
-	                $('#filterModal').modal('hide');
-	            });
-	        }
-	    });
-	
-	    function confirmDelete(event) {
-	        event.preventDefault();
-	        var form = event.target.closest('form');
-	        
-	        Swal.fire({
-	            title: 'Confirmer la suppression',
-	            text: "Êtes-vous sûr de vouloir supprimer cet utilisateur?",
-	            icon: 'warning',
-	            showCancelButton: true,
-	            confirmButtonText: 'Oui, supprimer',
-	            cancelButtonText: 'Annuler',
-	            customClass: {
-	                confirmButton: 'btn btn-primary me-3',
-	                cancelButton: 'btn btn-label-secondary'
-	            },
-	            buttonsStyling: false
-	        }).then((result) => {
-	            if (result.isConfirmed) {
-	                form.submit();
-	            }
-	        });
-	    }
-	</script>
+		    $(document).ready(function() {
+		        // Initialisation de DataTables
+		        if (!$.fn.DataTable.isDataTable('.datatable')) {
+		            var table = $('.datatable').DataTable({
+		                responsive: true,
+		                language: {
+		                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+		                },
+		                order: [[0, 'desc']],
+		                dom: '<"top"f>rt<"bottom"lip><"clear">',
+		                pageLength: 25,
+		                columnDefs: [
+		                    { orderable: false, targets: [5] } // Désactive le tri sur la colonne Actions
+		                ]
+		            });
+		
+		            // Gestion des filtres
+		            $('#applyFilters').click(function() {
+		                var role = $('select[name="role"]').val();
+		                var minBalance = $('input[name="minBalance"]').val();
+		
+		                // Filtre par rôle
+		                if (role === 'admin') {
+		                    table.column(4).search('ROLE_ADMIN').draw();
+		                } else if (role === 'user') {
+		                    table.column(4).search('ROLE_USER').draw();
+		                } else {
+		                    table.column(4).search('').draw();
+		                }
+		
+		                // Filtre par solde minimum
+		                if (minBalance) {
+		                    table.column(3).search('^\\$?' + minBalance, true, false).draw();
+		                } else {
+		                    table.column(3).search('').draw();
+		                }
+		
+		                $('#filterModal').modal('hide');
+		            });
+		        }
+		    });
+		
+		    function confirmDelete(event) {
+		        event.preventDefault();
+		        var form = event.target.closest('form');
+		        
+		        Swal.fire({
+		            title: 'Confirmer la suppression',
+		            text: "Êtes-vous sûr de vouloir supprimer cet utilisateur?",
+		            icon: 'warning',
+		            showCancelButton: true,
+		            confirmButtonText: 'Oui, supprimer',
+		            cancelButtonText: 'Annuler',
+		            customClass: {
+		                confirmButton: 'btn btn-primary me-3',
+		                cancelButton: 'btn btn-label-secondary'
+		            },
+		            buttonsStyling: false
+		        }).then((result) => {
+		            if (result.isConfirmed) {
+		                form.submit();
+		            }
+		        });
+		    }
+		</script>
 {% endblock %}

@@ -5,223 +5,268 @@
 
 {% block body %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Utilisateurs</h5>
-        <div class="d-flex">
-            <a href="{{ path('admin_user_new') }}" class="btn btn-primary me-2">
-                <i class="mdi mdi-plus me-1"></i> Nouvel utilisateur
-            </a>
-            <button class="btn btn-outline-secondary me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
-                <i class="mdi mdi-filter me-1"></i> Filtrer
-            </button>
-        </div>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover datatable">
-                <thead>
-                    <tr>
-                        <th>Id</th>
-                        <th>Email</th>
-                        <th>Nom</th>
-                        <th>Solde</th>
-                        <th>Rôles</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.fname }} {{ user.lname }}</td>
-                            <td>{{ user.balance|format_currency('USD') }}</td>
-                            <td>
-                                <span class="badge bg-{{ 'ROLE_ADMIN' in user.roles ? 'danger' : 'primary' }}">
-                                    {{ 'ROLE_ADMIN' in user.roles ? 'Administrateur' : 'Utilisateur' }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex">
-                                    <a href="{{ path('admin_user_show', {'id': user.id}) }}" class="btn btn-sm btn-info me-2">
-                                        <i class="mdi mdi-eye"></i>
-                                    </a>
-                                    <a href="{{ path('admin_user_edit', {'id': user.id}) }}" class="btn btn-sm btn-warning me-2">
-                                        <i class="mdi mdi-pencil"></i>
-                                    </a>
-                                    <form method="post" action="{{ path('admin_user_delete', {'id': user.id}) }}">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
-                                        <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
-                                            <i class="mdi mdi-delete"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center">Aucun utilisateur trouvé</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+  <div class="card-datatable pt-0">
+    <table class="datatables-basic table table-bordered">
+      <thead>
+        <tr>
+          <th></th>
+          <th></th>
+          <th>Id</th>
+          <th>Nom</th>
+          <th>Email</th>
+          <th>Solde</th>
+          <th>Rôles</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+          <tr>
+            <td></td>
+            <td></td>
+            <td>{{ user.id }}</td>
+            <td>
+              <div class="d-flex justify-content-start align-items-center">
+                <div class="avatar-wrapper">
+                  <div class="avatar me-2">
+                    <span class="avatar-initial rounded-circle bg-label-primary">
+                      {{ user.fname|first|upper }}{{ user.lname|first|upper }}
+                    </span>
+                  </div>
+                </div>
+                <div class="d-flex flex-column">
+                  <span class="emp_name text-truncate">{{ user.fname }} {{ user.lname }}</span>
+                </div>
+              </div>
+            </td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.balance|format_currency('USD') }}</td>
+            <td>
+              <span class="badge rounded-pill bg-{{ 'ROLE_ADMIN' in user.roles ? 'danger' : 'primary' }}">
+                {{ 'ROLE_ADMIN' in user.roles ? 'Administrateur' : 'Utilisateur' }}
+              </span>
+            </td>
+            <td>
+              <div class="d-inline-block">
+                <a href="{{ path('admin_user_show', {'id': user.id}) }}" class="btn btn-sm text-primary btn-icon item-edit">
+                  <i class="bx bx-show"></i>
+                </a>
+                <a href="{{ path('admin_user_edit', {'id': user.id}) }}" class="btn btn-sm text-primary btn-icon item-edit">
+                  <i class="bx bxs-edit"></i>
+                </a>
+                <a href="javascript:;" 
+                   class="btn btn-sm text-danger btn-icon delete-record" 
+                   onclick="confirmDelete(event, {{ user.id }})">
+                  <i class="bx bx-trash"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center">Aucun utilisateur trouvé</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- Modal de filtrage -->
-<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Filtrer les utilisateurs</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="filterForm">
-                    <div class="mb-3">
-                        <label class="form-label">Rôle</label>
-                        <select class="form-select" name="role">
-                            <option value="">Tous</option>
-                            <option value="admin">Administrateur</option>
-                            <option value="user">Utilisateur</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Solde minimum</label>
-                        <input type="number" class="form-control" name="minBalance" placeholder="$">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
-            </div>
-        </div>
+<!-- Add new user modal (optional) -->
+<div class="modal fade" id="addNewUser" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ajouter un nouvel utilisateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <a href="{{ path('admin_user_new') }}" class="btn btn-primary w-100">
+          <i class="bx bx-plus me-1"></i> Créer un nouvel utilisateur
+        </a>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // Initialisation de DataTables
-        if (!$.fn.DataTable.isDataTable('.datatable')) {
-            var table = $('.datatable').DataTable({
-                responsive: true,
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
-                },
-                order: [[0, 'desc']],
-                dom: '<"row"<"col-md-6"B><"col-md-6"f>><"row"<"col-md-12"rt>><"row"<"col-md-5"i><"col-md-7"p>>',
-                pageLength: 25,
-                buttons: [
-                    {
-                        extend: 'copy',
-                        text: '<i class="mdi mdi-content-copy"></i> Copier',
-                        className: 'btn btn-outline-secondary me-2',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
-                        }
-                    },
-                    {
-                        extend: 'csv',
-                        text: '<i class="mdi mdi-file-delimited"></i> CSV',
-                        className: 'btn btn-outline-primary me-2',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
-                        }
-                    },
-                    {
-                        extend: 'excel',
-                        text: '<i class="mdi mdi-file-excel"></i> Excel',
-                        className: 'btn btn-outline-success me-2',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
-                        }
-                    },
-                    {
-                        extend: 'pdf',
-                        text: '<i class="mdi mdi-file-pdf"></i> PDF',
-                        className: 'btn btn-outline-danger me-2',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
-                        }
-                    },
-                    {
-                        extend: 'print',
-                        text: '<i class="mdi mdi-printer"></i> Imprimer',
-                        className: 'btn btn-outline-info',
-                        exportOptions: {
-                            columns: ':not(:last-child)'
-                        }
-                    }
-                ],
-                columnDefs: [
-                    { 
-                        orderable: false, 
-                        targets: [5] // Désactive le tri sur la colonne Actions
-                    }
-                ]
-            });
+  $(function() {
+    'use strict';
 
-            // Gestion des filtres
-            $('#applyFilters').click(function() {
-                var role = $('select[name="role"]').val();
-                var minBalance = $('input[name="minBalance"]').val();
+    var dt_basic_table = $('.datatables-basic');
 
-                // Filtre par rôle
-                if (role === 'admin') {
-                    table.column(4).search('Administrateur').draw();
-                } else if (role === 'user') {
-                    table.column(4).search('Utilisateur').draw();
-                } else {
-                    table.column(4).search('').draw();
-                }
-
-                // Filtre par solde minimum
-                if (minBalance) {
-                    table.column(3).search('^\\$?' + minBalance, true, false).draw();
-                } else {
-                    table.column(3).search('').draw();
-                }
-
-                $('#filterModal').modal('hide');
-            });
-
-            // Ajout des boutons dans le DOM
-            table.buttons().container().appendTo('.datatable_wrapper .col-md-6:eq(0)');
-        }
-    });
-
-    function confirmDelete(event) {
-        event.preventDefault();
-        var form = event.target.closest('form');
-        
-        Swal.fire({
-            title: 'Confirmer la suppression',
-            text: "Êtes-vous sûr de vouloir supprimer cet utilisateur?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Oui, supprimer',
-            cancelButtonText: 'Annuler',
-            customClass: {
-                confirmButton: 'btn btn-primary me-3',
-                cancelButton: 'btn btn-label-secondary'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
+    if (dt_basic_table.length) {
+      var dt_basic = dt_basic_table.DataTable({
+        responsive: true,
+        language: {
+          url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
+        },
+        order: [[2, 'desc']],
+        dom:
+          '<"card-header"<"head-label"><"dt-action-buttons text-end"B>><"d-flex justify-content-between align-items-center row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>t<"d-flex justify-content-between row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
+        displayLength: 10,
+        lengthMenu: [10, 25, 50, 75, 100],
+        buttons: [
+          {
+            extend: 'collection',
+            className: 'btn btn-label-primary dropdown-toggle me-2',
+            text: '<i class="bx bx-export me-1"></i>Exporter',
+            buttons: [
+              {
+                extend: 'print',
+                text: '<i class="bx bx-printer me-1"></i>Imprimer',
+                className: 'dropdown-item',
+                exportOptions: { columns: [2, 3, 4, 5, 6] }
+              },
+              {
+                extend: 'csv',
+                text: '<i class="bx bx-file me-1"></i>CSV',
+                className: 'dropdown-item',
+                exportOptions: { columns: [2, 3, 4, 5, 6] }
+              },
+              {
+                extend: 'excel',
+                text: '<i class="bx bx-file me-1"></i>Excel',
+                className: 'dropdown-item',
+                exportOptions: { columns: [2, 3, 4, 5, 6] }
+              },
+              {
+                extend: 'pdf',
+                text: '<i class="bx bxs-file-pdf me-1"></i>PDF',
+                className: 'dropdown-item',
+                exportOptions: { columns: [2, 3, 4, 5, 6] }
+              },
+              {
+                extend: 'copy',
+                text: '<i class="bx bx-copy me-1"></i>Copier',
+                className: 'dropdown-item',
+                exportOptions: { columns: [2, 3, 4, 5, 6] }
+              }
+            ]
+          },
+          {
+            text: '<i class="bx bx-plus me-1"></i>Nouvel utilisateur',
+            className: 'create-new btn btn-primary',
+            action: function() {
+              $('#addNewUser').modal('show');
             }
-        });
+          }
+        ],
+        columnDefs: [
+          {
+            // For Responsive
+            className: 'control',
+            orderable: false,
+            responsivePriority: 2,
+            searchable: false,
+            targets: 0,
+            render: function() {
+              return '';
+            }
+          },
+          {
+            // For Checkboxes
+            targets: 1,
+            orderable: false,
+            responsivePriority: 3,
+            searchable: false,
+            checkboxes: {
+              selectAllRender: '<input type="checkbox" class="form-check-input">'
+            },
+            render: function() {
+              return '<input type="checkbox" class="dt-checkboxes form-check-input">';
+            }
+          },
+          {
+            targets: 2,
+            visible: true
+          },
+          {
+            responsivePriority: 1,
+            targets: 4
+          },
+          {
+            // Actions
+            targets: -1,
+            title: 'Actions',
+            orderable: false,
+            searchable: false
+          }
+        ],
+        responsive: {
+          details: {
+            display: $.fn.dataTable.Responsive.display.modal({
+              header: function(row) {
+                var data = row.data();
+                return 'Détails de ' + data[3];
+              }
+            }),
+            type: 'column',
+            renderer: function(api, rowIdx, columns) {
+              var data = $.map(columns, function(col, i) {
+                return col.title !== ''
+                  ? '<tr data-dt-row="' +
+                      col.rowIndex +
+                      '" data-dt-column="' +
+                      col.columnIndex +
+                      '">' +
+                      '<td>' +
+                      col.title +
+                      ':' +
+                      '</td> ' +
+                      '<td>' +
+                      col.data +
+                      '</td>' +
+                      '</tr>'
+                  : '';
+              }).join('');
+
+              return data ? $('<table class="table"/><tbody />').append(data) : false;
+            }
+          }
+        }
+      });
+      
+      $('div.head-label').html('<h5 class="card-title mb-0">Liste des Utilisateurs</h5>');
     }
+  });
+
+  function confirmDelete(event, userId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    Swal.fire({
+      title: 'Êtes-vous sûr?',
+      text: "Vous ne pourrez pas annuler cette action!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Oui, supprimer!',
+      cancelButtonText: 'Annuler',
+      customClass: {
+        confirmButton: 'btn btn-primary me-3',
+        cancelButton: 'btn btn-label-secondary'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/admin/user/' + userId + '/delete';
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token('delete' ~ 'USER_ID') }}'.replace('USER_ID', userId);
+        
+        form.appendChild(csrfToken);
+        document.body.appendChild(form);
+        form.submit();
+      }
+    });
+  }
 </script>
 {% endblock %}

@@ -4,8 +4,16 @@
 
 {% block body %}
 <div class="card">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Historique des transactions</h5>
+        <div class="d-flex">
+            <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="mdi mdi-filter-variant me-1"></i>Filtrer
+            </button>
+            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="mdi mdi-export me-1"></i>Exporter
+            </button>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -19,6 +27,7 @@
                         <th>Statut</th>
                         <th>Type</th>
                         <th>Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -26,12 +35,12 @@
                     <tr>
                         <td>{{ transaction.id }}</td>
                         <td>
-                            <a href="{{ path('admin_user_show', {'id': transaction.user.id}) }}">
+                            <a href="{{ path('admin_user_show', {'id': transaction.user.id}) }}" class="text-primary">
                                 {{ transaction.user.email }}
                             </a>
                         </td>
-                        <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }}">
-                            {{ (transaction.type == 'withdrawal' ? '-' : '') ~ transaction.amount|format_currency('USD') }}
+                        <td class="{{ transaction.type == 'withdrawal' ? 'text-danger' : 'text-success' }} fw-bold">
+                            {{ (transaction.type == 'withdrawal' ? '-' : '+') ~ transaction.amount|format_currency('USD') }}
                         </td>
                         <td>
                             {% set method_icons = {
@@ -49,16 +58,109 @@
                                 {{ transaction.status|capitalize }}
                             </span>
                         </td>
-                        <td>{{ transaction.type|capitalize }}</td>
+                        <td>
+                            <span class="badge bg-{{ transaction.type == 'deposit' ? 'info' : 'primary' }}">
+                                {{ transaction.type|capitalize }}
+                            </span>
+                        </td>
                         <td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-icon btn-outline-primary" title="Détails">
+                                <i class="mdi mdi-eye-outline"></i>
+                            </button>
+                            {% if transaction.status != 'completed' %}
+                                <button class="btn btn-sm btn-icon btn-outline-success" title="Valider">
+                                    <i class="mdi mdi-check"></i>
+                                </button>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">Aucune transaction trouvée</td>
+                        <td colspan="8" class="text-center">Aucune transaction trouvée</td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de filtrage -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filtrer les transactions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" name="status">
+                            <option value="">Tous</option>
+                            <option value="pending">En attente</option>
+                            <option value="completed">Complété</option>
+                            <option value="failed">Échoué</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" name="type">
+                            <option value="">Tous</option>
+                            <option value="deposit">Dépôt</option>
+                            <option value="withdrawal">Retrait</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-control" name="date">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary">Appliquer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'export -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exporter les transactions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Format</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="exportFormat" id="csvFormat" value="csv" checked>
+                        <label class="form-check-label" for="csvFormat">CSV</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="exportFormat" id="excelFormat" value="excel">
+                        <label class="form-check-label" for="excelFormat">Excel</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Période</label>
+                    <select class="form-select" name="exportPeriod">
+                        <option value="all">Toutes les transactions</option>
+                        <option value="today">Aujourd'hui</option>
+                        <option value="week">Cette semaine</option>
+                        <option value="month">Ce mois</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success">Exporter</button>
+            </div>
         </div>
     </div>
 </div>
@@ -68,14 +170,51 @@
 {{ parent() }}
 <script>
     $(document).ready(function() {
-        $('.datatable').DataTable({
-            responsive: true,
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
-            },
-            order: [[6, 'desc']], // Tri par date décroissante
-            dom: '<"top"f>rt<"bottom"lip><"clear">',
-            pageLength: 25
+        // Utilise la fonction initDataTables déjà définie dans admin.html.twig
+        initDataTables();
+
+        // Personnalisation supplémentaire pour cette table
+        const table = $('.datatable').DataTable();
+        
+        // Gestion des boutons d'action
+        $('.datatable').on('click', '.btn-outline-success', function() {
+            const tr = $(this).closest('tr');
+            const id = table.row(tr).data()[0];
+            
+            Swal.fire({
+                title: 'Confirmer la validation',
+                text: "Voulez-vous vraiment valider cette transaction?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Oui, valider',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Ici, ajouter l'appel AJAX pour valider la transaction
+                    Toast.fire({
+                        icon: 'success',
+                        title: 'Transaction validée avec succès'
+                    });
+                    tr.find('.badge.bg-warning').removeClass('bg-warning').addClass('bg-success').text('Completed');
+                    $(this).remove();
+                }
+            });
+        });
+
+        // Gestion du filtre
+        $('#filterModal .btn-primary').click(function() {
+            const status = $('select[name="status"]').val();
+            const type = $('select[name="type"]').val();
+            
+            table.column(4).search(status).draw();
+            table.column(5).search(type).draw();
+            
+            $('#filterModal').modal('hide');
+        });
+
+        // Réinitialisation des filtres
+        $('#filterModal').on('hidden.bs.modal', function() {
+            $('#filterForm')[0].reset();
         });
     });
 </script>

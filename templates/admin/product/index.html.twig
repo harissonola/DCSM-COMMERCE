@@ -6,19 +6,26 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Liste des produits</h5>
-        <a href="{{ path('admin_product_new') }}" class="btn btn-primary">
-            <i class="mdi mdi-plus me-1"></i> Nouveau produit
-        </a>
+        <div class="d-flex">
+            <a href="{{ path('admin_product_new') }}" class="btn btn-primary me-2">
+                <i class="mdi mdi-plus me-1"></i> Nouveau produit
+            </a>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="mdi mdi-filter me-1"></i> Filtrer
+            </button>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover datatable">
                 <thead>
                     <tr>
-                        <th>Id</th>
+                        <th>ID</th>
                         <th>Nom</th>
                         <th>Prix</th>
+                        <th>Catégorie</th>
                         <th>Boutique</th>
+                        <th>Statut</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -26,21 +33,51 @@
                 {% for product in products %}
                     <tr>
                         <td>{{ product.id }}</td>
-                        <td>{{ product.name }}</td>
-                        <td>{{ product.price|format_currency('USD') }}</td>
-                        <td>{{ product.shop ? product.shop.name : 'Aucune' }}</td>
+                        <td>
+                            <a href="{{ path('admin_product_show', {'id': product.id}) }}" class="text-primary">
+                                {{ product.name }}
+                            </a>
+                        </td>
+                        <td class="fw-bold">{{ product.price|format_currency('USD') }}</td>
+                        <td>
+                            {% if product.category %}
+                                <span class="badge bg-info">{{ product.category.name }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Non catégorisé</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if product.shop %}
+                                <a href="{{ path('admin_shop_show', {'id': product.shop.id}) }}" class="text-warning">
+                                    {{ product.shop.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">Aucune</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ product.isActive ? 'success' : 'danger' }}">
+                                {{ product.isActive ? 'Actif' : 'Inactif' }}
+                            </span>
+                        </td>
                         <td>
                             <div class="d-flex">
-                                <a href="{{ path('admin_product_show', {'id': product.id}) }}" class="btn btn-sm btn-info me-2">
-                                    <i class="mdi mdi-eye"></i>
+                                <a href="{{ path('admin_product_show', {'id': product.id}) }}" 
+                                   class="btn btn-sm btn-icon btn-outline-info me-2"
+                                   title="Voir détails">
+                                    <i class="mdi mdi-eye-outline"></i>
                                 </a>
-                                <a href="{{ path('admin_product_edit', {'id': product.id}) }}" class="btn btn-sm btn-warning me-2">
-                                    <i class="mdi mdi-pencil"></i>
+                                <a href="{{ path('admin_product_edit', {'id': product.id}) }}" 
+                                   class="btn btn-sm btn-icon btn-outline-warning me-2"
+                                   title="Modifier">
+                                    <i class="mdi mdi-pencil-outline"></i>
                                 </a>
-                                <form method="post" action="{{ path('admin_product_delete', {'id': product.id}) }}">
+                                <form method="post" action="{{ path('admin_product_delete', {'id': product.id}) }}"
+                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit?');">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ product.id) }}">
-                                    <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
-                                        <i class="mdi mdi-delete"></i>
+                                    <button type="submit" class="btn btn-sm btn-icon btn-outline-danger"
+                                            title="Supprimer">
+                                        <i class="mdi mdi-delete-outline"></i>
                                     </button>
                                 </form>
                             </div>
@@ -48,7 +85,7 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="5" class="text-center">Aucun produit trouvé</td>
+                        <td colspan="7" class="text-center">Aucun produit trouvé</td>
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -56,20 +93,87 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de filtrage -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filtrer les produits</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label class="form-label">Statut</label>
+                        <select class="form-select" name="status">
+                            <option value="">Tous</option>
+                            <option value="active">Actifs</option>
+                            <option value="inactive">Inactifs</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Catégorie</label>
+                        <select class="form-select" name="category">
+                            <option value="">Toutes</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Prix maximum</label>
+                        <input type="number" class="form-control" name="maxPrice" placeholder="€">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary">Appliquer</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('.datatable').DataTable({
-            responsive: true,
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/fr-FR.json'
-            }
+        // Initialisation de DataTables via la fonction existante dans admin.html.twig
+        const table = $('.datatable').DataTable();
+        
+        // Personnalisation supplémentaire
+        table.on('draw', function() {
+            // Réinitialiser les tooltips après chaque redessinage de la table
+            $('[title]').tooltip();
         });
+
+        // Gestion du filtre
+        $('#filterModal .btn-primary').click(function() {
+            const status = $('select[name="status"]').val();
+            const category = $('select[name="category"]').val();
+            const maxPrice = $('input[name="maxPrice"]').val();
+            
+            // Filtre par statut (colonne 5)
+            table.column(5).search(status === 'active' ? 'Actif' : 
+                                 status === 'inactive' ? 'Inactif' : '').draw();
+            
+            // Filtre par catégorie (colonne 3)
+            table.column(3).search(category).draw();
+            
+            // Filtre par prix (colonne 2)
+            if (maxPrice) {
+                table.column(2).search('^\\$?' + maxPrice, true, false).draw();
+            } else {
+                table.column(2).search('').draw();
+            }
+            
+            $('#filterModal').modal('hide');
+        });
+
+        // Activation des tooltips
+        $('[title]').tooltip();
     });
 </script>
 {% endblock %}

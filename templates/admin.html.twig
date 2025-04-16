@@ -184,62 +184,67 @@
 
 		<!-- Flash Messages Handler -->
 		 <script>
-				        // Configuration globale pour les toasts
-				        const Toast = Swal.mixin({
-				            toast: true,
-				            position: 'top-end',
-				            showConfirmButton: false,
-				            timer: 5000,
-				            timerProgressBar: true,
-				            background: 'var(--bs-dark)',
-				            color: 'var(--bs-body-color)',
-				            didOpen: (toast) => {
-				                toast.addEventListener('mouseenter', Swal.stopTimer);
-				                toast.addEventListener('mouseleave', Swal.resumeTimer);
-				            }
-				        });
-				
-				        // Fonction pour afficher les messages flash
-				        function showFlashMessages() {
-				            {% for type, messages in app.flashes %}
-				                {% for message in messages %}
-				                    Toast.fire({
-				                        icon: '{{ type }}',
-				                        title: '{{ message|raw }}'
-				                    });
-				                {% endfor %}
-				            {% endfor %}
-				        }
-				
-				        // Affichage initial des messages flash
-				        document.addEventListener('turbo:load', showFlashMessages);
-				
-				        // Fonction de confirmation de suppression (style Sneat)
-				        function confirmDelete(event) {
-				            event.preventDefault();
-				            const form = event.target.closest('form');
-				            
-				            Swal.fire({
-				                title: 'Êtes-vous sûr ?',
-				                text: "Cette action est irréversible !",
-				                icon: 'warning',
-				                showCancelButton: true,
-				                confirmButtonText: 'Oui, supprimer',
-				                cancelButtonText: 'Annuler',
-				                customClass: {
-				                    confirmButton: 'btn btn-primary me-3',
-				                    cancelButton: 'btn btn-label-secondary'
-				                },
-				                buttonsStyling: false
-				            }).then((result) => {
-				                if (result.isConfirmed) {
-				                    form.submit();
-				                }
-				            });
-				        }
-				
-				        // Gestion des événements Turbo (si utilisé)
-				        document.addEventListener('turbo:load', showFlashMessages);
-				    </script>{% block javascripts_end %}
+		       // DataTables
+		       const table = document.querySelector('#myTable');
+		       if (table && $.fn.DataTable && !$.fn.DataTable.isDataTable(table)) {
+		         $(table).DataTable();
+		       }
+						        // Configuration globale pour les toasts
+						        const Toast = Swal.mixin({
+						            toast: true,
+						            position: 'top-end',
+						            showConfirmButton: false,
+						            timer: 5000,
+						            timerProgressBar: true,
+						            background: 'var(--bs-dark)',
+						            color: 'var(--bs-body-color)',
+						            didOpen: (toast) => {
+						                toast.addEventListener('mouseenter', Swal.stopTimer);
+						                toast.addEventListener('mouseleave', Swal.resumeTimer);
+						            }
+						        });
+						
+						        // Fonction pour afficher les messages flash
+						        function showFlashMessages() {
+						            {% for type, messages in app.flashes %}
+						                {% for message in messages %}
+						                    Toast.fire({
+						                        icon: '{{ type }}',
+						                        title: '{{ message|raw }}'
+						                    });
+						                {% endfor %}
+						            {% endfor %}
+						        }
+						
+						        // Affichage initial des messages flash
+						        document.addEventListener('turbo:load', showFlashMessages);
+						
+						        // Fonction de confirmation de suppression (style Sneat)
+						        function confirmDelete(event) {
+						            event.preventDefault();
+						            const form = event.target.closest('form');
+						            
+						            Swal.fire({
+						                title: 'Êtes-vous sûr ?',
+						                text: "Cette action est irréversible !",
+						                icon: 'warning',
+						                showCancelButton: true,
+						                confirmButtonText: 'Oui, supprimer',
+						                cancelButtonText: 'Annuler',
+						                customClass: {
+						                    confirmButton: 'btn btn-primary me-3',
+						                    cancelButton: 'btn btn-label-secondary'
+						                },
+						                buttonsStyling: false
+						            }).then((result) => {
+						                if (result.isConfirmed) {
+						                    form.submit();
+						                }
+						            });
+						        }
+						
+						        // Gestion des événements Turbo (si utilisé)
+						        document.addEventListener('turbo:load', showFlashMessages);
+						    </script>{% block javascripts_end %}
 	{% endblock %}
 </body></html>

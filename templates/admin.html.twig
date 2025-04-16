@@ -134,82 +134,85 @@
 		</div>
 		<!-- / Layout wrapper -->
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+		{% block js2 %} <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-		<!-- Core JS -->
-		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
-		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
-		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
+			<!-- Core JS -->
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
 
-		<!-- Vendor JS -->
-		 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+			<!-- Vendor JS -->
+			 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
 
-		<!-- Main JS -->
-		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
+			<!-- Main JS -->
+			 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
 
-		<!-- SweetAlert2 JS -->
-		 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+			<!-- SweetAlert2 JS -->
+			 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-		<!-- Flash Messages Handler -->
-		 <script>
-		        // Configuration globale pour les toasts
-		        const Toast = Swal.mixin({
-		            toast: true,
-		            position: 'top-end',
-		            showConfirmButton: false,
-		            timer: 5000,
-		            timerProgressBar: true,
-		            background: 'var(--bs-dark)',
-		            color: 'var(--bs-body-color)',
-		            didOpen: (toast) => {
-		                toast.addEventListener('mouseenter', Swal.stopTimer);
-		                toast.addEventListener('mouseleave', Swal.resumeTimer);
-		            }
-		        });
-		
-		        // Fonction pour afficher les messages flash
-		        function showFlashMessages() {
-		            {% for type, messages in app.flashes %}
-		                {% for message in messages %}
-		                    Toast.fire({
-		                        icon: '{{ type }}',
-		                        title: '{{ message|raw }}'
-		                    });
-		                {% endfor %}
-		            {% endfor %}
-		        }
-		
-		        // Affichage initial des messages flash
-		        document.addEventListener('turbo:load', showFlashMessages);
-		
-		        // Fonction de confirmation de suppression (style Sneat)
-		        function confirmDelete(event) {
-		            event.preventDefault();
-		            const form = event.target.closest('form');
-		            
-		            Swal.fire({
-		                title: 'Êtes-vous sûr ?',
-		                text: "Cette action est irréversible !",
-		                icon: 'warning',
-		                showCancelButton: true,
-		                confirmButtonText: 'Oui, supprimer',
-		                cancelButtonText: 'Annuler',
-		                customClass: {
-		                    confirmButton: 'btn btn-primary me-3',
-		                    cancelButton: 'btn btn-label-secondary'
-		                },
-		                buttonsStyling: false
-		            }).then((result) => {
-		                if (result.isConfirmed) {
-		                    form.submit();
-		                }
-		            });
-		        }
-		
-		        // Gestion des événements Turbo (si utilisé)
-		        document.addEventListener('turbo:load', showFlashMessages);
-		    </script>{% block javascripts_end %}
-	{% endblock %}
-</body></html>
+			<!-- Flash Messages Handler -->
+			 <script>
+					        // Configuration globale pour les toasts
+					        const Toast = Swal.mixin({
+					            toast: true,
+					            position: 'top-end',
+					            showConfirmButton: false,
+					            timer: 5000,
+					            timerProgressBar: true,
+					            background: 'var(--bs-dark)',
+					            color: 'var(--bs-body-color)',
+					            didOpen: (toast) => {
+					                toast.addEventListener('mouseenter', Swal.stopTimer);
+					                toast.addEventListener('mouseleave', Swal.resumeTimer);
+					            }
+					        });
+					
+					        // Fonction pour afficher les messages flash
+					        function showFlashMessages() {
+					            {% for type, messages in app.flashes %}
+					                {% for message in messages %}
+					                    Toast.fire({
+					                        icon: '{{ type }}',
+					                        title: '{{ message|raw }}'
+					                    });
+					                {% endfor %}
+					            {% endfor %}
+					        }
+					
+					        // Affichage initial des messages flash
+					        document.addEventListener('turbo:load', showFlashMessages);
+					
+					        // Fonction de confirmation de suppression (style Sneat)
+					        function confirmDelete(event) {
+					            event.preventDefault();
+					            const form = event.target.closest('form');
+					            
+					            Swal.fire({
+					                title: 'Êtes-vous sûr ?',
+					                text: "Cette action est irréversible !",
+					                icon: 'warning',
+					                showCancelButton: true,
+					                confirmButtonText: 'Oui, supprimer',
+					                cancelButtonText: 'Annuler',
+					                customClass: {
+					                    confirmButton: 'btn btn-primary me-3',
+					                    cancelButton: 'btn btn-label-secondary'
+					                },
+					                buttonsStyling: false
+					            }).then((result) => {
+					                if (result.isConfirmed) {
+					                    form.submit();
+					                }
+					            });
+					        }
+					
+					        // Gestion des événements Turbo (si utilisé)
+					        document.addEventListener('turbo:load', showFlashMessages);
+					    </script>
+		{% endblock %}
+
+		{% block javascripts_end %}{% endblock %}
+	</body>
+</html>

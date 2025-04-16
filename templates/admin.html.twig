@@ -113,6 +113,10 @@
 	</head>
 
 	<body>
+		{# --- LOADER PERSONNALISÉ (SPINNER) --- #}
+		<div id="custom-spinner" class="spinner hidden">
+			<div class="spinner-circle"></div>
+		</div>
 		<div class="layout-wrapper layout-content-navbar">
 			<div class="layout-container">
 				{% include 'admin/_menu.html.twig' %}
@@ -144,79 +148,139 @@
 				 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 				 <script>
-				        document.addEventListener('turbo:load', function() {
-				            // Détection du thème système
-				            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-				            const savedTheme = localStorage.getItem('theme') || systemTheme;
-				            
-				            // Appliquer le thème
-				            document.documentElement.setAttribute('data-bs-theme', savedTheme);
-				            
-				            // Configurer le toggle
-				            const themeToggle = document.getElementById('theme-toggle');
-				            if (themeToggle) {
-				                themeToggle.checked = savedTheme === 'dark';
-				                
-				                themeToggle.addEventListener('change', function() {
-				                    const newTheme = this.checked ? 'dark' : 'light';
-				                    document.documentElement.setAttribute('data-bs-theme', newTheme);
-				                    localStorage.setItem('theme', newTheme);
-				                    
-				                    // Animation de transition
-				                    document.documentElement.style.transition = 'all 0.5s ease';
-				                    setTimeout(() => {
-				                        document.documentElement.style.transition = '';
-				                    }, 500);
-				                    
-				                    // Mise à jour de l'icône
-				                    const icon = this.nextElementSibling.querySelector('i');
-				                    icon.className = this.checked ? 'mdi mdi-weather-night' : 'mdi mdi-weather-sunny';
-				                });
-				            }
+								        document.addEventListener('turbo:load', function() {
+								            // Détection du thème système
+								            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+								            const savedTheme = localStorage.getItem('theme') || systemTheme;
+								            
+								            // Appliquer le thème
+								            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+								            
+								            // Configurer le toggle
+								            const themeToggle = document.getElementById('theme-toggle');
+								            if (themeToggle) {
+								                themeToggle.checked = savedTheme === 'dark';
+								                
+								                themeToggle.addEventListener('change', function() {
+								                    const newTheme = this.checked ? 'dark' : 'light';
+								                    document.documentElement.setAttribute('data-bs-theme', newTheme);
+								                    localStorage.setItem('theme', newTheme);
+								                    
+								                    // Animation de transition
+								                    document.documentElement.style.transition = 'all 0.5s ease';
+								                    setTimeout(() => {
+								                        document.documentElement.style.transition = '';
+								                    }, 500);
+								                    
+								                    // Mise à jour de l'icône
+								                    const icon = this.nextElementSibling.querySelector('i');
+								                    icon.className = this.checked ? 'mdi mdi-weather-night' : 'mdi mdi-weather-sunny';
+								                });
+								            }
+								
+								            // Gestion des messages flash
+								            const Toast = Swal.mixin({
+								                toast: true,
+								                position: 'top-end',
+								                showConfirmButton: false,
+								                timer: 5000,
+								                timerProgressBar: true,
+								                background: 'var(--bs-card-bg)',
+								                color: 'var(--bs-body-color)',
+								                didOpen: (toast) => {
+								                    toast.addEventListener('mouseenter', Swal.stopTimer);
+								                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+								                }
+								            });
+								            
+								            {% for type, messages in app.flashes %}
+								                {% for message in messages %}
+								                    Toast.fire({ icon: '{{ type }}', title: '{{ message|raw }}' });
+								                {% endfor %}
+								            {% endfor %}
+								        });
+								
+								        function confirmDelete(event) {
+								            event.preventDefault();
+								            const form = event.target.closest('form');
+								            
+								            Swal.fire({
+								                title: 'Êtes-vous sûr ?',
+								                text: "Cette action est irréversible !",
+								                icon: 'warning',
+								                showCancelButton: true,
+								                confirmButtonColor: '#696cff',
+								                cancelButtonColor: '#ff3e1d',
+								                confirmButtonText: 'Oui, supprimer !',
+								                cancelButtonText: 'Annuler',
+								                background: 'var(--bs-card-bg)',
+								                color: 'var(--bs-body-color)',
+								                buttonsStyling: false
+								            }).then((result) => {
+								                if (result.isConfirmed) form.submit();
+								            });
+								        }
+								    </script>
+
+
+				{# Désactivation de la barre de progression Turbo et gestion du spinner #}
+				 <script type="module">
+				            import { setProgressBarDelay } from '@hotwired/turbo';
 				
-				            // Gestion des messages flash
-				            const Toast = Swal.mixin({
-				                toast: true,
-				                position: 'top-end',
-				                showConfirmButton: false,
-				                timer: 5000,
-				                timerProgressBar: true,
-				                background: 'var(--bs-card-bg)',
-				                color: 'var(--bs-body-color)',
-				                didOpen: (toast) => {
-				                    toast.addEventListener('mouseenter', Swal.stopTimer);
-				                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+				            // On met un délai très élevé pour la barre de progression Turbo
+				            setProgressBarDelay(999999);
+				
+				            // Affichage du spinner lors du début de la navigation
+				            document.addEventListener('turbo:visit', () => {
+				                const spinner = document.getElementById('custom-spinner');
+				                if (spinner) {
+				                    spinner.classList.remove('hidden');
 				                }
 				            });
-				            
-				            {% for type, messages in app.flashes %}
-				                {% for message in messages %}
-				                    Toast.fire({ icon: '{{ type }}', title: '{{ message|raw }}' });
-				                {% endfor %}
-				            {% endfor %}
-				        });
 				
-				        function confirmDelete(event) {
-				            event.preventDefault();
-				            const form = event.target.closest('form');
-				            
-				            Swal.fire({
-				                title: 'Êtes-vous sûr ?',
-				                text: "Cette action est irréversible !",
-				                icon: 'warning',
-				                showCancelButton: true,
-				                confirmButtonColor: '#696cff',
-				                cancelButtonColor: '#ff3e1d',
-				                confirmButtonText: 'Oui, supprimer !',
-				                cancelButtonText: 'Annuler',
-				                background: 'var(--bs-card-bg)',
-				                color: 'var(--bs-body-color)',
-				                buttonsStyling: false
-				            }).then((result) => {
-				                if (result.isConfirmed) form.submit();
+				            // Masquage du spinner lorsque la page est entièrement chargée
+				            document.addEventListener('turbo:load', () => {
+				                const spinner = document.getElementById('custom-spinner');
+				                if (spinner) {
+				                    spinner.classList.add('hidden');
+				                }
 				            });
-				        }
-				    </script>
+				        </script>
 			{% endblock %}
-		</body>
-	</html>
+
+
+			<style>
+				/* Styles pour le loader (spinner) */
+				.spinner {
+					position: fixed;
+					top: 0;
+					left: 0;
+					width: 100%;
+					height: 100%;
+					background-color: rgba(0, 0, 0, 0.3);
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					z-index: 9999;
+				}
+				.spinner.hidden {
+					display: none;
+				}
+				.spinner-circle {
+					width: 50px;
+					height: 50px;
+					border: 6px solid #eee;
+					border-top-color: #6366f1; /* Couleur de la rotation */
+					border-radius: 50%;
+					animation: spin 1s linear infinite;
+				}
+				@keyframes spin {
+					to {
+						transform: rotate(360deg);
+					}
+				}
+			</style>
+
+		{% endblock %}
+	</body>
+</html>

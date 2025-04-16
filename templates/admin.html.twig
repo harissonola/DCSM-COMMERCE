@@ -1,151 +1,222 @@
 <!DOCTYPE html>
 <html lang="fr" class="layout-menu-fixed" dir="ltr" data-bs-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Panel{% endblock %}</title>
-    <link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>
+			{% block title %}Admin Panel
+			{% endblock %}
+		</title>
+		<link
+		rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/dcsm-favicon.svg" type="image/x-icon"/>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+		<!-- Fonts -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link
+		href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
 
-    <!-- Core CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css">
+		<!-- Core CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/core.css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/css/theme-default.css">
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/css/demo.css">
 
-    <!-- Vendor CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
+		<!-- Vendor CSS -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
-    <!-- SweetAlert2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+		<!-- SweetAlert2 CSS -->
+		<link
+		rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+		<!-- Icons -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
 
-    <style>
-        /* Transition douce pour le changement de thème */
-        html, body, .card, .dropdown-menu, .table, .form-control, .modal-content {
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-        
-        /* Style du toggle */
-        .theme-toggle .form-check-input:checked {
-            background-color: #696cff;
-            border-color: #696cff;
-        }
-        .theme-toggle .form-check-label i {
-            font-size: 1.25rem;
-        }
-    </style>
-    {% block stylesheets %}{% endblock %}
-        {% block javascripts %}
+		<style>
+			/* Dark mode renforcé */
+			[data-bs-theme="dark"] {
+				--bs-body-bg: #121212;
+				--bs-body-color: #f0f0f0;
+				--bs-dark: #1e1e1e;
+				--bs-light: #2d2d2d;
+				--bs-border-color: #333;
+				--bs-card-bg: #1e1e1e;
+				--bs-table-bg: transparent;
+				--bs-table-color: #f0f0f0;
+				--bs-table-border-color: #333;
+				--bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+				--bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+			}
+
+			/* Améliorations spécifiques */
+			[data-bs-theme="dark"] .card,
+			[data-bs-theme="dark"] .dropdown-menu,
+			[data-bs-theme="dark"] .modal-content {
+				background-color: var(--bs-card-bg);
+				border: 1px solid var(--bs-border-color);
+				box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+			}
+
+			[data-bs-theme="dark"] .form-control,
+			[data-bs-theme="dark"] .form-select {
+				background-color: #2d2d2d;
+				border-color: #333;
+				color: #f0f0f0;
+			}
+
+			[data-bs-theme="dark"] .table {
+				--bs-table-bg: var(--bs-table-bg);
+				--bs-table-color: var(--bs-table-color);
+				--bs-table-border-color: var(--bs-table-border-color);
+				--bs-table-striped-bg: var(--bs-table-striped-bg);
+				--bs-table-hover-bg: var(--bs-table-hover-bg);
+			}
+
+			/* Transition fluide */
+			html,
+			body,
+			.card,
+			.dropdown-menu,
+			.table,
+			.form-control,
+			.modal-content,
+			.layout-menu,
+			.layout-navbar,
+			.content-footer,
+			.btn {
+				transition: all 0.3s ease;
+			}
+
+			/* Style du toggle amélioré */
+			.theme-toggle .form-check-input {
+				width: 3rem;
+				height: 1.5rem;
+			}
+			.theme-toggle .form-check-label i {
+				font-size: 1.25rem;
+				margin-left: 0.5rem;
+				color: var(--bs-body-color);
+			}
+			.theme-toggle .form-check-input:checked {
+				background-color: #696cff;
+				border-color: #696cff;
+			}
+		</style>
+		{% block stylesheets %}{% endblock %}
+		{% block javascripts %}
 			{% block importmap %}
 				{{ importmap('app') }}
 			{% endblock %}
 		{% endblock %}
-</head>
+	</head>
 
-<body>
-    <div class="layout-wrapper layout-content-navbar">
-        <div class="layout-container">
-            {% include 'admin/_menu.html.twig' %}
-            
-            <div class="layout-page">
-                {% include 'admin/_navbar.html.twig' %}
-                
-                <div class="content-wrapper">
-                    <div class="container-xxl flex-grow-1 container-p-y">
-                        {% block body %}{% endblock %}
-                    </div>
-                    {% include 'admin/_footer.html.twig' %}
-                </div>
-            </div>
-        </div>
-    </div>
+	<body>
+		<div class="layout-wrapper layout-content-navbar">
+			<div class="layout-container">
+				{% include 'admin/_menu.html.twig' %}
 
-    <!-- Core JS -->
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
+				<div class="layout-page">
+					{% include 'admin/_navbar.html.twig' %}
 
-    <!-- Vendor JS -->
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+					<div class="content-wrapper">
+						<div class="container-xxl flex-grow-1 container-p-y"> {% block body %}{% endblock %}
+							</div>
+							{% include 'admin/_footer.html.twig' %}
+						</div>
+					</div>
+				</div>
+			</div>
 
-    <!-- Main JS -->
-    <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+			{% block js2 %}<!-- Core JS -->
+				 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
+				 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
+				 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
 
-    <script>
-        // Gestion du thème
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialisation
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-bs-theme', savedTheme);
-            
-            // Configuration du toggle
-            const themeToggle = document.getElementById('theme-toggle');
-            if (themeToggle) {
-                themeToggle.checked = savedTheme === 'dark';
-                
-                themeToggle.addEventListener('change', function() {
-                    const newTheme = this.checked ? 'dark' : 'light';
-                    document.documentElement.setAttribute('data-bs-theme', newTheme);
-                    localStorage.setItem('theme', newTheme);
-                    
-                    // Mise à jour de l'icône
-                    const icon = this.nextElementSibling.querySelector('i');
-                    icon.className = this.checked ? 'mdi mdi-weather-night' : 'mdi mdi-weather-sunny';
-                });
-            }
+				<!-- Vendor JS -->
+				 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+				 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+				 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apexcharts.js"></script>
 
-            // Gestion des messages flash
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 5000,
-                timerProgressBar: true,
-                background: 'var(--bs-body-bg)',
-                color: 'var(--bs-body-color)',
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer);
-                    toast.addEventListener('mouseleave', Swal.resumeTimer);
-                }
-            });
-            
-            {% for type, messages in app.flashes %}
-                {% for message in messages %}
-                    Toast.fire({ icon: '{{ type }}', title: '{{ message|raw }}' });
-                {% endfor %}
-            {% endfor %}
-        });
+				<!-- Main JS -->
+				 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
+				 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-        function confirmDelete(event) {
-            event.preventDefault();
-            const form = event.target.closest('form');
-            
-            Swal.fire({
-                title: 'Êtes-vous sûr ?',
-                text: "Cette action est irréversible !",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#696cff',
-                cancelButtonColor: '#ff3e1d',
-                confirmButtonText: 'Oui, supprimer !',
-                cancelButtonText: 'Annuler',
-                background: 'var(--bs-body-bg)',
-                color: 'var(--bs-body-color)',
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) form.submit();
-            });
-        }
-    </script>
-</body>
-</html>
+				 <script>
+				        document.addEventListener('turbo:load', function() {
+				            // Détection du thème système
+				            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				            const savedTheme = localStorage.getItem('theme') || systemTheme;
+				            
+				            // Appliquer le thème
+				            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+				            
+				            // Configurer le toggle
+				            const themeToggle = document.getElementById('theme-toggle');
+				            if (themeToggle) {
+				                themeToggle.checked = savedTheme === 'dark';
+				                
+				                themeToggle.addEventListener('change', function() {
+				                    const newTheme = this.checked ? 'dark' : 'light';
+				                    document.documentElement.setAttribute('data-bs-theme', newTheme);
+				                    localStorage.setItem('theme', newTheme);
+				                    
+				                    // Animation de transition
+				                    document.documentElement.style.transition = 'all 0.5s ease';
+				                    setTimeout(() => {
+				                        document.documentElement.style.transition = '';
+				                    }, 500);
+				                    
+				                    // Mise à jour de l'icône
+				                    const icon = this.nextElementSibling.querySelector('i');
+				                    icon.className = this.checked ? 'mdi mdi-weather-night' : 'mdi mdi-weather-sunny';
+				                });
+				            }
+				
+				            // Gestion des messages flash
+				            const Toast = Swal.mixin({
+				                toast: true,
+				                position: 'top-end',
+				                showConfirmButton: false,
+				                timer: 5000,
+				                timerProgressBar: true,
+				                background: 'var(--bs-card-bg)',
+				                color: 'var(--bs-body-color)',
+				                didOpen: (toast) => {
+				                    toast.addEventListener('mouseenter', Swal.stopTimer);
+				                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+				                }
+				            });
+				            
+				            {% for type, messages in app.flashes %}
+				                {% for message in messages %}
+				                    Toast.fire({ icon: '{{ type }}', title: '{{ message|raw }}' });
+				                {% endfor %}
+				            {% endfor %}
+				        });
+				
+				        function confirmDelete(event) {
+				            event.preventDefault();
+				            const form = event.target.closest('form');
+				            
+				            Swal.fire({
+				                title: 'Êtes-vous sûr ?',
+				                text: "Cette action est irréversible !",
+				                icon: 'warning',
+				                showCancelButton: true,
+				                confirmButtonColor: '#696cff',
+				                cancelButtonColor: '#ff3e1d',
+				                confirmButtonText: 'Oui, supprimer !',
+				                cancelButtonText: 'Annuler',
+				                background: 'var(--bs-card-bg)',
+				                color: 'var(--bs-body-color)',
+				                buttonsStyling: false
+				            }).then((result) => {
+				                if (result.isConfirmed) form.submit();
+				            });
+				        }
+				    </script>
+			{% endblock %}
+		</body>
+	</html>

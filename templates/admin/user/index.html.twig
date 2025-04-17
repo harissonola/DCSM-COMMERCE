@@ -14,9 +14,9 @@
                 <i class="mdi mdi-filter me-1"></i> Filtrer
             </button>
             <div class="btn-group">
-                <a class="btn btn-success" href="#" data-bs-toggle="dropdown">
+                <button id="exportPdf" class="btn btn-success me-2">
                     <i class="mdi mdi-file-pdf me-1"></i> Exporter PDF
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -88,14 +88,17 @@
             <select class="form-select" name="role">
               <option value="">Tous</option>
               <option value="Administrateur" {{ app.request.query.get('role') == 'Administrateur' ? 'selected' }}>Administrateur</option>
-              <option value="Utilisateur" {{ app.request.query.get('role') == 'Utilisateur' ? 'selected' }}>Utilisateur</option>
+              <option value="Utilisateur"    {{ app.request.query.get('role') == 'Utilisateur'    ? 'selected' }}>Utilisateur</option>
             </select>
           </div>
           <div class="mb-3">
             <label class="form-label">Solde minimum</label>
-            <input type="number" class="form-control" name="minBalance"
+            <input type="number"
+                   class="form-control"
+                   name="minBalance"
                    value="{{ app.request.query.get('minBalance') }}"
-                   placeholder="$" step="0.01">
+                   placeholder="$"
+                   step="0.01">
           </div>
         </form>
       </div>
@@ -124,34 +127,32 @@ $(function() {
     // Initialisation DataTable avec export PDF uniquement
     var table = $('.datatable').DataTable({
         dom: '<"top"<"row"<"col-md-6"B><"col-md-6"f>>><"bottom"rt><"row"<"col-md-5"i><"col-md-7"p>>',
-        buttons: [
-            {
-                extend: 'pdfHtml5',
-                name: 'pdfExport',
-                text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
-                className: 'btn btn-danger btn-sm',
-                exportOptions: { columns: ':not(:last-child)' },
-                customize: function(doc) {
-                    doc.defaultStyle.fontSize = 10;
-                    doc.styles.tableHeader.fontSize = 11;
-                    doc.pageMargins = [20,20,20,20];
-                }
+        buttons: [{
+            extend: 'pdfHtml5',
+            name: 'pdfExport',
+            text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
+            className: 'btn btn-danger btn-sm',
+            exportOptions: { columns: ':not(:last-child)' },
+            customize: function(doc) {
+                doc.defaultStyle.fontSize = 10;
+                doc.styles.tableHeader.fontSize = 11;
+                doc.pageMargins = [20, 20, 20, 20];
             }
-        ],
+        }],
         language: {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
         },
         columnDefs: [
             { orderable: false, targets: [5], searchable: false },
-            { type: 'num', targets: [3] }
+            { type: 'num',    targets: [3] }
         ],
         initComplete: function() {
             $('.dt-buttons').removeClass('btn-group');
         }
     });
 
-    // Dropdown PDF
-    $('.btn-success').on('click', function(e) {
+    // Export PDF (bouton unique)
+    $('#exportPdf').on('click', function(e) {
         e.preventDefault();
         table.button('pdfExport:name').trigger();
     });
@@ -185,7 +186,11 @@ $(function() {
                 cancelButton:  'btn btn-label-secondary'
             },
             buttonsStyling: false
-        }).then((res) => res.isConfirmed && form.submit());
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
     };
 });
 </script>

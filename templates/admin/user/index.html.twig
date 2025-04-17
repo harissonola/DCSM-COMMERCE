@@ -14,14 +14,9 @@
                 <i class="mdi mdi-filter me-1"></i> Filtrer
             </button>
             <div class="btn-group">
-                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
-                    <i class="mdi mdi-download me-1"></i> Exporter
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item dt-export" data-type="excel" href="#"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
-                    <li><a class="dropdown-item dt-export" data-type="pdf" href="#"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
-                    <li><a class="dropdown-item dt-export" data-type="print" href="#"><i class="mdi mdi-printer me-2"></i>Imprimer</a></li>
-                </ul>
+                <a class="btn btn-success" href="#" data-bs-toggle="dropdown">
+                    <i class="mdi mdi-file-pdf me-1"></i> Exporter PDF
+                </a>
             </div>
         </div>
     </div>
@@ -52,13 +47,13 @@
                             </td>
                             <td>
                                 <div class="d-flex">
-                                    <a href="{{ path('admin_user_show', {'id': user.id}) }}" class="btn btn-sm btn-info me-2">
+                                    <a href="{{ path('admin_user_show', {id: user.id}) }}" class="btn btn-sm btn-info me-2">
                                         <i class="mdi mdi-eye"></i>
                                     </a>
-                                    <a href="{{ path('admin_user_edit', {'id': user.id}) }}" class="btn btn-sm btn-warning me-2">
+                                    <a href="{{ path('admin_user_edit', {id: user.id}) }}" class="btn btn-sm btn-warning me-2">
                                         <i class="mdi mdi-pencil"></i>
                                     </a>
-                                    <form method="post" action="{{ path('admin_user_delete', {'id': user.id}) }}">
+                                    <form method="post" action="{{ path('admin_user_delete', {id: user.id}) }}">
                                         <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
                                         <button class="btn btn-sm btn-danger" onclick="return confirmDelete(event)">
                                             <i class="mdi mdi-delete"></i>
@@ -80,37 +75,39 @@
 
 <!-- Modal de filtrage -->
 <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Filtrer les utilisateurs</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="filterForm">
-                    <div class="mb-3">
-                        <label class="form-label">Rôle</label>
-                        <select class="form-select" name="role">
-                            <option value="">Tous</option>
-                            <option value="Administrateur">Administrateur</option>
-                            <option value="Utilisateur">Utilisateur</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Solde minimum</label>
-                        <input type="number" class="form-control" name="minBalance" placeholder="$" step="0.01">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
-                <button type="button" class="btn btn-outline-danger" id="resetFilters">
-                    <i class="mdi mdi-filter-remove me-1"></i> Réinitialiser
-                </button>
-            </div>
-        </div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Filtrer les utilisateurs</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="filterForm">
+          <div class="mb-3">
+            <label class="form-label">Rôle</label>
+            <select class="form-select" name="role">
+              <option value="">Tous</option>
+              <option value="Administrateur" {{ app.request.query.get('role') == 'Administrateur' ? 'selected' }}>Administrateur</option>
+              <option value="Utilisateur" {{ app.request.query.get('role') == 'Utilisateur' ? 'selected' }}>Utilisateur</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Solde minimum</label>
+            <input type="number" class="form-control" name="minBalance"
+                   value="{{ app.request.query.get('minBalance') }}"
+                   placeholder="$" step="0.01">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" id="applyFilters">Appliquer</button>
+        <button type="button" class="btn btn-outline-danger" id="resetFilters">
+          <i class="mdi mdi-filter-remove me-1"></i> Réinitialiser
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -119,73 +116,25 @@
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://pdfmake.build/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
 
 <script>
-$(document).ready(function() {
-    var minBalanceFilter = '';
-    var roleFilter = '';
-
-    $.fn.dataTable.ext.search.push(
-        function(settings, data, dataIndex) {
-            var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
-            var roles = data[4] || '';
-
-            if (minBalanceFilter !== '' && balance < minBalanceFilter) {
-                return false;
-            }
-
-            if (roleFilter !== '' && roles.indexOf(roleFilter) === -1) {
-                return false;
-            }
-
-            return true;
-        }
-    );
-
+$(function() {
+    // Initialisation DataTable avec export PDF uniquement
     var table = $('.datatable').DataTable({
         dom: '<"top"<"row"<"col-md-6"B><"col-md-6"f>>><"bottom"rt><"row"<"col-md-5"i><"col-md-7"p>>',
         buttons: [
             {
-                extend: 'excelHtml5',
-                name: 'excelExport',
-                text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
-                className: 'btn btn-success btn-sm me-2',
-                exportOptions: {
-                    columns: ':not(:last-child)',
-                    format: {
-                        body: function(data, column, row) {
-                            if (column === 3) return data.replace(/[^\d.-]/g, '');
-                            if (column === 4) return $(data).text().trim();
-                            return data;
-                        }
-                    }
-                }
-            },
-            {
                 extend: 'pdfHtml5',
                 name: 'pdfExport',
                 text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
-                className: 'btn btn-danger btn-sm me-2',
-                exportOptions: {
-                    columns: ':not(:last-child)'
-                },
+                className: 'btn btn-danger btn-sm',
+                exportOptions: { columns: ':not(:last-child)' },
                 customize: function(doc) {
                     doc.defaultStyle.fontSize = 10;
                     doc.styles.tableHeader.fontSize = 11;
-                    doc.pageMargins = [20, 20, 20, 20];
-                }
-            },
-            {
-                extend: 'print',
-                name: 'printExport',
-                text: '<i class="mdi mdi-printer me-1"></i> Imprimer',
-                className: 'btn btn-info btn-sm',
-                exportOptions: {
-                    columns: ':not(:last-child)'
+                    doc.pageMargins = [20,20,20,20];
                 }
             }
         ],
@@ -201,54 +150,42 @@ $(document).ready(function() {
         }
     });
 
-    $('.dt-export').click(function(e) {
+    // Dropdown PDF
+    $('.btn-success').on('click', function(e) {
         e.preventDefault();
-        var type = $(this).data('type');
-        if (type === 'excel') {
-            table.button('excelExport:name').trigger();
-        } else if (type === 'pdf') {
-            table.button('pdfExport:name').trigger();
-        } else if (type === 'print') {
-            table.button('printExport:name').trigger();
-        }
+        table.button('pdfExport:name').trigger();
     });
 
+    // Filtrage côté serveur
     $('#applyFilters').click(function() {
-        minBalanceFilter = $('input[name="minBalance"]').val() ? parseFloat($('input[name="minBalance"]').val()) : '';
-        roleFilter = $('select[name="role"]').val();
-        table.draw();
-        $('#filterModal').modal('hide');
+        var params = new URLSearchParams();
+        var role = $('select[name="role"]').val();
+        var minBalance = $('input[name="minBalance"]').val();
+        if (role)       params.append('role', role);
+        if (minBalance) params.append('minBalance', minBalance);
+        window.location.href = '{{ path("admin_user_index") }}?' + params.toString();
     });
-
     $('#resetFilters').click(function() {
-        $('#filterForm')[0].reset();
-        minBalanceFilter = '';
-        roleFilter = '';
-        table.draw();
-        $('#filterModal').modal('hide');
+        window.location.href = '{{ path("admin_user_index") }}';
     });
 
-    window.confirmDelete = function(event) {
-        event.preventDefault();
-        var form = event.target.closest('form');
-
+    // Confirmation suppression
+    window.confirmDelete = function(e) {
+        e.preventDefault();
+        var form = e.target.closest('form');
         Swal.fire({
             title: 'Confirmer la suppression',
-            text: "Êtes-vous sûr de vouloir supprimer cet utilisateur?",
+            text: "Êtes-vous sûr ?",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Oui, supprimer',
             cancelButtonText: 'Annuler',
             customClass: {
-                confirmButton: 'btn btn-primary me-3',
-                cancelButton: 'btn btn-label-secondary'
+                confirmButton: 'btn btn-primary me-2',
+                cancelButton:  'btn btn-label-secondary'
             },
             buttonsStyling: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                form.submit();
-            }
-        });
+        }).then((res) => res.isConfirmed && form.submit());
     };
 });
 </script>

@@ -6,7 +6,7 @@
 {% block body %}
 	<div
 		class="auth-wrapper">
-		<!-- Background animé amélioré -->
+		<!-- Background animé -->
 		<div class="auth-bg">
 			<div class="gradient"></div>
 			<div class="particles"></div>
@@ -14,48 +14,38 @@
 
 		<div
 			class="auth-container">
-			<!-- Carte plus compacte -->
+			<!-- Carte compacte -->
 			<div
 				class="auth-card">
-				<!-- Logo centré -->
+				<!-- Logo -->
 				<div class="auth-logo">
-					<img src="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" alt="Bactrary" class="logo-pulse">
+					<img src="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" alt="Bactrary">
 				</div>
 
 				<h1 class="auth-title">Bienvenue</h1>
-				<p class="auth-subtitle">Connectez-vous à votre compte</p>
+				<p class="auth-subtitle">Connectez-vous pour accéder à votre espace</p>
 
 				{% if error %}
-					<div class="alert-error pulse">
-						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<div class="alert-error">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<circle cx="12" cy="12" r="10"></circle>
 							<line x1="12" y1="8" x2="12" y2="12"></line>
 							<line x1="12" y1="16" x2="12.01" y2="16"></line>
 						</svg>
-						<span>{{ error.messageKey|trans(error.messageData, 'security') }}</span>
+						{{ error.messageKey|trans(error.messageData, 'security') }}
 					</div>
 				{% endif %}
 
-				<!-- Formulaire optimisé -->
+				<!-- Formulaire compact -->
 				<form method="post" class="auth-form">
-					<div class="input-group focus-effect">
-						<svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24">
-							<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-							<circle cx="12" cy="7" r="4"></circle>
-						</svg>
-						<input type="text" id="username" name="username" value="{{ last_username }}" required autofocus placeholder=" ">
-						<label for="username">Email ou nom d'utilisateur</label>
+					<div class="input-group">
+						<input type="text" id="username" name="username" value="{{ last_username }}" required autofocus placeholder="Email ou nom d'utilisateur">
 					</div>
 
-					<div class="input-group focus-effect">
-						<svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24">
-							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-							<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-						</svg>
-						<input type="password" id="password" name="password" required placeholder=" ">
-						<label for="password">Mot de passe</label>
+					<div class="input-group">
+						<input type="password" id="password" name="password" required placeholder="Mot de passe">
 						<button type="button" class="toggle-password">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
 								<circle cx="12" cy="12" r="3"></circle>
 							</svg>
@@ -63,21 +53,20 @@
 					</div>
 
 					<div class="form-options">
-						<label class="checkbox-label hover-effect">
+						<label class="checkbox-label">
 							<input type="checkbox" name="_remember_me" checked>
-							<span class="checkmark"></span>
 							<span>Se souvenir de moi</span>
 						</label>
-						<a href="{{ path('app_forgot_password_request') }}" class="forgot-password hover-effect">
+						<a href="{{ path('app_forgot_password_request') }}" class="forgot-password">
 							Mot de passe oublié ?
 						</a>
 					</div>
 
 					<input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
-					<button type="submit" class="btn-login hover-effect">
-						<span>Se connecter</span>
-						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24">
+					<button type="submit" class="btn-login">
+						Se connecter
+						<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 							<line x1="5" y1="12" x2="19" y2="12"></line>
 							<polyline points="12 5 19 12 12 19"></polyline>
 						</svg>
@@ -88,16 +77,17 @@
 					<span>ou continuer avec</span>
 				</div>
 
-				<a href="{{ path('connect_google_start') }}" class="btn-google hover-effect">
-					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24">
-						<path d="M12 2a10 10 0 0 0-3.16 19.5c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.58 9.58 0 0 1 2.5-.34c.85 0 1.7.11 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .26.18.58.69.48A10 10 0 0 0 12 2z"></path>
+				<a href="{{ path('connect_google_start') }}" class="btn-google">
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21.8 12.2c-.2-1.6-.7-3.1-1.5-4.4-1-1.7-2.5-3-4.3-3.7-1.8-.7-3.8-.8-5.7-.3-1.9.5-3.6 1.6-4.9 3.1-1.3 1.5-2.1 3.4-2.3 5.4-.2 2 .2 4 1.1 5.7.9 1.8 2.3 3.2 4 4.1 1.7.9 3.6 1.3 5.5 1.1 1.9-.2 3.7-.9 5.2-2 1.5-1.1 2.7-2.6 3.4-4.3.7-1.7.9-3.6.7-5.5z"></path>
+						<path d="M12 7.7c2.9 0 5.3 2.4 5.3 5.3 0 2.9-2.4 5.3-5.3 5.3-2.9 0-5.3-2.4-5.3-5.3 0-2.9 2.4-5.3 5.3-5.3z"></path>
 					</svg>
-					<span>Google</span>
+					Google
 				</a>
 
 				<div class="auth-footer">
 					Pas de compte ?
-					<a href="{{ path('app_register') }}" class="hover-effect">S'inscrire</a>
+					<a href="{{ path('app_register') }}">S'inscrire</a>
 				</div>
 			</div>
 		</div>
@@ -106,33 +96,17 @@
 	<style>:root
 	{
 		--primary: #6c5ce7;
-		--primary-light: #8577ef;
 		--primary-dark: #5649c0;
 		--text: #ffffff;
 		--text-secondary: #b2b2b2;
 		--bg-dark: #0f0f1a;
 		--bg-darker: #0a0a12;
-		--card-bg: rgba(30, 30, 45, 0.9);
-		--input-bg: rgba(45, 45, 65, 0.4);
-		--input-border: rgba(255, 255, 255, 0.15);
-		--input-focus: rgba(108, 92, 231, 0.4);
+		--card-bg: rgba(30, 30, 45, 0.8);
+		--input-bg: rgba(45, 45, 65, 0.6);
+		--input-border: rgba(255, 255, 255, 0.1);
 		--error: #ff6b6b;
-		--transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 	}
 
-	/* Reset et base */
-	* {
-		box-sizing: border-box;
-		margin: 0;
-		padding: 0;
-	}
-
-	body {
-		font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-		line-height: 1.6;
-	}
-
-	/* Structure principale */
 	.auth-wrapper {
 		min-height: 100vh;
 		display: flex;
@@ -144,15 +118,13 @@
 		padding: 1rem;
 	}
 
-	/* Background animé */
 	.auth-bg {
-		position: fixed;
+		position: absolute;
 		top: 0;
 		left: 0;
 		width: 100%;
 		height: 100%;
-		z-index: -1;
-		pointer-events: none;
+		z-index: 0;
 	}
 
 	.gradient {
@@ -166,273 +138,165 @@
 		position: absolute;
 		width: 100%;
 		height: 100%;
-		background-image: radial-gradient(circle at 20% 30%, rgba(108, 92, 231, 0.15) 0%, transparent 25%), radial-gradient(circle at 80% 70%, rgba(108, 92, 231, 0.15) 0%, transparent 25%);
-		animation: float 20s infinite ease-in-out alternate;
+		background-image: radial-gradient(circle at 20% 30%, rgba(108, 92, 231, 0.15) 0%, transparent 20%), radial-gradient(circle at 80% 70%, rgba(108, 92, 231, 0.15) 0%, transparent 20%);
+		animation: float 15s infinite ease-in-out alternate;
 	}
 
 	@keyframes float {
-		0,
+		0% {
+			transform: translateY(0) rotate(0deg);
+		}
 		100% {
-			transform: translate(0, 0) rotate(0deg);
-		}
-		25% {
-			transform: translate(-10px, -10px) rotate(-1deg);
-		}
-		50% {
-			transform: translate(0, -20px) rotate(0deg);
-		}
-		75% {
-			transform: translate(10px, -10px) rotate(1deg);
+			transform: translateY(-20px) rotate(2deg);
 		}
 	}
 
-	/* Conteneur de la carte */
 	.auth-container {
 		width: 100%;
-		max-width: 400px;
+		max-width: 380px;
 		position: relative;
 		z-index: 1;
 	}
 
-	/* Carte de connexion */
 	.auth-card {
 		background: var(--card-bg);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
-		border-radius: 16px;
-		padding: 2.5rem;
-		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		border-radius: 14px;
+		padding: 2rem;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 		border: 1px solid var(--input-border);
-		transform: translateY(0);
-		transition: var(--transition);
 	}
 
-	.auth-card:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-	}
-
-	/* Logo */
 	.auth-logo {
 		text-align: center;
 		margin-bottom: 1.5rem;
 	}
 
-	.logo-pulse {
-		height: 60px;
-		filter: drop-shadow(0 0 12px rgba(108, 92, 231, 0.5));
-		animation: pulse 4s infinite ease-in-out;
+	.auth-logo img {
+		height: 50px;
+		filter: drop-shadow(0 0 8px rgba(108, 92, 231, 0.4));
 	}
 
-	@keyframes pulse {
-		0,
-		100% {
-			transform: scale(1);
-		}
-		50% {
-			transform: scale(1.05);
-		}
-	}
-
-	/* Titres */
 	.auth-title {
-		font-size: 1.75rem;
+		font-size: 1.5rem;
 		text-align: center;
 		margin-bottom: 0.5rem;
-		font-weight: 700;
-		background: linear-gradient(90deg, var(--primary), var(--primary-light));
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
+		font-weight: 600;
 	}
 
 	.auth-subtitle {
 		color: var(--text-secondary);
 		text-align: center;
-		margin-bottom: 2rem;
+		margin-bottom: 1.5rem;
 		font-size: 0.95rem;
 	}
 
-	/* Alerte erreur */
 	.alert-error {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.5rem;
 		background: rgba(255, 107, 107, 0.15);
 		color: var(--error);
-		padding: 1rem;
-		border-radius: 10px;
+		padding: 0.75rem;
+		border-radius: 8px;
 		margin-bottom: 1.5rem;
 		font-size: 0.9rem;
-		border-left: 4px solid var(--error);
-		animation: pulse 2s infinite;
+		border-left: 3px solid var(--error);
 	}
 
-	/* Groupes de champs */
 	.input-group {
 		position: relative;
-		margin-bottom: 1.5rem;
+		margin-bottom: 1rem;
 	}
 
 	.input-group input {
 		width: 100%;
-		padding: 1rem 1rem 1rem 3rem;
+		padding: 0.875rem 1rem;
 		background: var(--input-bg);
 		border: 1px solid var(--input-border);
-		border-radius: 10px;
+		border-radius: 8px;
 		color: var(--text);
-		font-size: 1rem;
-		transition: var(--transition);
+		font-size: 0.95rem;
+		transition: all 0.3s ease;
 	}
 
 	.input-group input:focus {
 		outline: none;
 		border-color: var(--primary);
-		box-shadow: 0 0 0 3px var(--input-focus);
+		box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
 	}
 
 	.input-group input::placeholder {
-		color: transparent;
-	}
-
-	.input-group label {
-		position: absolute;
-		top: 1rem;
-		left: 3rem;
 		color: var(--text-secondary);
-		transition: var(--transition);
-		pointer-events: none;
 	}
 
-	.input-group input:focus + label,
-	.input-group input:not(:placeholder-shown) + label {
-		transform: translateY(-1.75rem) translateX(-1.5rem) scale(0.85);
-		color: var(--primary);
-		background: var(--card-bg);
-		padding: 0 0.5rem;
-	}
-
-	.input-icon {
-		position: absolute;
-		left: 1rem;
-		top: 1rem;
-		color: var(--text-secondary);
-		transition: var(--transition);
-	}
-
-	.input-group input:focus ~ .input-icon {
-		color: var(--primary);
-	}
-
-	/* Bouton toggle password */
 	.toggle-password {
 		position: absolute;
-		right: 1rem;
-		top: 1rem;
+		right: 12px;
+		top: 50%;
+		transform: translateY(-50%);
 		background: none;
 		border: none;
 		color: var(--text-secondary);
 		cursor: pointer;
-		transition: var(--transition);
 	}
 
-	.toggle-password:hover {
-		color: var(--primary);
-	}
-
-	/* Options du formulaire */
 	.form-options {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin: 1.5rem 0;
+		margin: 1rem 0 1.5rem;
 		font-size: 0.9rem;
 	}
 
 	.checkbox-label {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.5rem;
 		color: var(--text-secondary);
 		cursor: pointer;
-		position: relative;
 	}
 
 	.checkbox-label input {
-		position: absolute;
-		opacity: 0;
-		cursor: pointer;
-	}
-
-	.checkmark {
-		position: relative;
-		height: 18px;
-		width: 18px;
-		background: var(--input-bg);
-		border: 1px solid var(--input-border);
-		border-radius: 4px;
-		transition: var(--transition);
-	}
-
-	.checkbox-label:hover .checkmark {
-		border-color: var(--primary);
-	}
-
-	.checkbox-label input:checked ~ .checkmark {
-		background: var(--primary);
-		border-color: var(--primary);
-	}
-
-	.checkmark:after {
-		content: "";
-		position: absolute;
-		display: none;
-	}
-
-	.checkbox-label input:checked ~ .checkmark:after {
-		display: block;
-	}
-
-	.checkbox-label .checkmark:after {
-		left: 6px;
-		top: 2px;
-		width: 5px;
-		height: 10px;
-		border: solid white;
-		border-width: 0 2px 2px 0;
-		transform: rotate(45deg);
+		accent-color: var(--primary);
 	}
 
 	.forgot-password {
 		color: var(--primary);
 		text-decoration: none;
-		transition: var(--transition);
+		transition: color 0.2s;
 	}
 
-	/* Bouton de connexion */
+	.forgot-password:hover {
+		color: var(--primary-dark);
+		text-decoration: underline;
+	}
+
 	.btn-login {
 		width: 100%;
-		padding: 1rem;
-		background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+		padding: 0.875rem;
+		background: var(--primary);
 		color: white;
 		border: none;
-		border-radius: 10px;
+		border-radius: 8px;
 		font-size: 1rem;
-		font-weight: 600;
+		font-weight: 500;
 		cursor: pointer;
-		transition: var(--transition);
+		transition: all 0.3s ease;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.75rem;
+		gap: 0.5rem;
 		margin-bottom: 1.5rem;
 	}
 
-	.btn-login svg {
-		transition: transform 0.3s ease;
+	.btn-login:hover {
+		background: var(--primary-dark);
+		transform: translateY(-2px);
+		box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
 	}
 
-	/* Séparateur */
 	.auth-separator {
 		position: relative;
 		margin: 1.5rem 0;
@@ -459,27 +323,30 @@
 		right: 0;
 	}
 
-	/* Bouton Google */
 	.btn-google {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.75rem;
+		gap: 0.5rem;
 		width: 100%;
-		padding: 0.875rem;
+		padding: 0.75rem;
 		background: var(--input-bg);
 		color: var(--text);
 		border: 1px solid var(--input-border);
-		border-radius: 10px;
-		font-size: 1rem;
+		border-radius: 8px;
+		font-size: 0.95rem;
 		font-weight: 500;
 		cursor: pointer;
-		transition: var(--transition);
+		transition: all 0.3s ease;
 		margin-bottom: 1.5rem;
 		text-decoration: none;
 	}
 
-	/* Pied de page */
+	.btn-google:hover {
+		background: rgba(45, 45, 65, 0.8);
+		transform: translateY(-2px);
+	}
+
 	.auth-footer {
 		text-align: center;
 		color: var(--text-secondary);
@@ -490,96 +357,37 @@
 		color: var(--primary);
 		text-decoration: none;
 		font-weight: 500;
-		transition: var(--transition);
+		transition: color 0.2s;
 	}
 
-	/* Effets de hover */
-	.hover-effect:hover {
-		transform: translateY(-2px);
+	.auth-footer a:hover {
+		color: var(--primary-dark);
+		text-decoration: underline;
 	}
 
-	/* Animations */
-	.pulse {
-		animation: pulse 2s infinite;
-	}
-
-	@keyframes pulse {
-		0,
-		100% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.8;
-		}
-	}
-
-	/* Responsive */
 	@media(max-width: 480px) {
 		.auth-card {
-			padding: 1.75rem;
+			padding: 1.5rem;
 		}
 
 		.auth-title {
-			font-size: 1.5rem;
-		}
-
-		.auth-logo img {
-			height: 50px;
+			font-size: 1.3rem;
 		}
 	}
 </style>
 
  <script>
-document.addEventListener('DOMContentLoaded', function() {
   // Toggle password visibility
-  const togglePassword = document.querySelector('.toggle-password');
-  const passwordInput = document.getElementById('password');
-  const passwordIcon = togglePassword.querySelector('svg');
-  
-  togglePassword.addEventListener('click', function() {
-    const isPassword = passwordInput.type === 'password';
-    passwordInput.type = isPassword ? 'text' : 'password';
-    passwordIcon.style.color = isPassword ? 'var(--primary)' : 'var(--text-secondary)';
-  });
-  
-  // Focus effect for inputs
-  const inputs = document.querySelectorAll('.input-group input');
-  inputs.forEach(input => {
-    input.addEventListener('focus', function() {
-      this.parentElement.classList.add('focused');
-    });
+  document.querySelector('.toggle-password').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const icon = this.querySelector('svg');
     
-    input.addEventListener('blur', function() {
-      if (!this.value) {
-        this.parentElement.classList.remove('focused');
-      }
-    });
-    
-    // Initialize filled state
-    if (input.value) {
-      input.parentElement.classList.add('focused');
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      icon.setAttribute('stroke', 'var(--primary)');
+    } else {
+      passwordInput.type = 'password';
+      icon.setAttribute('stroke', 'currentColor');
     }
   });
-  
-  // Add ripple effect to buttons
-  const buttons = document.querySelectorAll('.btn-login, .btn-google');
-  buttons.forEach(button => {
-    button.addEventListener('click', function(e) {
-      const rect = this.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      const ripple = document.createElement('span');
-      ripple.className = 'ripple';
-      ripple.style.left = `${x}px`;
-      ripple.style.top = `${y}px`;
-      
-      this.appendChild(ripple);
-      
-      setTimeout(() => {
-        ripple.remove();
-      }, 1000);
-    });
-  });
-});
 </script>{% endblock %}

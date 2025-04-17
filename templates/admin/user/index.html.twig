@@ -17,12 +17,10 @@
                 <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
                     <i class="mdi mdi-download me-1"></i> Exporter
                 </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item export-btn" href="#" data-type="copy"><i class="mdi mdi-content-copy me-2"></i>Copier</a></li>
-                    <li><a class="dropdown-item export-btn" href="#" data-type="excel"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
-                    <li><a class="dropdown-item export-btn" href="#" data-type="csv"><i class="mdi mdi-file-delimited me-2"></i>CSV</a></li>
-                    <li><a class="dropdown-item export-btn" href="#" data-type="pdf"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
-                    <li><a class="dropdown-item export-btn" href="#" data-type="print"><i class="mdi mdi-printer me-2"></i>Imprimer</a></li>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item dt-export" data-type="excel" href="#"><i class="mdi mdi-file-excel me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item dt-export" data-type="pdf" href="#"><i class="mdi mdi-file-pdf me-2"></i>PDF</a></li>
+                    <li><a class="dropdown-item dt-export" data-type="print" href="#"><i class="mdi mdi-printer me-2"></i>Imprimer</a></li>
                 </ul>
             </div>
         </div>
@@ -127,173 +125,125 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
 
 <script>
-    $(document).ready(function() {
-        // Initialisation de DataTables
-        var table = $('.datatable').DataTable({
-            responsive: true,
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+$(document).ready(function() {
+    // Initialisation DataTable
+    var table = $('.datatable').DataTable({
+        dom: '<"top"<"row"<"col-md-6"B><"col-md-6"f>>><"bottom"rt><"row"<"col-md-5"i><"col-md-7"p>>',
+        buttons: [
+            {
+                extend: 'excelHtml5',
+                text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
+                className: 'btn btn-success btn-sm me-2',
+                exportOptions: {
+                    columns: ':not(:last-child)',
+                    format: {
+                        body: function(data, column, row) {
+                            if (column === 3) return data.replace(/[^\d.-]/g, '');
+                            if (column === 4) return $(data).text().trim();
+                            return data;
+                        }
+                    }
+                }
             },
-            order: [[0, 'desc']],
-            dom: '<"top"<"row"<"col-md-6"B><"col-md-6"f>>>rt<"bottom"<"row"<"col-md-5"i><"col-md-7"p>>>',
-            pageLength: 25,
-            lengthMenu: [10, 25, 50, 75, 100],
-            buttons: [
-                {
-                    extend: 'copy',
-                    text: '<i class="mdi mdi-content-copy me-1"></i> Copier',
-                    className: 'btn btn-outline-secondary',
-                    exportOptions: {
-                        columns: ':not(:last-child)',
-                        format: {
-                            body: function(data, column, row) {
-                                if (column === 3) return data.replace(/[^\d.-]/g, '');
-                                if (column === 4) return $(data).text().trim();
-                                return data;
-                            }
-                        }
-                    }
+            {
+                extend: 'pdfHtml5',
+                text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
+                className: 'btn btn-danger btn-sm me-2',
+                exportOptions: {
+                    columns: ':not(:last-child)'
                 },
-                {
-                    extend: 'excel',
-                    text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
-                    className: 'btn btn-outline-success',
-                    exportOptions: {
-                        columns: ':not(:last-child)',
-                        format: {
-                            body: function(data, column, row) {
-                                if (column === 3) return data.replace(/[^\d.-]/g, '');
-                                if (column === 4) return $(data).text().trim();
-                                return data;
-                            }
-                        }
-                    }
-                },
-                {
-                    extend: 'csv',
-                    text: '<i class="mdi mdi-file-delimited me-1"></i> CSV',
-                    className: 'btn btn-outline-primary',
-                    exportOptions: {
-                        columns: ':not(:last-child)',
-                        format: {
-                            body: function(data, column, row) {
-                                if (column === 3) return data.replace(/[^\d.-]/g, '');
-                                if (column === 4) return $(data).text().trim();
-                                return data;
-                            }
-                        }
-                    }
-                },
-                {
-                    extend: 'pdf',
-                    text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
-                    className: 'btn btn-outline-danger',
-                    exportOptions: {
-                        columns: ':not(:last-child)',
-                        format: {
-                            body: function(data, column, row) {
-                                if (column === 3) return data.replace(/[^\d.-]/g, '');
-                                if (column === 4) return $(data).text().trim();
-                                return data;
-                            }
-                        }
-                    },
-                    customize: function(doc) {
-                        doc.defaultStyle.fontSize = 10;
-                        doc.styles.tableHeader.fontSize = 11;
-                        doc.pageMargins = [20, 40, 20, 40];
-                    }
-                },
-                {
-                    extend: 'print',
-                    text: '<i class="mdi mdi-printer me-1"></i> Imprimer',
-                    className: 'btn btn-outline-info',
-                    exportOptions: {
-                        columns: ':not(:last-child)',
-                        format: {
-                            body: function(data, column, row) {
-                                if (column === 3) return data.replace(/[^\d.-]/g, '');
-                                if (column === 4) return $(data).text().trim();
-                                return data;
-                            }
-                        }
-                    }
+                customize: function(doc) {
+                    doc.defaultStyle.fontSize = 10;
+                    doc.styles.tableHeader.fontSize = 11;
+                    doc.pageMargins = [20, 20, 20, 20];
                 }
-            ],
-            columnDefs: [
-                { 
-                    orderable: false, 
-                    targets: [5],
-                    searchable: false
-                },
-                {
-                    type: 'num',
-                    targets: [3]
+            },
+            {
+                extend: 'print',
+                text: '<i class="mdi mdi-printer me-1"></i> Imprimer',
+                className: 'btn btn-info btn-sm',
+                exportOptions: {
+                    columns: ':not(:last-child)'
                 }
-            ],
-            initComplete: function() {
-                // Masquer les boutons natifs (nous utilisons notre menu déroulant)
-                this.api().buttons().container().addClass('d-none');
             }
-        });
-
-        // Gestion des exports via le menu déroulant
-        $('.export-btn').click(function(e) {
-            e.preventDefault();
-            var type = $(this).data('type');
-            if (type === 'copy') {
-                table.button('.buttons-copy').trigger();
-            } else if (type === 'excel') {
-                table.button('.buttons-excel').trigger();
-            } else if (type === 'csv') {
-                table.button('.buttons-csv').trigger();
-            } else if (type === 'pdf') {
-                table.button('.buttons-pdf').trigger();
-            } else if (type === 'print') {
-                table.button('.buttons-print').trigger();
+        ],
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+        },
+        columnDefs: [
+            { 
+                orderable: false, 
+                targets: [5],
+                searchable: false
+            },
+            {
+                type: 'num',
+                targets: [3]
             }
-        });
-
-        // Variables pour les filtres
-        var minBalanceFilter = '';
-
-        // Fonction de filtrage personnalisée
-        $.fn.dataTable.ext.search.push(
-            function(settings, data, dataIndex) {
-                // Filtre par solde minimum
-                if (minBalanceFilter !== '') {
-                    var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
-                    if (balance < minBalanceFilter) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        );
-
-        // Gestion des filtres
-        $('#applyFilters').click(function() {
-            var role = $('select[name="role"]').val();
-            minBalanceFilter = $('input[name="minBalance"]').val() ? parseFloat($('input[name="minBalance"]').val()) : '';
-
-            // Filtre par rôle
-            table.column(4).search(role).draw();
-            
-            // Filtre par solde minimum (via la fonction personnalisée)
-            table.draw();
-            
-            $('#filterModal').modal('hide');
-        });
-
-        // Réinitialisation des filtres
-        $('#resetFilters').click(function() {
-            $('#filterForm')[0].reset();
-            minBalanceFilter = '';
-            table.search('').columns().search('').draw();
-            $('#filterModal').modal('hide');
-        });
+        ],
+        initComplete: function() {
+            $('.dt-buttons').removeClass('btn-group');
+        }
     });
 
+    // Gestion des exports via le menu déroulant
+    $('.dt-export').click(function(e) {
+        e.preventDefault();
+        var type = $(this).data('type');
+        if (type === 'excel') {
+            table.button('.buttons-excelHtml5').trigger();
+        } else if (type === 'pdf') {
+            table.button('.buttons-pdfHtml5').trigger();
+        } else if (type === 'print') {
+            table.button('.buttons-print').trigger();
+        }
+    });
+
+    // Variables pour les filtres
+    var minBalanceFilter = '';
+    var roleFilter = '';
+
+    // Fonction de filtrage personnalisée
+    $.fn.dataTable.ext.search.push(
+        function(settings, data, dataIndex) {
+            // Filtre par solde
+            if (minBalanceFilter !== '') {
+                var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
+                if (balance < minBalanceFilter) {
+                    return false;
+                }
+            }
+            
+            // Filtre par rôle
+            if (roleFilter !== '') {
+                var roles = data[4];
+                if (roles.indexOf(roleFilter) === -1) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+    );
+
+    // Appliquer les filtres
+    $('#applyFilters').click(function() {
+        minBalanceFilter = $('input[name="minBalance"]').val() ? parseFloat($('input[name="minBalance"]').val()) : '';
+        roleFilter = $('select[name="role"]').val();
+        table.draw();
+        $('#filterModal').modal('hide');
+    });
+
+    // Réinitialiser les filtres
+    $('#resetFilters').click(function() {
+        $('#filterForm')[0].reset();
+        minBalanceFilter = '';
+        roleFilter = '';
+        table.draw();
+        $('#filterModal').modal('hide');
+    });
+
+    // Confirmation suppression
     function confirmDelete(event) {
         event.preventDefault();
         var form = event.target.closest('form');
@@ -316,5 +266,6 @@
             }
         });
     }
+});
 </script>
 {% endblock %}

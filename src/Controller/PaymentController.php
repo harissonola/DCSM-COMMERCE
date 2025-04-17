@@ -108,7 +108,17 @@ class PaymentController extends AbstractController
                 'ipn_url'      => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
                 'custom'       => $transaction->getId()
             ];
+            
+            // Log de la requête de retrait
+            file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_request.log', 
+                date('Y-m-d H:i:s') . ' - Params: ' . print_r($params, true), FILE_APPEND);
+                
             $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
+            
+            // Log de la réponse
+            file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_response.log', 
+                date('Y-m-d H:i:s') . ' - Response: ' . print_r($response, true), FILE_APPEND);
+                
             if ($response['error'] !== 'ok') {
                 throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
             }
@@ -120,11 +130,15 @@ class PaymentController extends AbstractController
                 $currency
             ));
         } catch (\Exception $e) {
+            // Log de l'exception
+            file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_error.log', 
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), FILE_APPEND);
+                
             // En cas d'erreur, on rembourse l'utilisateur et on marque la transaction comme échouée
             $user->setBalance($user->getBalance() + $totalAmount);
             $transaction->setStatus('failed');
             $em->flush();
-            $this->addFlash('danger', 'Désolé, une erreur est survenue lors du traitement de votre demande de retrait. Veuillez réessayer ultérieurement.');
+            $this->addFlash('danger', 'Désolé, une erreur est survenue lors du traitement de votre demande de retrait: ' . $e->getMessage());
         }
         return $this->redirectToRoute('app_profile');
     }
@@ -135,7 +149,8 @@ class PaymentController extends AbstractController
         $ipnData = $request->request->all();
 
         // Logger les données pour le débogage
-        file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_ipn.log', print_r($ipnData, true), FILE_APPEND);
+        file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_ipn.log', 
+            date('Y-m-d H:i:s') . ' - IPN Data: ' . print_r($ipnData, true), FILE_APPEND);
 
         // Vérifier les champs nécessaires
         if (
@@ -150,6 +165,10 @@ class PaymentController extends AbstractController
                 $transaction->setStatus('completed');
                 // Nous ne modifions plus le solde de l'utilisateur ici car il a déjà été déduit lors de la création
                 $em->flush();
+                
+                // Log du succès
+                file_put_contents(__DIR__ . '/../../var/log/coinpayments_withdrawal_success.log', 
+                    date('Y-m-d H:i:s') . ' - Transaction #' . $transactionId . ' complétée.', FILE_APPEND);
             }
         }
 
@@ -166,7 +185,6 @@ class PaymentController extends AbstractController
         }
         $amount = (float)$request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
-        $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
 
         if ($amount <= 0) {
             $this->addFlash('danger', 'Le montant doit être supérieur à 0 USD. Veuillez saisir un montant valide.');
@@ -194,25 +212,32 @@ class PaymentController extends AbstractController
         if ($request->isMethod('GET')) {
             return $this->render('payment/crypto_deposit.html.twig', ['amount' => $amount]);
         }
-        $cryptoType    = strtoupper(trim($request->request->get('cryptoType')));
+        
+        $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
         $walletAddress = trim($request->request->get('walletAddress'));
+        
         if (!$cryptoType || !$walletAddress) {
             $this->addFlash('danger', 'Veuillez sélectionner le type de crypto-monnaie et fournir l\'adresse de votre portefeuille.');
             return $this->redirectToRoute('app_profile');
         }
+        
         $user = $this->getUser();
         if (!$user) {
             return $this->redirectToRoute('app_login');
         }
+        
+        // Créer la transaction
         $transaction = new Transactions();
         $transaction->setUser($user)
             ->setAmount($amount)
+            ->setType('deposit')  // Ajout du type pour cohérence
             ->setMethod("crypto_deposit ($cryptoType)")
             ->setStatus('pending')
             ->setCreatedAt(new \DateTimeImmutable());
         $em->persist($transaction);
         $em->flush();
 
+        // Paramètres pour CoinPayments
         $params = [
             'amount'      => $amount,
             'currency1'   => 'USD',
@@ -222,16 +247,41 @@ class PaymentController extends AbstractController
             'ipn_url'     => $this->generateUrl('app_payment_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'success_url' => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
             'cancel_url'  => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
-            'custom'      => $transaction->getId(),
+            'custom'      => $transaction->getId()
         ];
+        
         try {
+            // Log pour débogage
+            file_put_contents(__DIR__ . '/../../var/log/coinpayments_deposit_request.log', 
+                date('Y-m-d H:i:s') . ' - Params: ' . print_r($params, true), FILE_APPEND);
+            
             $response = $this->coinPaymentsApiCall('create_transaction', $params);
+            
+            // Log de la réponse
+            file_put_contents(__DIR__ . '/../../var/log/coinpayments_deposit_response.log', 
+                date('Y-m-d H:i:s') . ' - Response: ' . print_r($response, true), FILE_APPEND);
+            
             if ($response['error'] !== 'ok') {
                 throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
             }
+            
+            // Mettre à jour la transaction avec les détails de CoinPayments
+            if (isset($response['result']['txn_id'])) {
+                $transaction->setExternalId($response['result']['txn_id']);
+                $em->flush();
+            }
+            
             return $this->redirect($response['result']['checkout_url']);
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Une erreur est survenue lors du dépôt. Veuillez réessayer ultérieurement.');
+            // Log de l'exception
+            file_put_contents(__DIR__ . '/../../var/log/coinpayments_deposit_error.log', 
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), FILE_APPEND);
+            
+            // Marquer la transaction comme échouée
+            $transaction->setStatus('failed');
+            $em->flush();
+            
+            $this->addFlash('danger', 'Une erreur est survenue lors du dépôt: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -240,7 +290,10 @@ class PaymentController extends AbstractController
     public function handleIpn(Request $request, EntityManagerInterface $em): Response
     {
         $ipnData = $request->request->all();
-        file_put_contents(__DIR__ . '/../../var/log/ipn.log', print_r($ipnData, true), FILE_APPEND);
+        
+        // Log plus détaillé
+        file_put_contents(__DIR__ . '/../../var/log/ipn.log', 
+            date('Y-m-d H:i:s') . ' - IPN Data: ' . print_r($ipnData, true), FILE_APPEND);
 
         if (
             isset($ipnData['status']) && (int)$ipnData['status'] >= 100 &&
@@ -248,16 +301,20 @@ class PaymentController extends AbstractController
             isset($ipnData['amount1']) &&
             isset($ipnData['custom'])
         ) {
-            $txnId         = $ipnData['txn_id'];
-            $amount        = (float)$ipnData['amount1'];
+            $txnId = $ipnData['txn_id'];
+            $amount = (float)$ipnData['amount1'];
             $transactionId = (int)$ipnData['custom'];
 
             $transaction = $em->getRepository(Transactions::class)->find($transactionId);
-            if ($transaction) {
+            if ($transaction && $transaction->getStatus() !== 'completed') {
                 $transaction->setStatus('completed');
                 $user = $transaction->getUser();
                 if ($user) {
                     $user->setBalance($user->getBalance() + $transaction->getAmount());
+                    
+                    // Log du succès
+                    file_put_contents(__DIR__ . '/../../var/log/deposit_success.log', 
+                        date('Y-m-d H:i:s') . ' - Transaction #' . $transactionId . ' complétée. Montant: ' . $amount, FILE_APPEND);
                 }
                 $em->flush();
             }
@@ -273,26 +330,37 @@ class PaymentController extends AbstractController
             $this->addFlash('danger', 'Le montant saisi est invalide. Veuillez saisir un montant supérieur à 0 USD.');
             return $this->redirectToRoute('app_profile');
         }
-        $client = $this->getPayPalClient();
-        $paypalRequest = new OrdersCreateRequest();
-        $paypalRequest->prefer('return=representation');
-        $paypalRequest->body = [
-            'intent' => 'CAPTURE',
-            'purchase_units' => [[
-                'amount' => [
-                    'currency_code' => 'USD',
-                    'value' => number_format($amount, 2, '.', '')
-                ]
-            ]],
-            'application_context' => [
-                'return_url' => $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'cancel_url' => $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'brand_name' => $this->getParameter('app.site_name'),
-                'user_action' => 'PAY_NOW',
-            ]
-        ];
+        
         try {
+            $client = $this->getPayPalClient();
+            $paypalRequest = new OrdersCreateRequest();
+            $paypalRequest->prefer('return=representation');
+            $paypalRequest->body = [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [[
+                    'amount' => [
+                        'currency_code' => 'USD',
+                        'value' => number_format($amount, 2, '.', '')
+                    ]
+                ]],
+                'application_context' => [
+                    'return_url' => $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                    'cancel_url' => $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                    'brand_name' => $this->getParameter('app.site_name'),
+                    'user_action' => 'PAY_NOW',
+                ]
+            ];
+            
+            // Log de la requête PayPal
+            file_put_contents(__DIR__ . '/../../var/log/paypal_request.log', 
+                date('Y-m-d H:i:s') . ' - Request: ' . print_r($paypalRequest->body, true), FILE_APPEND);
+                
             $response = $client->execute($paypalRequest);
+            
+            // Log de la réponse PayPal
+            file_put_contents(__DIR__ . '/../../var/log/paypal_response.log', 
+                date('Y-m-d H:i:s') . ' - Order ID: ' . $response->result->id, FILE_APPEND);
+                
             $approveUrl = null;
             foreach ($response->result->links as $link) {
                 if ($link->rel === 'approve') {
@@ -307,7 +375,11 @@ class PaymentController extends AbstractController
             $request->getSession()->set('paypal_amount', $amount);
             return $this->redirect($approveUrl);
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Une erreur est survenue lors de la redirection vers PayPal. Veuillez réessayer ultérieurement.');
+            // Log de l'erreur PayPal
+            file_put_contents(__DIR__ . '/../../var/log/paypal_error.log', 
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), FILE_APPEND);
+                
+            $this->addFlash('danger', 'Une erreur est survenue lors de la redirection vers PayPal: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -322,16 +394,27 @@ class PaymentController extends AbstractController
             return $this->redirectToRoute('app_profile');
         }
         $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
+        }
+        
         $client = $this->getPayPalClient();
         $captureRequest = new OrdersCaptureRequest($orderId);
         try {
             $response = $client->execute($captureRequest);
+            
+            // Log de la réponse de capture
+            file_put_contents(__DIR__ . '/../../var/log/paypal_capture.log', 
+                date('Y-m-d H:i:s') . ' - Order ID: ' . $orderId . ' - Status: ' . $response->result->status, FILE_APPEND);
+                
             if ($response->result->status !== 'COMPLETED') {
-                throw new \Exception('Paiement non complété');
+                throw new \Exception('Paiement non complété: ' . $response->result->status);
             }
+            
             $transaction = (new Transactions())
                 ->setUser($user)
                 ->setAmount($amount)
+                ->setType('deposit')
                 ->setMethod('paypal')
                 ->setStatus('completed')
                 ->setExternalId($orderId)
@@ -340,11 +423,16 @@ class PaymentController extends AbstractController
             $em->persist($transaction);
             $em->persist($user);
             $em->flush();
+            
             $request->getSession()->remove('paypal_order_id');
             $request->getSession()->remove('paypal_amount');
             $this->addFlash('success', sprintf('Votre dépôt de %.2f USD a été effectué avec succès.', $amount));
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Une erreur est survenue lors du traitement de votre paiement PayPal. Veuillez réessayer ultérieurement.');
+            // Log de l'erreur de capture
+            file_put_contents(__DIR__ . '/../../var/log/paypal_capture_error.log', 
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), FILE_APPEND);
+                
+            $this->addFlash('danger', 'Une erreur est survenue lors du traitement de votre paiement PayPal: ' . $e->getMessage());
         }
         return $this->redirectToRoute('app_profile');
     }
@@ -360,36 +448,65 @@ class PaymentController extends AbstractController
 
     private function coinPaymentsApiCall(string $cmd, array $params = []): array
     {
+        // Vérifier que les clés API sont configurées
+        if (empty($_ENV['COINPAYMENTS_API_SECRET']) || empty($_ENV['COINPAYMENTS_API_KEY'])) {
+            throw new \Exception("Les clés API CoinPayments ne sont pas configurées");
+        }
+
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
-        $publicKey  = $_ENV['COINPAYMENTS_API_KEY'];
+        $publicKey = $_ENV['COINPAYMENTS_API_KEY'];
+        
         $params += [
             'version' => 1,
-            'cmd'     => $cmd,
-            'key'     => $publicKey,
-            'format'  => 'json'
+            'cmd' => $cmd,
+            'key' => $publicKey,
+            'format' => 'json'
         ];
+        
         $postData = http_build_query($params, '', '&');
         $hmac = hash_hmac('sha512', $postData, $privateKey);
+        
         $ch = curl_init('https://www.coinpayments.net/api.php');
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_HTTPHEADER     => ["hmac: $hmac"],
-            CURLOPT_POSTFIELDS     => $postData
+            CURLOPT_HTTPHEADER => ["HMAC: $hmac"], // Notez que "HMAC" est en majuscules
+            CURLOPT_POST => true,                 // S'assurer que c'est une requête POST
+            CURLOPT_POSTFIELDS => $postData,
+            CURLOPT_TIMEOUT => 30                 // Ajouter un timeout
         ]);
+        
         $data = curl_exec($ch);
+        
         if ($data === false) {
-            throw new \Exception("Erreur cURL: " . curl_error($ch));
+            $error = curl_error($ch);
+            $info = curl_getinfo($ch);
+            curl_close($ch);
+            throw new \Exception("Erreur cURL: " . $error . " - Info: " . print_r($info, true));
         }
+        
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode !== 200) {
+            throw new \Exception("Réponse HTTP non valide: " . $httpCode . " - Réponse: " . $data);
+        }
+        
         $result = json_decode($data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception("Réponse API invalide");
+            throw new \Exception("Réponse API invalide (JSON): " . json_last_error_msg() . " - Réponse: " . $data);
         }
+        
         return $result;
     }
 
     private function getPayPalClient(): PayPalHttpClient
     {
+        // Vérifier que les clés API sont configurées
+        if (empty($_ENV['PAYPAL_CLIENT_ID']) || empty($_ENV['PAYPAL_CLIENT_SECRET'])) {
+            throw new \Exception("Les clés API PayPal ne sont pas configurées");
+        }
+        
         $clientId = $_ENV['PAYPAL_CLIENT_ID'];
         $clientSecret = $_ENV['PAYPAL_CLIENT_SECRET'];
         $environment = $_ENV['APP_ENV'] === 'prod'

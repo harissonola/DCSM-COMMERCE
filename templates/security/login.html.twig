@@ -390,4 +390,12 @@
       icon.setAttribute('stroke', 'currentColor');
     }
   });
+
+  document.getElementById('username').addEventListener('focus', function() {
+  console.log('Username field focused');
+});
+
+document.getElementById('password').addEventListener('focus', function() {
+  console.log('Password field focused');
+});
 </script>{% endblock %}

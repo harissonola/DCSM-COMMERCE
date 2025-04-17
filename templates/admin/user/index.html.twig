@@ -92,8 +92,8 @@
                         <label class="form-label">Rôle</label>
                         <select class="form-select" name="role">
                             <option value="">Tous</option>
-                            <option value="ROLE_ADMIN">Administrateur</option>
-                            <option value="ROLE_USER">Utilisateur</option>
+                            <option value="Administrateur">Administrateur</option>
+                            <option value="Utilisateur">Utilisateur</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -126,12 +126,32 @@
 
 <script>
 $(document).ready(function() {
-    // Initialisation DataTable
+    var minBalanceFilter = '';
+    var roleFilter = '';
+
+    $.fn.dataTable.ext.search.push(
+        function(settings, data, dataIndex) {
+            var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
+            var roles = data[4] || '';
+
+            if (minBalanceFilter !== '' && balance < minBalanceFilter) {
+                return false;
+            }
+
+            if (roleFilter !== '' && roles.indexOf(roleFilter) === -1) {
+                return false;
+            }
+
+            return true;
+        }
+    );
+
     var table = $('.datatable').DataTable({
         dom: '<"top"<"row"<"col-md-6"B><"col-md-6"f>>><"bottom"rt><"row"<"col-md-5"i><"col-md-7"p>>',
         buttons: [
             {
                 extend: 'excelHtml5',
+                name: 'excelExport',
                 text: '<i class="mdi mdi-file-excel me-1"></i> Excel',
                 className: 'btn btn-success btn-sm me-2',
                 exportOptions: {
@@ -147,6 +167,7 @@ $(document).ready(function() {
             },
             {
                 extend: 'pdfHtml5',
+                name: 'pdfExport',
                 text: '<i class="mdi mdi-file-pdf me-1"></i> PDF',
                 className: 'btn btn-danger btn-sm me-2',
                 exportOptions: {
@@ -160,6 +181,7 @@ $(document).ready(function() {
             },
             {
                 extend: 'print',
+                name: 'printExport',
                 text: '<i class="mdi mdi-printer me-1"></i> Imprimer',
                 className: 'btn btn-info btn-sm',
                 exportOptions: {
@@ -171,62 +193,26 @@ $(document).ready(function() {
             url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
         },
         columnDefs: [
-            { 
-                orderable: false, 
-                targets: [5],
-                searchable: false
-            },
-            {
-                type: 'num',
-                targets: [3]
-            }
+            { orderable: false, targets: [5], searchable: false },
+            { type: 'num', targets: [3] }
         ],
         initComplete: function() {
             $('.dt-buttons').removeClass('btn-group');
         }
     });
 
-    // Gestion des exports via le menu déroulant
     $('.dt-export').click(function(e) {
         e.preventDefault();
         var type = $(this).data('type');
         if (type === 'excel') {
-            table.button('.buttons-excelHtml5').trigger();
+            table.button('excelExport:name').trigger();
         } else if (type === 'pdf') {
-            table.button('.buttons-pdfHtml5').trigger();
+            table.button('pdfExport:name').trigger();
         } else if (type === 'print') {
-            table.button('.buttons-print').trigger();
+            table.button('printExport:name').trigger();
         }
     });
 
-    // Variables pour les filtres
-    var minBalanceFilter = '';
-    var roleFilter = '';
-
-    // Fonction de filtrage personnalisée
-    $.fn.dataTable.ext.search.push(
-        function(settings, data, dataIndex) {
-            // Filtre par solde
-            if (minBalanceFilter !== '') {
-                var balance = parseFloat(data[3].replace(/[^\d.-]/g, '')) || 0;
-                if (balance < minBalanceFilter) {
-                    return false;
-                }
-            }
-            
-            // Filtre par rôle
-            if (roleFilter !== '') {
-                var roles = data[4];
-                if (roles.indexOf(roleFilter) === -1) {
-                    return false;
-                }
-            }
-            
-            return true;
-        }
-    );
-
-    // Appliquer les filtres
     $('#applyFilters').click(function() {
         minBalanceFilter = $('input[name="minBalance"]').val() ? parseFloat($('input[name="minBalance"]').val()) : '';
         roleFilter = $('select[name="role"]').val();
@@ -234,7 +220,6 @@ $(document).ready(function() {
         $('#filterModal').modal('hide');
     });
 
-    // Réinitialiser les filtres
     $('#resetFilters').click(function() {
         $('#filterForm')[0].reset();
         minBalanceFilter = '';
@@ -243,11 +228,10 @@ $(document).ready(function() {
         $('#filterModal').modal('hide');
     });
 
-    // Confirmation suppression
-    function confirmDelete(event) {
+    window.confirmDelete = function(event) {
         event.preventDefault();
         var form = event.target.closest('form');
-        
+
         Swal.fire({
             title: 'Confirmer la suppression',
             text: "Êtes-vous sûr de vouloir supprimer cet utilisateur?",
@@ -265,7 +249,7 @@ $(document).ready(function() {
                 form.submit();
             }
         });
-    }
+    };
 });
 </script>
 {% endblock %}

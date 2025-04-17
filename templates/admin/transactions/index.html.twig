@@ -65,7 +65,8 @@
                         <td data-search="{{ transaction.status }}">
                             <span class="badge bg-{{ transaction.status == 'completed' ? 'success' : 
                                 (transaction.status == 'failed' ? 'danger' : 'warning') }}">
-                                {{ transaction.status|capitalize }}
+                                {{ transaction.status == 'completed' ? 'Reussi' : 
+                                    (transaction.status == 'failed' ? 'Échoué' : 'En attente') }}
                             </span>
                         </td>
                         <td data-search="{{ transaction.type }}">

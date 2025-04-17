@@ -394,7 +394,7 @@
 </style>
 
  <script>
-	  document.addEventListener('DOMContentLoaded', function() {
+	  document.addEventListener('turbo:load', function() {
 		// Toggle password visibility
 		document.querySelector('.toggle-password').addEventListener('click', function() {
 		  const passwordInput = document.getElementById('password');
@@ -409,20 +409,6 @@
 		  }
 		});
 	
-		// Débogage des événements focus
-		document.getElementById('username').addEventListener('focus', function() {
-		  console.log('Username field focused');
-		});
-	
-		document.getElementById('password').addEventListener('focus', function() {
-		  console.log('Password field focused');
-		});
-	
-		// Débogage des clics sur la page
-		document.addEventListener('click', function(e) {
-		  console.log('Élément cliqué:', e.target);
-		});
-	
 		// Solutions pour les problèmes de clic
 		const usernameField = document.getElementById('username');
 		const passwordField = document.getElementById('password');
@@ -435,13 +421,13 @@
 		  if (e.clientY >= usernameRect.top && e.clientY <= usernameRect.bottom &&
 			  e.clientX >= usernameRect.left && e.clientX <= usernameRect.right) {
 			usernameField.focus();
-			console.log('Focus forcé sur username');
+			//console.log('Focus forcé sur username');
 		  }
 		  
 		  if (e.clientY >= passwordRect.top && e.clientY <= passwordRect.bottom &&
 			  e.clientX >= passwordRect.left && e.clientX <= passwordRect.right) {
 			passwordField.focus();
-			console.log('Focus forcé sur password');
+			//console.log('Focus forcé sur password');
 		  }
 		});
 	

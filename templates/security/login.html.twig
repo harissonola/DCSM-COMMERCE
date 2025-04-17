@@ -1,176 +1,181 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}
-  Se Connecter
+{% block title %}Connexion |
+	{{ app_name }}
 {% endblock %}
 
 {% block body %}
-  <style>
-    body {
-      background: linear-gradient(180deg, #1a1f35 0%, #0f1521 100%);
-      min-height: 100vh;
-      align-items: center;
-      justify-content: center;
-      font-family: Arial, sans-serif;
-      perspective: 1000px;
-      overflow: hidden;
-    }
-    
-    .login-container {
-      background: rgba(26, 31, 53, 0.9);
-      border-radius: 20px;
-      padding: 2rem;
-      width: 100%;
-      max-width: 400px;
-      position: relative;
-      box-shadow: 0 0 20px rgba(0, 195, 255, 0.2);
-      animation: float 6s ease-in-out infinite;
-    }
-    
-    @keyframes float {
-      0%,
-      100% {
-        transform: translateY(0px);
-      }
-      50% {
-        transform: translateY(-10px);
-      }
-    }
-    
-    .grid-bg {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 50vh;
-      background-image: linear-gradient(0deg, rgba(0, 195, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 195, 255, 0.2) 1px, transparent 1px);
-      background-size: 40px 40px;
-      perspective: 1000px;
-      transform: rotateX(60deg);
-      transform-origin: bottom;
-    }
-    
-    .title {
-      font-size: 2.5rem;
-      color: white;
-      text-align: center;
-      margin-bottom: 2rem;
-      text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
-      letter-spacing: 2px;
-    }
-    
-    .form-control {
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 30px;
-      color: white;
-      padding: 1rem 1.5rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 0 15px rgba(0, 195, 255, 0.1);
-    }
-    
-    .form-control:focus {
-      background: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 0 20px rgba(0, 195, 255, 0.3);
-      color: white;
-    }
-    
-    .btn-login {
-      width: 100%;
-      padding: 0.8rem;
-      border-radius: 30px;
-      background: linear-gradient(45deg, #00c3ff, #0066ff);
-      border: none;
-      color: white;
-      font-weight: bold;
-      margin-top: 1rem;
-      box-shadow: 0 0 15px rgba(0, 195, 255, 0.3);
-      transition: all 0.3s ease;
-    }
-    
-    .btn-login:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 25px rgba(0, 195, 255, 0.5);
-    }
-    
-    .forgot-password {
-      color: rgba(255, 255, 255, 0.7);
-      text-align: center;
-      display: block;
-      margin-top: 1rem;
-      text-decoration: none;
-      transition: all 0.3s ease;
-    }
-    
-    .forgot-password:hover {
-      color: #00c3ff;
-      text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
-    }
-    
-    .bitcoin-icons {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 15px rgba(0, 195, 255, 0.3);
-      color: #fff;
-    }
-    
-    .bitcoin-1 {
-      top: -20px;
-      left: -20px;
-    }
-    .bitcoin-2 {
-      top: -20px;
-      right: -20px;
-    }
-    .bitcoin-3 {
-      bottom: -20px;
-      left: -20px;
-    }
-    .bitcoin-4 {
-      bottom: -20px;
-      right: -20px;
-    }
-  </style>
-  <div class="grid-bg"></div>
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-md-6">
-        <div class="login-container">
-          <div class="bitcoin-icons bitcoin-1">₿</div>
-          <div class="bitcoin-icons bitcoin-2">₿</div>
-          <div class="bitcoin-icons bitcoin-3">₿</div>
-          <div class="bitcoin-icons bitcoin-4">₿</div>
+	<div class="container-xxl">
+		<div class="authentication-wrapper authentication-basic container-p-y">
+			<div
+				class="authentication-inner py-4">
+				<!-- Logo + Title -->
+				<div class="card p-2">
+					<div class="app-brand justify-content-center mt-5">
+						<a href="{{ path('app_home') }}" class="app-brand-link gap-2">
+							<span
+								class="app-brand-logo demo">
+								{# Insérez votre logo ici #}
+								<svg width="32" height="22" viewbox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path fill-rule="evenodd" clip-rule="evenodd" d="..." fill="var(--primary)"/>
+								</svg>
+							</span>
+							<span class="app-brand-text demo text-body fw-bold fs-3">{{ app_name }}</span>
+						</a>
+					</div>
 
-          <h1 class="title text-uppercase">Connexion</h1>
-          {% if error %}
-            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-          {% endif %}
-          <form method="post">
-            <div class="mb-3">
-              <input value="{{ last_username }}" name="username" type="text" class="form-control" placeholder="USERNAME ou EMAIL" autocomplete="username" required autofocus />
-            </div>
-            <div class="mb-3">
-              <input type="password" name="password" class="form-control" placeholder="MOT DE PASSE" autocomplete="current-password" required />
-            </div>
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}" />
-            <div class="form-check">
-              <input type="checkbox" id="remember"  name="_remember_me" class="form-check-input" value="1" />
-              <label class="text-light text-uppercase form-check-label required" for="remember">Se Souvenir de Moi</label>
-            </div>
-            <button type="submit" class="btn btn-login text-uppercase">Connexion</button>
-            <!-- Bouton Google -->
-						<a href="{{ path('connect_google_start') }}" class="btn btn-warning text-center" style="margin-top: 30px;">Se Connecter avec Google</a>
-            <a href="{{ path('app_register') }}" class="forgot-password text-uppercase">Vous n'avez un compte?</a>
-            <a href="{{ path('app_forgot_password_request') }}" class="forgot-password text-uppercase">Mot de passe oublie?</a>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
+					<!-- /Logo -->
+					<div class="card-body mt-2">
+						<h4 class="mb-4 text-center">Bienvenue sur
+							{{ app_name }}! 👋</h4>
+						<p class="mb-4 text-center">Veuillez vous connecter à votre compte</p>
+
+						{% if error %}
+							<div class="alert alert-danger alert-dismissible" role="alert">
+								{{ error.messageKey|trans(error.messageData, 'security') }}
+								<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+							</div>
+						{% endif %}
+
+						<form id="formAuthentication" class="mb-3" method="post">
+							<div class="mb-3">
+								<label for="username" class="form-label">Email ou nom d'utilisateur</label>
+								<input type="text" class="form-control" id="username" name="username" value="{{ last_username }}" placeholder="Entrez votre email ou nom d'utilisateur" autofocus required/>
+							</div>
+							<div class="mb-3 form-password-toggle">
+								<div class="d-flex justify-content-between">
+									<label class="form-label" for="password">Mot de passe</label>
+									<a href="{{ path('app_forgot_password_request') }}">
+										<small>Mot de passe oublié ?</small>
+									</a>
+								</div>
+								<div class="input-group input-group-merge">
+									<input type="password" id="password" class="form-control" name="password" placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;" aria-describedby="password" required/>
+									<span class="input-group-text cursor-pointer">
+										<i class="bx bx-hide"></i>
+									</span>
+								</div>
+							</div>
+							<div class="mb-3">
+								<div class="form-check">
+									<input class="form-check-input" type="checkbox" id="remember-me" name="_remember_me" checked/>
+									<label class="form-check-label" for="remember-me">
+										Se souvenir de moi
+									</label>
+								</div>
+							</div>
+							<input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}"/>
+
+							<div class="mb-3">
+								<button class="btn btn-primary d-grid w-100 waves-effect" type="submit">
+									Se connecter
+								</button>
+							</div>
+						</form>
+
+						<!-- Social Auth -->
+						<div class="divider my-4">
+							<div class="divider-text">ou</div>
+						</div>
+
+						<div class="d-flex justify-content-center">
+							<a href="{{ path('connect_google_start') }}" class="btn btn-icon btn-label-google me-3">
+								<i class="tf-icons bx bxl-google"></i>
+							</a>
+							{# Ajoutez d'autres providers ici si nécessaire #}
+						</div>
+
+						<p class="text-center mt-3">
+							<span>Nouveau sur notre plateforme ?</span>
+							<a href="{{ path('app_register') }}">
+								<span>Créez un compte</span>
+							</a>
+						</p>
+					</div>
+				</div>
+				<!-- /Register -->
+			</div>
+		</div>
+	</div>
+
+	{# Ajout d'un script pour améliorer l'UX #}
+	 <script>
+	    document.addEventListener('DOMContentLoaded', function() {
+	      // Animation douce au chargement
+	      const card = document.querySelector('.authentication-inner');
+	      card.style.opacity = '0';
+	      card.style.transform = 'translateY(20px)';
+	      card.style.transition = 'all 0.4s ease';
+	      
+	      setTimeout(() => {
+	        card.style.opacity = '1';
+	        card.style.transform = 'translateY(0)';
+	      }, 100);
+	
+	      // Amélioration du toggle password
+	      const passwordInput = document.getElementById('password');
+	      const toggleBtn = document.querySelector('.input-group-text');
+	      
+	      toggleBtn.addEventListener('click', function() {
+	        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+	        passwordInput.setAttribute('type', type);
+	        this.querySelector('i').classList.toggle('bx-show');
+	        this.querySelector('i').classList.toggle('bx-hide');
+	      });
+	    });
+	  </script>
+
+	<style>
+		/* Customisations complémentaires pour harmoniser avec Sneat */
+		.authentication-wrapper {
+			background: url('../../assets/img/backgrounds/auth-bg.jpg') no-repeat;
+			background-size: cover;
+		}
+
+		.authentication-inner {
+			max-width: 440px;
+			width: 100%;
+		}
+
+		.card {
+			border: 0;
+			box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+			border-radius: 0.5rem;
+			overflow: hidden;
+			background: rgba(255, 255, 255, 0.98);
+			backdrop-filter: blur(10px);
+		}
+
+		.btn-primary {
+			background-color: var(--primary);
+			border-color: var(--primary);
+			transition: all 0.3s ease;
+		}
+
+		.btn-primary:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 4px 8px rgba(var(--primary-rgb), 0.3);
+		}
+
+		.form-control:focus {
+			border-color: var(--primary);
+			box-shadow: 0 0 0 1px var(--primary);
+		}
+
+		.divider-text {
+			color: var(--text-muted);
+			font-size: 0.85rem;
+		}
+
+		.btn-label-google {
+			background-color: #fff;
+			border: 1px solid #e0e0e0;
+			transition: all 0.3s ease;
+		}
+
+		.btn-label-google:hover {
+			background-color: #f5f5f5;
+			transform: translateY(-2px);
+		}
+	</style>
 {% endblock %}

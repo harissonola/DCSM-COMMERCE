@@ -350,6 +350,7 @@ class RegistrationController extends AbstractController
                         UrlGeneratorInterface::ABSOLUTE_URL
                     ),
                     'qrCodePath' => $user->getQrCodePath(),
+                    'app_name' => 'Bictrary',
                 ]);
             $mailer->send($email);
         } catch (TransportExceptionInterface $e) {

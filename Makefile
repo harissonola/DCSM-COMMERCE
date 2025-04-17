@@ -1,7 +1,7 @@
 .PHONY: deploy install
 
 deploy:
-	ssh bictrary@ssh-bictrary.alwaysdata.net  "cd www && git pull origin main && make install"
+	ssh -A bictrary@ssh-bictrary.alwaysdata.net  "cd www && git pull origin main && make install"
 
 install: vendor/autoload.php
 	php bin/console d:s:u -f --no-interaction

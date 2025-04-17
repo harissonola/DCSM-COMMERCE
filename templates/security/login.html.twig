@@ -125,6 +125,7 @@
 		width: 100%;
 		height: 100%;
 		z-index: 0;
+		pointer-events: none !important;
 	}
 
 	.gradient {
@@ -132,6 +133,7 @@
 		width: 100%;
 		height: 100%;
 		background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+		pointer-events: none !important;
 	}
 
 	.particles {
@@ -139,7 +141,8 @@
 		width: 100%;
 		height: 100%;
 		background-image: radial-gradient(circle at 20% 30%, rgba(108, 92, 231, 0.15) 0%, transparent 20%), radial-gradient(circle at 80% 70%, rgba(108, 92, 231, 0.15) 0%, transparent 20%);
-		animation: float 15s infinite ease-in-out alternate;
+		animation: none !important;
+		pointer-events: none !important;
 	}
 
 	@keyframes float {
@@ -155,17 +158,19 @@
 		width: 100%;
 		max-width: 380px;
 		position: relative;
-		z-index: 1;
+		z-index: 10;
 	}
 
 	.auth-card {
 		background: var(--card-bg);
-		backdrop-filter: blur(10px);
-		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
 		border-radius: 14px;
 		padding: 2rem;
 		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 		border: 1px solid var(--input-border);
+		position: relative;
+		z-index: 20;
 	}
 
 	.auth-logo {
@@ -205,9 +210,15 @@
 		border-left: 3px solid var(--error);
 	}
 
+	.auth-form {
+		position: relative;
+		z-index: 100 !important;
+	}
+
 	.input-group {
 		position: relative;
 		margin-bottom: 1rem;
+		z-index: 1000 !important;
 	}
 
 	.input-group input {
@@ -219,6 +230,11 @@
 		color: var(--text);
 		font-size: 0.95rem;
 		transition: all 0.3s ease;
+		pointer-events: auto !important;
+		position: relative !important;
+		z-index: 1001 !important;
+		user-select: text !important;
+		-webkit-user-select: text !important;
 	}
 
 	.input-group input:focus {
@@ -240,6 +256,7 @@
 		border: none;
 		color: var(--text-secondary);
 		cursor: pointer;
+		z-index: 1002 !important;
 	}
 
 	.form-options {
@@ -377,25 +394,80 @@
 </style>
 
  <script>
-  // Toggle password visibility
-  document.querySelector('.toggle-password').addEventListener('click', function() {
-    const passwordInput = document.getElementById('password');
-    const icon = this.querySelector('svg');
-    
-    if (passwordInput.type === 'password') {
-      passwordInput.type = 'text';
-      icon.setAttribute('stroke', 'var(--primary)');
-    } else {
-      passwordInput.type = 'password';
-      icon.setAttribute('stroke', 'currentColor');
-    }
-  });
-
-  document.getElementById('username').addEventListener('focus', function() {
-  console.log('Username field focused');
-});
-
-document.getElementById('password').addEventListener('focus', function() {
-  console.log('Password field focused');
-});
-</script>{% endblock %}
+	  document.addEventListener('DOMContentLoaded', function() {
+		// Toggle password visibility
+		document.querySelector('.toggle-password').addEventListener('click', function() {
+		  const passwordInput = document.getElementById('password');
+		  const icon = this.querySelector('svg');
+		  
+		  if (passwordInput.type === 'password') {
+			passwordInput.type = 'text';
+			icon.setAttribute('stroke', 'var(--primary)');
+		  } else {
+			passwordInput.type = 'password';
+			icon.setAttribute('stroke', 'currentColor');
+		  }
+		});
+	
+		// Débogage des événements focus
+		document.getElementById('username').addEventListener('focus', function() {
+		  console.log('Username field focused');
+		});
+	
+		document.getElementById('password').addEventListener('focus', function() {
+		  console.log('Password field focused');
+		});
+	
+		// Débogage des clics sur la page
+		document.addEventListener('click', function(e) {
+		  console.log('Élément cliqué:', e.target);
+		});
+	
+		// Solutions pour les problèmes de clic
+		const usernameField = document.getElementById('username');
+		const passwordField = document.getElementById('password');
+		
+		// Forcer le focus quand on clique près du champ
+		document.querySelector('.auth-card').addEventListener('click', function(e) {
+		  const usernameRect = usernameField.getBoundingClientRect();
+		  const passwordRect = passwordField.getBoundingClientRect();
+		  
+		  if (e.clientY >= usernameRect.top && e.clientY <= usernameRect.bottom &&
+			  e.clientX >= usernameRect.left && e.clientX <= usernameRect.right) {
+			usernameField.focus();
+			console.log('Focus forcé sur username');
+		  }
+		  
+		  if (e.clientY >= passwordRect.top && e.clientY <= passwordRect.bottom &&
+			  e.clientX >= passwordRect.left && e.clientX <= passwordRect.right) {
+			passwordField.focus();
+			console.log('Focus forcé sur password');
+		  }
+		});
+	
+		// Solution alternative: remplacer les champs pour voir si cela résout le problème
+		// Décommentez ce code si les solutions ci-dessus ne fonctionnent pas
+		/*
+		const usernameGroup = document.querySelector('.input-group:first-of-type');
+		const passwordGroup = document.querySelector('.input-group:nth-of-type(2)');
+		
+		// Conserver le contenu original
+		const originalUsernameHTML = usernameGroup.innerHTML;
+		const originalPasswordHTML = passwordGroup.innerHTML;
+		
+		// Créer un formulaire de test
+		const testForm = document.createElement('div');
+		testForm.innerHTML = `
+		  <form style="margin-top: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;">
+			<h3 style="color: white; margin-bottom: 10px;">Formulaire de test</h3>
+			<input type="text" placeholder="Test champ texte" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #333; color: white; border: 1px solid #555;">
+			<input type="password" placeholder="Test mot de passe" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #333; color: white; border: 1px solid #555;">
+			<button type="button" style="padding: 8px 15px; background: var(--primary); color: white; border: none; border-radius: 4px;">Tester</button>
+		  </form>
+		`;
+		
+		// Ajouter le formulaire de test à la carte (décommentez si nécessaire)
+		// document.querySelector('.auth-card').appendChild(testForm);
+		*/
+	  });
+	</script>{% endblock %}

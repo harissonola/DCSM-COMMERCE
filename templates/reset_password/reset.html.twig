@@ -29,10 +29,10 @@
 				<div class="form-group">
 					<div class="password-input">
 						{{ form_widget(resetForm.plainPassword, {'attr': {
-              'class': 'form-control',
-              'placeholder': ' ',
-              'autocomplete': 'new-password'
-            }}) }}
+				  'class': 'form-control',
+				  'placeholder': ' ',
+				  'autocomplete': 'new-password'
+				}}) }}
 						<label for="{{ resetForm.plainPassword.vars.id }}">Nouveau mot de passe</label>
 						<button type="button" class="toggle-password">
 							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -63,13 +63,13 @@
 		--primary-dark: #5649c0;
 		--error: #ff6b6b;
 		--success: #00b894;
-		--text: #2d3436;
-		--text-light: #636e72;
-		--bg-dark: #0f1521;
-		--bg-darker: #0a0e17;
-		--card-bg: rgba(255, 255, 255, 0.95);
-		--input-bg: rgba(245, 245, 245, 0.9);
-		--input-border: rgba(0, 0, 0, 0.1);
+		--text: #ffffff;
+		--text-light: #d1d1d1;
+		--bg-dark: #121212;
+		--bg-darker: #0f0f0f;
+		--card-bg: rgba(30, 30, 30, 0.95);
+		--input-bg: rgba(40, 40, 40, 0.9);
+		--input-border: rgba(255, 255, 255, 0.1);
 	}
 
 	/* Structure de base */
@@ -141,14 +141,14 @@
 		-webkit-backdrop-filter: blur(10px);
 		border-radius: 16px;
 		padding: 2.5rem;
-		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
 		transform: translateY(0);
 		transition: all 0.4s ease;
 	}
 
 	.auth-card:hover {
 		transform: translateY(-5px);
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
 	}
 
 	/* Logo */
@@ -205,7 +205,7 @@
 	.form-control:focus {
 		outline: none;
 		border-color: var(--primary);
-		box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+		box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.5);
 	}
 
 	.password-input label {
@@ -281,7 +281,7 @@
 
 	.btn-auth:hover {
 		transform: translateY(-3px);
-		box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+		box-shadow: 0 10px 25px rgba(108, 92, 231, 0.6);
 	}
 
 	.btn-auth svg {
@@ -309,34 +309,33 @@
 </style>
 
  <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Toggle password visibility
-  const togglePassword = document.querySelector('.toggle-password');
-  const passwordInput = document.getElementById('{{ resetForm.plainPassword.vars.id }}');
-  const passwordIcon = togglePassword.querySelector('svg');
-  
-  togglePassword.addEventListener('click', function() {
-    const isPassword = passwordInput.type === 'password';
-    passwordInput.type = isPassword ? 'text' : 'password';
-    passwordIcon.style.color = isPassword ? 'var(--primary)' : 'var(--text-light)';
-  });
-
-  // Password strength indicator
-  passwordInput.addEventListener('input', function() {
-    const strengthBar = document.querySelector('.password-strength');
-    const strength = calculatePasswordStrength(this.value);
-    strengthBar.style.setProperty('--strength', strength + '%');
-  });
-
-  function calculatePasswordStrength(password) {
-    // Simple strength calculation (replace with more robust solution)
-    let strength = 0;
-    if (password.length > 0) strength += 20;
-    if (password.length > 5) strength += 20;
-    if (password.match(/[A-Z]/)) strength += 20;
-    if (password.match(/[0-9]/)) strength += 20;
-    if (password.match(/[^A-Za-z0-9]/)) strength += 20;
-    return Math.min(strength, 100);
-  }
-});
-</script>{% endblock %}
+	document.addEventListener('DOMContentLoaded', function() {
+	  // Toggle password visibility
+	  const togglePassword = document.querySelector('.toggle-password');
+	  const passwordInput = document.getElementById('{{ resetForm.plainPassword.vars.id }}');
+	  const passwordIcon = togglePassword.querySelector('svg');
+	  
+	  togglePassword.addEventListener('click', function() {
+		const isPassword = passwordInput.type === 'password';
+		passwordInput.type = isPassword ? 'text' : 'password';
+		passwordIcon.style.color = isPassword ? 'var(--primary)' : 'var(--text-light)';
+	  });
+	
+	  // Password strength indicator
+	  passwordInput.addEventListener('input', function() {
+		const strengthBar = document.querySelector('.password-strength');
+		const strength = calculatePasswordStrength(this.value);
+		strengthBar.style.setProperty('--strength', strength + '%');
+	  });
+	
+	  function calculatePasswordStrength(password) {
+		let strength = 0;
+		if (password.length > 0) strength += 20;
+		if (password.length > 5) strength += 20;
+		if (password.match(/[A-Z]/)) strength += 20;
+		if (password.match(/[0-9]/)) strength += 20;
+		if (password.match(/[^A-Za-z0-9]/)) strength += 20;
+		return Math.min(strength, 100);
+	  }
+	});
+	</script>{% endblock %}

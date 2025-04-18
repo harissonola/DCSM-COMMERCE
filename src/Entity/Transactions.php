@@ -26,6 +26,9 @@ class Transactions
     #[ORM\Column(nullable: true)]
     private ?float $amount = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?float $fees = null; // Nouvelle propriété pour les frais
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $ExternalId = null;
 
@@ -84,6 +87,18 @@ class Transactions
     public function setAmount(?float $amount): static
     {
         $this->amount = $amount;
+
+        return $this;
+    }
+
+    public function getFees(): ?float
+    {
+        return $this->fees;
+    }
+
+    public function setFees(?float $fees): static
+    {
+        $this->fees = $fees;
 
         return $this;
     }

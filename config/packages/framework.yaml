@@ -2,6 +2,12 @@ framework:
     secret: '%env(APP_SECRET)%'
     session: true
 
+    rate_limiter:
+    payment_limiter:
+        policy: 'fixed_window'
+        limit: 5
+        interval: '1 minute'
+
     # Configuration du cache applicatif
     cache:
         app: cache.adapter.filesystem

@@ -6,315 +6,358 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Transactions;
 use App\Entity\User;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use PayPalCheckoutSdk\Core\PayPalHttpClient;
-use PayPalCheckoutSdk\Core\ProductionEnvironment;
 use PayPalCheckoutSdk\Core\SandboxEnvironment;
-use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
+use PayPalCheckoutSdk\Core\ProductionEnvironment;
 use PayPalCheckoutSdk\Orders\OrdersCreateRequest;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Contracts\Cache\ItemInterface;
-use Psr\Log\LoggerInterface;
-use Tron\Api;
-use Tron\TRX;
-use Tron\Exceptions\TronErrorException;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
-use Symfony\Component\Validator\Constraints as Assert;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
+use PayPalCheckoutSdk\Orders\OrdersCaptureRequest;
 
 class PaymentController extends AbstractController
 {
-    private $entityManager;
-    private $cache;
-    private $coinGeckoClient;
-    private $tronGridClient;
-    private $logger;
-    private $tron;
-    private $rateLimiter;
-    private $validator;
+    /**
+     * Calcule les frais de retrait en fonction du montant demandé
+     */
+    private function calculateWithdrawalFees(float $amount): float
+    {
+        // Structure tarifaire pour les retraits
+        if ($amount <= 20) {
+            $feePercentage = 0.05; // 5% pour $2-$20
+        } elseif ($amount <= 100) {
+            $feePercentage = 0.03; // 3% pour $20.01-$100
+        } elseif ($amount <= 500) {
+            $feePercentage = 0.02; // 2% pour $100.01-$500
+        } else {
+            $feePercentage = 0.01; // 1% pour $500.01+
+        }
 
-    public function __construct(
-        EntityManagerInterface $entityManager,
-        LoggerInterface $logger,
-        RateLimiterFactory $paymentRateLimiter,
-        ValidatorInterface $validator
-    ) {
-        $this->entityManager = $entityManager;
-        $this->logger = $logger;
-        $this->cache = new FilesystemAdapter();
-        $this->rateLimiter = $paymentRateLimiter;
-        $this->validator = $validator;
+        $fee = $amount * $feePercentage;
 
-        $this->initializeApiClients();
-        $this->initializeTron();
+        // Frais minimum de $1
+        return max($fee, 1.0);
     }
 
-    private function initializeApiClients(): void
+    #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
+    public function withdraw(Request $request, EntityManagerInterface $em): Response
     {
-        try {
-            $this->coinGeckoClient = new Client([
-                'base_uri' => 'https://api.coingecko.com/api/v3/',
-                'timeout' => 5,
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json'
-                ],
-                'verify' => true
-            ]);
-
-            $this->tronGridClient = new Client([
-                'base_uri' => 'https://api.trongrid.io/',
-                'headers' => [
-                    'TRON-PRO-API-KEY' => $_ENV['TRONGRID_API_KEY'],
-                    'Content-Type' => 'application/json'
-                ],
-                'verify' => true
-            ]);
-        } catch (\Exception $e) {
-            $this->logger->critical('API Client initialization failed', ['error' => $e->getMessage()]);
-            throw new \RuntimeException('Service temporarily unavailable');
-        }
-    }
-
-    private function initializeTron(): void
-    {
-        try {
-            $this->tron = new TRX(new Api($_ENV['TRONGRID_API_KEY']));
-            $this->tron->setPrivateKey($_ENV['TRON_WALLET_PRIVATE_KEY']);
-        } catch (TronErrorException $e) {
-            $this->logger->critical('TRON initialization failed', ['error' => $e->getMessage()]);
-            throw new \RuntimeException('TRON service unavailable');
-        }
-    }
-
-    #[Route('/deposit/crypto', name: 'app_crypto_deposit', methods: ['POST'])]
-    public function cryptoDeposit(Request $request): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        // Rate limiting
-        $limiter = $this->rateLimiter->create($request->getClientIp());
-        if (false === $limiter->consume(1)->isAccepted()) {
-            $this->addFlash('danger', 'Trop de tentatives. Veuillez réessayer plus tard.');
-            return $this->redirectToRoute('app_profile');
-        }
-
-        // CSRF protection
-        if (!$this->isCsrfTokenValid('crypto-deposit', $request->request->get('_token'))) {
-            $this->addFlash('danger', 'Token de sécurité invalide');
-            return $this->redirectToRoute('app_profile');
-        }
-
         $user = $this->getUser();
-        $amount = (float)$request->request->get('amount');
-        $cryptoType = strtoupper($request->request->get('cryptoType'));
-
-        // Input validation
-        $constraints = new Assert\Collection([
-            'amount' => [
-                new Assert\NotBlank(),
-                new Assert\Type(['type' => 'numeric']),
-                new Assert\Range(['min' => 1, 'max' => 10000])
-            ],
-            'cryptoType' => [
-                new Assert\NotBlank(),
-                new Assert\Choice(['choices' => ['BTC', 'ETH', 'TRX', 'USDT', 'USDT.TRC20', 'BNB', 'XRP']])
-            ]
-        ]);
-
-        $violations = $this->validator->validate([
-            'amount' => $amount,
-            'cryptoType' => $cryptoType
-        ], $constraints);
-
-        if (count($violations) > 0) {
-            foreach ($violations as $violation) {
-                $this->addFlash('danger', $violation->getMessage());
-            }
-            return $this->redirectToRoute('app_profile');
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
         }
 
-        try {
-            $rate = $this->getCurrentRate($cryptoType);
-            if ($rate <= 0) {
-                throw new \Exception('Invalid exchange rate');
-            }
-
-            $transaction = (new Transactions())
-                ->setUser($user)
-                ->setAmount($amount)
-                ->setType('deposit')
-                ->setMethod('crypto_' . $cryptoType)
-                ->setStatus('pending')
-                ->setCreatedAt(new \DateTimeImmutable());
-
-            $this->entityManager->persist($transaction);
-            $this->entityManager->flush();
-
-            $depositAddress = $this->generateSecureDepositAddress($cryptoType, $transaction);
-
-            return $this->render('payment/deposit_redirect.html.twig', [
-                'address' => $depositAddress,
-                'cryptoType' => $cryptoType,
-                'amountUSD' => $amount,
-                'transactionId' => $transaction->getId(),
-                'qrCodeData' => "$cryptoType:$depositAddress?amount=$amount",
-                'expiresAt' => (new \DateTime('+15 minutes'))->format('Y-m-d H:i:s'),
-                'rate' => $rate
-            ]);
-        } catch (\Exception $e) {
-            $this->logger->error('Crypto deposit failed', [
-                'error' => $e->getMessage(),
-                'user' => $user->getId(),
-                'amount' => $amount,
-                'crypto' => $cryptoType
-            ]);
-            $this->addFlash('danger', 'Erreur lors du traitement. Contactez le support.');
-            return $this->redirectToRoute('app_profile');
-        }
-    }
-
-    #[Route('/withdraw/crypto', name: 'app_crypto_withdraw', methods: ['POST'])]
-    public function cryptoWithdraw(Request $request): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        // Rate limiting
-        $limiter = $this->rateLimiter->create($request->getClientIp());
-        if (false === $limiter->consume(1)->isAccepted()) {
-            $this->addFlash('danger', 'Trop de tentatives. Veuillez réessayer plus tard.');
-            return $this->redirectToRoute('app_profile');
-        }
-
-        // CSRF protection
-        if (!$this->isCsrfTokenValid('crypto-withdraw', $request->request->get('_token'))) {
-            $this->addFlash('danger', 'Token de sécurité invalide');
-            return $this->redirectToRoute('app_profile');
-        }
-
-        $user = $this->getUser();
-        $amountUSD = (float)$request->request->get('amount');
-        $cryptoType = strtoupper($request->request->get('currency'));
+        $amountUsd = (float)$request->request->get('amount');
+        $currency = strtoupper(trim($request->request->get('currency')));
         $address = trim($request->request->get('recipient'));
 
-        // Input validation
-        $constraints = new Assert\Collection([
-            'amount' => [
-                new Assert\NotBlank(),
-                new Assert\Type(['type' => 'numeric']),
-                new Assert\Range(['min' => 1, 'max' => 5000])
-            ],
-            'currency' => [
-                new Assert\NotBlank(),
-                new Assert\Choice(['choices' => ['BTC', 'ETH', 'TRX', 'USDT', 'USDT.TRC20', 'BNB', 'XRP']])
-            ],
-            'recipient' => [
-                new Assert\NotBlank(),
-                new Assert\Length(['min' => 26, 'max' => 64])
-            ]
-        ]);
-
-        $violations = $this->validator->validate([
-            'amount' => $amountUSD,
-            'currency' => $cryptoType,
-            'recipient' => $address
-        ], $constraints);
-
-        if (count($violations) > 0) {
-            foreach ($violations as $violation) {
-                $this->addFlash('danger', $violation->getMessage());
-            }
+        // Validation de base
+        if ($amountUsd <= 0) {
+            $this->addFlash('danger', 'Le montant demandé est invalide.');
             return $this->redirectToRoute('app_profile');
         }
+        if ($amountUsd < 2) {
+            $this->addFlash('danger', 'Le montant de retrait doit être d\'au moins 2 USD.');
+            return $this->redirectToRoute('app_profile');
+        }
+        if (empty($address)) {
+            $this->addFlash('danger', 'Veuillez fournir une adresse de portefeuille valide.');
+            return $this->redirectToRoute('app_profile');
+        }
+
+        // Calcul des frais de retrait
+        $fees = $this->calculateWithdrawalFees($amountUsd);
+        $totalAmount = $amountUsd + $fees;
+
+        // Vérifier si l'utilisateur a suffisamment de fonds (montant + frais)
+        if ($totalAmount > $user->getBalance()) {
+            $this->addFlash('danger', sprintf(
+                'Solde insuffisant. Le retrait de %.2f USD nécessite %.2f USD de frais, soit un total de %.2f USD.',
+                $amountUsd,
+                $fees,
+                $totalAmount
+            ));
+            return $this->redirectToRoute('app_profile');
+        }
+
+        // Création de la transaction en statut "pending"
+        $transaction = (new Transactions())
+            ->setUser($user)
+            ->setType('withdrawal')
+            ->setAmount($amountUsd)
+            ->setFees($fees)  // Stockage des frais dans un champ 'fees'
+            ->setMethod("Crypto ($currency)")
+            ->setStatus('pending')
+            ->setCreatedAt(new \DateTimeImmutable());
+        $em->persist($transaction);
+
+        // Déduire immédiatement le montant total (montant + frais) du solde de l'utilisateur
+        $user->setBalance($user->getBalance() - $totalAmount);
+        $em->persist($user);
+        $em->flush();
 
         try {
-            $this->entityManager->beginTransaction();
+            // Envoi de la demande de retrait
+            $params = [
+                'amount'       => $amountUsd,      // Montant en USD (sans les frais)
+                'currency'     => $currency,       // Devise cible (crypto)
+                'currency2'    => 'USD',           // Devise source
+                'address'      => $address,
+                'auto_confirm' => 1,
+                'ipn_url'      => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                'custom'       => $transaction->getId()
+            ];
 
-            // Lock user row for update
-            $user = $this->entityManager->find(User::class, $user->getId(), \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE);
+            // Log de la requête de retrait
+            file_put_contents(
+                __DIR__ . '/../../var/log/coinpayments_withdrawal_request.log',
+                date('Y-m-d H:i:s') . ' - Params: ' . print_r($params, true),
+                FILE_APPEND
+            );
 
-            $fees = $this->calculateWithdrawalFees($amountUSD, $cryptoType);
-            $totalAmount = $amountUSD + $fees;
+            $response = $this->coinPaymentsApiCall('create_withdrawal', $params);
 
-            if ($totalAmount > $user->getBalance()) {
-                throw new \Exception('Insufficient balance');
+            // Log de la réponse
+            file_put_contents(
+                __DIR__ . '/../../var/log/coinpayments_withdrawal_response.log',
+                date('Y-m-d H:i:s') . ' - Response: ' . print_r($response, true),
+                FILE_APPEND
+            );
+
+            if ($response['error'] !== 'ok') {
+                throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
             }
 
-            $cryptoAmount = $this->convertUsdToCrypto($amountUSD, $cryptoType);
-            $networkFee = $this->getNetworkFee($cryptoType);
-
-            $transaction = (new Transactions())
-                ->setUser($user)
-                ->setAmount($amountUSD)
-                ->setFees($fees)
-                ->setType('withdrawal')
-                ->setMethod('crypto_' . $cryptoType)
-                ->setStatus('pending')
-                ->setCreatedAt(new \DateTimeImmutable());
-
-            $this->entityManager->persist($transaction);
-            $user->setBalance($user->getBalance() - $totalAmount);
-            $this->entityManager->flush();
-            $this->entityManager->commit();
-
-            return $this->render('payment/withdraw_confirm.html.twig', [
-                'transactionId' => $transaction->getId(),
-                'cryptoType' => $cryptoType,
-                'cryptoAmount' => $cryptoAmount,
-                'recipientAddress' => $address,
-                'networkFee' => $networkFee,
-                'totalToSend' => $cryptoAmount - $networkFee,
-                'fees' => $fees
-            ]);
+            $this->addFlash('success', sprintf(
+                'Votre demande de retrait de %.2f USD a été enregistrée. Des frais de %.2f USD ont été appliqués. La conversion en %s sera effectuée dans les plus brefs délais.',
+                $amountUsd,
+                $fees,
+                $currency
+            ));
         } catch (\Exception $e) {
-            $this->entityManager->rollback();
-            $this->logger->error('Withdrawal failed', [
-                'error' => $e->getMessage(),
-                'user' => $user->getId(),
-                'amount' => $amountUSD,
-                'crypto' => $cryptoType
-            ]);
-            $this->addFlash('danger', 'Erreur lors du traitement du retrait');
+            // Log de l'exception
+            file_put_contents(
+                __DIR__ . '/../../var/log/coinpayments_withdrawal_error.log',
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(),
+                FILE_APPEND
+            );
+
+            // En cas d'erreur, on rembourse l'utilisateur et on marque la transaction comme échouée
+            $user->setBalance($user->getBalance() + $totalAmount);
+            $transaction->setStatus('failed');
+            $em->flush();
+            $this->addFlash('danger', 'Désolé, une erreur est survenue lors du traitement de votre demande de retrait: ' . $e->getMessage());
+        }
+        return $this->redirectToRoute('app_profile');
+    }
+
+    #[Route('/coinpayments/withdrawal-ipn', name: 'coinpayments_withdrawal_ipn', methods: ['POST'])]
+    public function coinpaymentsWithdrawalIpn(Request $request, EntityManagerInterface $em): Response
+    {
+        $ipnData = $request->request->all();
+
+        // Logger les données pour le débogage
+        file_put_contents(
+            __DIR__ . '/../../var/log/coinpayments_withdrawal_ipn.log',
+            date('Y-m-d H:i:s') . ' - IPN Data: ' . print_r($ipnData, true),
+            FILE_APPEND
+        );
+
+        // Vérifier les champs nécessaires
+        if (
+            isset($ipnData['status']) && (int)$ipnData['status'] >= 100 &&
+            isset($ipnData['custom']) &&
+            isset($ipnData['amount'])
+        ) {
+            $transactionId = (int)$ipnData['custom'];
+            $transaction = $em->getRepository(Transactions::class)->find($transactionId);
+
+            if ($transaction && $transaction->getStatus() !== 'completed') {
+                $transaction->setStatus('completed');
+                // Nous ne modifions plus le solde de l'utilisateur ici car il a déjà été déduit lors de la création
+                $em->flush();
+
+                // Log du succès
+                file_put_contents(
+                    __DIR__ . '/../../var/log/coinpayments_withdrawal_success.log',
+                    date('Y-m-d H:i:s') . ' - Transaction #' . $transactionId . ' complétée.',
+                    FILE_APPEND
+                );
+            }
+        }
+
+        return new Response('IPN de retrait traité', 200);
+    }
+
+    // --- Dépôts ---
+    #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
+    public function deposit(Request $request): Response
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
+        }
+        $amount = (float)$request->request->get('amount');
+        $paymentMethod = $request->request->get('paymentMethod');
+
+        if ($amount <= 0) {
+            $this->addFlash('danger', 'Le montant doit être supérieur à 0 USD. Veuillez saisir un montant valide.');
             return $this->redirectToRoute('app_profile');
         }
+        switch ($paymentMethod) {
+            case 'paypal':
+                return $this->redirectToRoute('app_paypal_redirect', ['amount' => $amount]);
+            case 'crypto':
+                return $this->redirectToRoute('app_crypto_redirect', ['amount' => $amount]);
+            default:
+                $this->addFlash('danger', 'La méthode de paiement sélectionnée n\'est pas valide. Veuillez réessayer.');
+                return $this->redirectToRoute('app_profile');
+        }
+    }
+
+    #[Route('/deposit/redirect', name: 'app_crypto_redirect', methods: ['GET', 'POST'])]
+    public function cryptoRedirect(Request $request, EntityManagerInterface $em): Response
+    {
+        $amount = (float)$request->query->get('amount');
+        if ($amount <= 0) {
+            $this->addFlash('danger', 'Le montant doit être supérieur à 0 USD. Veuillez saisir un montant valide.');
+            return $this->redirectToRoute('app_profile');
+        }
+        if ($request->isMethod('GET')) {
+            return $this->render('payment/crypto_deposit.html.twig', ['amount' => $amount]);
+        }
+
+        $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
+        $walletAddress = trim($request->request->get('walletAddress'));
+
+        if (!$cryptoType || !$walletAddress) {
+            $this->addFlash('danger', 'Veuillez sélectionner le type de crypto-monnaie et fournir l\'adresse de votre portefeuille.');
+            return $this->redirectToRoute('app_profile');
+        }
+
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        // Créer la transaction
+        $transaction = new Transactions();
+        $transaction->setUser($user)
+            ->setAmount($amount)
+            ->setType('deposit')  // Ajout du type pour cohérence
+            ->setMethod("crypto_deposit ($cryptoType)")
+            ->setStatus('pending')
+            ->setCreatedAt(new \DateTimeImmutable());
+        $em->persist($transaction);
+        $em->flush();
+
+        // Paramètres pour CoinPayments
+        $params = [
+            'amount'      => $amount,
+            'currency1'   => 'USD',
+            'currency2'   => $cryptoType,
+            'buyer_email' => $user->getEmail(),
+            'item_name'   => 'Dépôt sur ' . $this->getParameter('app.site_name'),
+            'ipn_url'     => $this->generateUrl('app_payment_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'success_url' => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'cancel_url'  => $this->generateUrl('app_profile', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'custom'      => $transaction->getId()
+        ];
+
+        try {
+            // Log pour débogage
+            file_put_contents(
+                __DIR__ . '/../../var/log/coinpayments_deposit_request.log',
+                date('Y-m-d H:i:s') . ' - Params: ' . print_r($params, true),
+                FILE_APPEND
+            );
+
+            $response = $this->coinPaymentsApiCall('create_transaction', $params);
+
+            // Log de la réponse
+            file_put_contents(
+                __DIR__ . '/../../var/log/coinpayments_deposit_response.log',
+                date('Y-m-d H:i:s') . ' - Response: ' . print_r($response, true),
+                FILE_APPEND
+            );
+
+            if ($response['error'] !== 'ok') {
+                throw new \Exception($response['error'] ?? 'Erreur inconnue lors de l\'appel à l\'API');
+            }
+
+            // Mettre à jour la transaction avec les détails de CoinPayments
+            if (isset($response['result']['txn_id'])) {
+                $transaction->setExternalId($response['result']['txn_id']);
+                $em->flush();
+            }
+
+            return $this->redirect($response['result']['checkout_url']);
+        } catch (\Exception $e) {
+            // Log de l'exception
+            file_put_contents(
+                __DIR__ . '/../../var/log/coinpayments_deposit_error.log',
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(),
+                FILE_APPEND
+            );
+
+            // Marquer la transaction comme échouée
+            $transaction->setStatus('failed');
+            $em->flush();
+
+            $this->addFlash('danger', 'Une erreur est survenue lors du dépôt: ' . $e->getMessage());
+            return $this->redirectToRoute('app_profile');
+        }
+    }
+
+    #[Route('/payment/ipn-handler', name: 'app_payment_ipn', methods: ['POST'])]
+    public function handleIpn(Request $request, EntityManagerInterface $em): Response
+    {
+        $ipnData = $request->request->all();
+
+        // Log plus détaillé
+        file_put_contents(
+            __DIR__ . '/../../var/log/ipn.log',
+            date('Y-m-d H:i:s') . ' - IPN Data: ' . print_r($ipnData, true),
+            FILE_APPEND
+        );
+
+        if (
+            isset($ipnData['status']) && (int)$ipnData['status'] >= 100 &&
+            isset($ipnData['txn_id']) &&
+            isset($ipnData['amount1']) &&
+            isset($ipnData['custom'])
+        ) {
+            $txnId = $ipnData['txn_id'];
+            $amount = (float)$ipnData['amount1'];
+            $transactionId = (int)$ipnData['custom'];
+
+            $transaction = $em->getRepository(Transactions::class)->find($transactionId);
+            if ($transaction && $transaction->getStatus() !== 'completed') {
+                $transaction->setStatus('completed');
+                $user = $transaction->getUser();
+                if ($user) {
+                    $user->setBalance($user->getBalance() + $transaction->getAmount());
+
+                    // Log du succès
+                    file_put_contents(
+                        __DIR__ . '/../../var/log/deposit_success.log',
+                        date('Y-m-d H:i:s') . ' - Transaction #' . $transactionId . ' complétée. Montant: ' . $amount,
+                        FILE_APPEND
+                    );
+                }
+                $em->flush();
+            }
+        }
+        return new Response('IPN traité', 200);
     }
 
     #[Route('/paypal/redirect', name: 'app_paypal_redirect')]
     public function paypalRedirect(Request $request): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        // Rate limiting
-        $limiter = $this->rateLimiter->create($request->getClientIp());
-        if (false === $limiter->consume(1)->isAccepted()) {
-            $this->addFlash('danger', 'Trop de tentatives. Veuillez réessayer plus tard.');
-            return $this->redirectToRoute('app_profile');
-        }
-
         $amount = (float)$request->query->get('amount');
-
-        // Input validation
-        $constraints = new Assert\Collection([
-            'amount' => [
-                new Assert\NotBlank(),
-                new Assert\Type(['type' => 'numeric']),
-                new Assert\Range(['min' => 1, 'max' => 10000])
-            ]
-        ]);
-
-        $violations = $this->validator->validate([
-            'amount' => $amount
-        ], $constraints);
-
-        if (count($violations) > 0) {
-            foreach ($violations as $violation) {
-                $this->addFlash('danger', $violation->getMessage());
-            }
+        if ($amount <= 0) {
+            $this->addFlash('danger', 'Le montant saisi est invalide. Veuillez saisir un montant supérieur à 0 USD.');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -322,345 +365,94 @@ class PaymentController extends AbstractController
             $client = $this->getPayPalClient();
             $paypalRequest = new OrdersCreateRequest();
             $paypalRequest->prefer('return=representation');
-            $paypalRequest->body = $this->createPayPalOrder($amount);
+            $paypalRequest->body = [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [[
+                    'amount' => [
+                        'currency_code' => 'USD',
+                        'value' => number_format($amount, 2, '.', '')
+                    ]
+                ]],
+                'application_context' => [
+                    'return_url' => $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                    'cancel_url' => $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                    'brand_name' => $this->getParameter('app.site_name'),
+                    'user_action' => 'PAY_NOW',
+                ]
+            ];
+
+            // Log de la requête PayPal
+            file_put_contents(
+                __DIR__ . '/../../var/log/paypal_request.log',
+                date('Y-m-d H:i:s') . ' - Request: ' . print_r($paypalRequest->body, true),
+                FILE_APPEND
+            );
 
             $response = $client->execute($paypalRequest);
 
+            // Log de la réponse PayPal
+            file_put_contents(
+                __DIR__ . '/../../var/log/paypal_response.log',
+                date('Y-m-d H:i:s') . ' - Order ID: ' . $response->result->id,
+                FILE_APPEND
+            );
+
+            $approveUrl = null;
             foreach ($response->result->links as $link) {
                 if ($link->rel === 'approve') {
-                    $request->getSession()->set('paypal_order_id', $response->result->id);
-                    $request->getSession()->set('paypal_amount', $amount);
-                    return $this->redirect($link->href);
+                    $approveUrl = $link->href;
+                    break;
                 }
             }
-
-            throw new \Exception('URL PayPal introuvable');
+            if (!$approveUrl) {
+                throw new \Exception('URL PayPal introuvable');
+            }
+            $request->getSession()->set('paypal_order_id', $response->result->id);
+            $request->getSession()->set('paypal_amount', $amount);
+            return $this->redirect($approveUrl);
         } catch (\Exception $e) {
-            $this->logger->error('PayPal redirect failed', [
-                'error' => $e->getMessage(),
-                'amount' => $amount
-            ]);
-            $this->addFlash('danger', 'Erreur PayPal: ' . $e->getMessage());
+            // Log de l'erreur PayPal
+            file_put_contents(
+                __DIR__ . '/../../var/log/paypal_error.log',
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(),
+                FILE_APPEND
+            );
+
+            $this->addFlash('danger', 'Une erreur est survenue lors de la redirection vers PayPal: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
 
     #[Route('/paypal/return', name: 'paypal_return')]
-    public function paypalReturn(Request $request): Response
+    public function paypalReturn(Request $request, EntityManagerInterface $em): Response
     {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
         $orderId = $request->query->get('token') ?? $request->getSession()->get('paypal_order_id');
         $amount = $request->getSession()->get('paypal_amount');
-
         if (!$orderId || !$amount) {
-            $this->addFlash('danger', 'Commande PayPal introuvable');
+            $this->addFlash('danger', 'Impossible de retrouver votre commande PayPal. Veuillez réessayer.');
             return $this->redirectToRoute('app_profile');
         }
-
         $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        $client = $this->getPayPalClient();
+        $captureRequest = new OrdersCaptureRequest($orderId);
         try {
-            $client = $this->getPayPalClient();
-            $response = $client->execute(new OrdersCaptureRequest($orderId));
+            $response = $client->execute($captureRequest);
 
-            if ($response->result->status === 'COMPLETED') {
-                $this->createPayPalTransaction($user, $amount, $orderId);
-                $request->getSession()->remove('paypal_order_id');
-                $request->getSession()->remove('paypal_amount');
-                $this->addFlash('success', 'Paiement PayPal réussi !');
-            } else {
-                throw new \Exception('Statut PayPal non complet: ' . $response->result->status);
-            }
-        } catch (\Exception $e) {
-            $this->logger->error('PayPal return processing failed', [
-                'error' => $e->getMessage(),
-                'orderId' => $orderId,
-                'user' => $user->getId()
-            ]);
-            $this->addFlash('danger', 'Erreur lors du traitement PayPal: ' . $e->getMessage());
-        }
-
-        return $this->redirectToRoute('app_profile');
-    }
-
-    #[Route('/paypal/cancel', name: 'paypal_cancel')]
-    public function paypalCancel(Request $request): Response
-    {
-        $request->getSession()->remove('paypal_order_id');
-        $request->getSession()->remove('paypal_amount');
-        $this->addFlash('warning', 'Paiement PayPal annulé');
-        return $this->redirectToRoute('app_profile');
-    }
-
-    #[Route('/check-deposits', name: 'app_check_deposits')]
-    public function checkDeposits(): Response
-    {
-        // Security: only accessible via CLI or admin
-        if (!$this->isGranted('ROLE_ADMIN') && php_sapi_name() !== 'cli') {
-            throw $this->createAccessDeniedException();
-        }
-
-        $transactions = $this->entityManager->getRepository(Transactions::class)
-            ->findPendingDeposits();
-
-        $processed = 0;
-        foreach ($transactions as $transaction) {
-            try {
-                $this->verifyAndProcessDeposit($transaction);
-                $processed++;
-            } catch (\Exception $e) {
-                $this->logger->error('Deposit verification failed', [
-                    'transaction' => $transaction->getId(),
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-
-        return new Response(sprintf('Processed %d/%d deposits', $processed, count($transactions)));
-    }
-
-    private function verifyAndProcessDeposit(Transactions $transaction): void
-    {
-        $this->entityManager->beginTransaction();
-
-        try {
-            // Lock transaction row for update
-            $transaction = $this->entityManager->find(
-                Transactions::class,
-                $transaction->getId(),
-                \Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE
+            // Log de la réponse de capture
+            file_put_contents(
+                __DIR__ . '/../../var/log/paypal_capture.log',
+                date('Y-m-d H:i:s') . ' - Order ID: ' . $orderId . ' - Status: ' . $response->result->status,
+                FILE_APPEND
             );
 
-            if ($transaction->getStatus() !== 'pending') {
-                return;
+            if ($response->result->status !== 'COMPLETED') {
+                throw new \Exception('Paiement non complété: ' . $response->result->status);
             }
 
-            $verified = $this->verifyBlockchainTransaction($transaction);
-
-            if ($verified) {
-                $this->transferToMainWallet($transaction);
-
-                $user = $transaction->getUser();
-                $user->setBalance($user->getBalance() + $transaction->getAmount());
-
-                $transaction->setStatus('completed');
-                $this->entityManager->flush();
-                $this->entityManager->commit();
-
-                $this->logger->info('Deposit processed successfully', [
-                    'transaction' => $transaction->getId(),
-                    'user' => $user->getId(),
-                    'amount' => $transaction->getAmount()
-                ]);
-            }
-        } catch (\Exception $e) {
-            $this->entityManager->rollback();
-            throw $e;
-        }
-    }
-
-    private function verifyBlockchainTransaction(Transactions $transaction): bool
-    {
-        $method = $transaction->getMethod();
-        $crypto = str_replace('crypto_', '', $method);
-        $txId = $transaction->getExternalId();
-
-        try {
-            if ($crypto === 'TRX' || $crypto === 'USDT.TRC20') {
-                $transactionInfo = $this->tron->getTransaction($txId);
-
-                if ($transactionInfo['ret'][0]['contractRet'] === 'SUCCESS') {
-                    $transaction->setExternalAddress($transactionInfo['raw_data']['contract'][0]['parameter']['value']['owner_address']);
-                    return true;
-                }
-            }
-
-            return false;
-        } catch (TronErrorException $e) {
-            $this->logger->error('Blockchain verification failed', [
-                'transaction' => $transaction->getId(),
-                'error' => $e->getMessage()
-            ]);
-            return false;
-        }
-    }
-
-    private function transferToMainWallet(Transactions $transaction): void
-    {
-        $crypto = str_replace('crypto_', '', $transaction->getMethod());
-        $amount = $transaction->getAmount();
-        $fromAddress = $transaction->getExternalAddress();
-        $mainAddress = $_ENV['TRON_MAIN_WALLET'];
-
-        try {
-            if ($crypto === 'TRX') {
-                $this->tron->sendTRX($fromAddress, $mainAddress, $amount);
-            } elseif ($crypto === 'USDT.TRC20') {
-                $this->tron->sendTRC20Token($fromAddress, $mainAddress, $amount);
-            }
-
-            $this->logger->info('Funds transferred to main wallet', [
-                'transaction' => $transaction->getId(),
-                'amount' => $amount,
-                'crypto' => $crypto
-            ]);
-        } catch (TronErrorException $e) {
-            $this->logger->error('Funds transfer failed', [
-                'error' => $e->getMessage(),
-                'transaction' => $transaction->getId()
-            ]);
-            throw new \Exception('Transfer failed');
-        }
-    }
-
-    private function generateSecureDepositAddress(string $crypto, Transactions $transaction): string
-    {
-        try {
-            if ($crypto === 'TRX') {
-                $address = $this->tron->generateAddress();
-                $this->tron->assignDepositAddress($address, $transaction->getId());
-                return $address->address;
-            } elseif ($crypto === 'USDT.TRC20') {
-                $address = $this->tron->generateAddress();
-                $this->tron->assignDepositAddress($address, $transaction->getId());
-                return $address->address;
-            }
-
-            throw new \Exception('Unsupported crypto for direct generation');
-        } catch (TronErrorException $e) {
-            $this->logger->error('Address generation failed', [
-                'error' => $e->getMessage(),
-                'transaction' => $transaction->getId()
-            ]);
-            throw new \Exception('Failed to generate address');
-        }
-    }
-
-    private function validateCryptoAddress(string $crypto, string $address): bool
-    {
-        try {
-            if ($crypto === 'TRX' || $crypto === 'USDT.TRC20') {
-                return $this->tron->validateAddress($address);
-            }
-
-            // Fallback to API validation for other cryptos
-            $response = $this->tronGridClient->get("wallet/validateaddress?address=$address");
-            $data = json_decode($response->getBody(), true);
-            return $data['valid'] ?? false;
-        } catch (\Exception $e) {
-            $this->logger->error('Address validation failed', [
-                'error' => $e->getMessage(),
-                'crypto' => $crypto,
-                'address' => substr($address, 0, 10) . '...'
-            ]);
-            return false;
-        }
-    }
-
-    private function getCurrentRate(string $crypto): float
-    {
-        $cacheKey = 'crypto_rate_' . $crypto;
-
-        return $this->cache->get($cacheKey, function (ItemInterface $item) use ($crypto) {
-            $item->expiresAfter(300); // 5 min cache
-
-            try {
-                $response = $this->coinGeckoClient->get("simple/price?ids=$crypto&vs_currencies=usd");
-                $data = json_decode($response->getBody(), true);
-
-                if (!isset($data[$crypto]['usd'])) {
-                    throw new \Exception('Exchange rate not available');
-                }
-
-                return (float)$data[$crypto]['usd'];
-            } catch (\Exception $e) {
-                $this->logger->error('Rate fetch failed', [
-                    'crypto' => $crypto,
-                    'error' => $e->getMessage()
-                ]);
-                throw $e;
-            }
-        });
-    }
-
-    private function convertUsdToCrypto(float $usdAmount, string $crypto): float
-    {
-        $rate = $this->getCurrentRate($crypto);
-        return $usdAmount / $rate;
-    }
-
-    private function getNetworkFee(string $crypto): float
-    {
-        try {
-            $rate = $this->getCurrentRate($crypto);
-
-            return match ($crypto) {
-                'BTC' => 0.0003 * $rate,
-                'ETH' => 0.0005 * $rate,
-                'TRX' => 0.1 * $rate,
-                'USDT.TRC20' => 1.0,
-                default => 1.0
-            };
-        } catch (\Exception $e) {
-            $this->logger->error('Network fee calculation failed', [
-                'error' => $e->getMessage(),
-                'crypto' => $crypto
-            ]);
-            return 1.0;
-        }
-    }
-
-    private function calculateWithdrawalFees(float $amount, string $crypto): float
-    {
-        $baseFee = max($amount * 0.01, 1.0);
-
-        if (in_array($crypto, ['BTC', 'ETH'])) {
-            $baseFee += 0.5;
-        }
-
-        return $baseFee;
-    }
-
-    private function isCryptoSupported(string $crypto): bool
-    {
-        $supported = [
-            'BTC',
-            'ETH',
-            'TRX',
-            'USDT',
-            'USDT.TRC20',
-            'USDT.ERC20',
-            'BNB',
-            'XRP'
-        ];
-
-        return in_array($crypto, $supported);
-    }
-
-    private function createPayPalOrder(float $amount): array
-    {
-        return [
-            'intent' => 'CAPTURE',
-            'purchase_units' => [[
-                'amount' => [
-                    'currency_code' => 'USD',
-                    'value' => number_format($amount, 2, '.', '')
-                ]
-            ]],
-            'application_context' => [
-                'return_url' => $this->generateUrl('paypal_return', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'cancel_url' => $this->generateUrl('paypal_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'brand_name' => $this->getParameter('app.site_name'),
-                'user_action' => 'PAY_NOW',
-            ]
-        ];
-    }
-
-    private function createPayPalTransaction(User $user, float $amount, string $orderId): void
-    {
-        $this->entityManager->beginTransaction();
-
-        try {
             $transaction = (new Transactions())
                 ->setUser($user)
                 ->setAmount($amount)
@@ -669,43 +461,117 @@ class PaymentController extends AbstractController
                 ->setStatus('completed')
                 ->setExternalId($orderId)
                 ->setCreatedAt(new \DateTimeImmutable());
-
             $user->setBalance($user->getBalance() + $amount);
+            $em->persist($transaction);
+            $em->persist($user);
+            $em->flush();
 
-            $this->entityManager->persist($transaction);
-            $this->entityManager->persist($user);
-            $this->entityManager->flush();
-            $this->entityManager->commit();
-
-            $this->logger->info('PayPal transaction completed', [
-                'transaction' => $transaction->getId(),
-                'user' => $user->getId(),
-                'amount' => $amount
-            ]);
+            $request->getSession()->remove('paypal_order_id');
+            $request->getSession()->remove('paypal_amount');
+            $this->addFlash('success', sprintf('Votre dépôt de %.2f USD a été effectué avec succès.', $amount));
         } catch (\Exception $e) {
-            $this->entityManager->rollback();
-            $this->logger->error('PayPal transaction failed', [
-                'error' => $e->getMessage(),
-                'orderId' => $orderId,
-                'user' => $user->getId()
-            ]);
-            throw $e;
+            // Log de l'erreur de capture
+            file_put_contents(
+                __DIR__ . '/../../var/log/paypal_capture_error.log',
+                date('Y-m-d H:i:s') . ' - Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString(),
+                FILE_APPEND
+            );
+
+            $this->addFlash('danger', 'Une erreur est survenue lors du traitement de votre paiement PayPal: ' . $e->getMessage());
         }
+        return $this->redirectToRoute('app_profile');
     }
+
+    #[Route('/paypal/cancel', name: 'paypal_cancel')]
+    public function paypalCancel(Request $request): Response
+    {
+        $request->getSession()->remove('paypal_order_id');
+        $request->getSession()->remove('paypal_amount');
+        $this->addFlash('warning', 'Votre paiement PayPal a été annulé.');
+        return $this->redirectToRoute('app_profile');
+    }
+
+    private function coinPaymentsApiCall(string $cmd, array $params = []): array
+    {
+        // Vérifier que les clés API sont configurées
+        if (empty($_ENV['COINPAYMENTS_API_SECRET']) || empty($_ENV['COINPAYMENTS_API_KEY'])) {
+            throw new \Exception("Les clés API CoinPayments ne sont pas configurées");
+        }
+
+        $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
+        $publicKey  = $_ENV['COINPAYMENTS_API_KEY'];
+
+        // Utiliser microtime pour un nonce plus précis et unique
+        $nonce = (int)(microtime(true) * 1000); // Millisecondes depuis l'époque Unix
+
+        // On ajoute le nonce et les autres paramètres obligatoires
+        $params += [
+            'version' => 1,
+            'cmd'     => $cmd,
+            'key'     => $publicKey,
+            'format'  => 'json',
+            'nonce'   => $nonce, // Utilisation du nonce plus précis
+        ];
+
+        $postData = http_build_query($params, '', '&');
+        $hmac     = hash_hmac('sha512', $postData, $privateKey);
+
+        $ch = curl_init('https://www.coinpayments.net/api.php');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER    => true,
+            CURLOPT_SSL_VERIFYPEER    => true,
+            CURLOPT_HTTPHEADER        => ["HMAC: $hmac"],
+            CURLOPT_POST              => true,
+            CURLOPT_POSTFIELDS        => $postData,
+            CURLOPT_TIMEOUT           => 30,
+        ]);
+
+        $data = curl_exec($ch);
+        if ($data === false) {
+            $err  = curl_error($ch);
+            $info = curl_getinfo($ch);
+            curl_close($ch);
+            throw new \Exception("Erreur cURL: $err – Info: " . print_r($info, true));
+        }
+
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode !== 200) {
+            throw new \Exception("Réponse HTTP $httpCode – Réponse brute: $data");
+        }
+
+        $result = json_decode($data, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception("JSON invalide: " . json_last_error_msg() . " – Données: $data");
+        }
+
+        return $result;
+    }
+
 
     private function getPayPalClient(): PayPalHttpClient
     {
-        $clientId = $_ENV['PAYPAL_CLIENT_ID'];
-        $clientSecret = $_ENV['PAYPAL_CLIENT_SECRET'];
-
-        if (empty($clientId) || empty($clientSecret)) {
-            throw new \RuntimeException('PayPal credentials not configured');
+        // Vérifier que les clés API sont configurées
+        if (empty($_ENV['PAYPAL_CLIENT_ID']) || empty($_ENV['PAYPAL_CLIENT_SECRET'])) {
+            throw new \Exception("Les clés API PayPal ne sont pas configurées");
         }
 
+        $clientId = $_ENV['PAYPAL_CLIENT_ID'];
+        $clientSecret = $_ENV['PAYPAL_CLIENT_SECRET'];
         $environment = $_ENV['APP_ENV'] === 'prod'
             ? new ProductionEnvironment($clientId, $clientSecret)
             : new SandboxEnvironment($clientId, $clientSecret);
-
         return new PayPalHttpClient($environment);
+    }
+
+    // --- Méthodes de paiement non implémentées ---
+    private function processCardPayment(User $user, float $amount): bool
+    {
+        return false;
+    }
+
+    private function processMobileMoney(User $user, float $amount): bool
+    {
+        return false;
     }
 }

@@ -158,6 +158,10 @@
 			margin-bottom: 20px;
 		}
 	</style>
+
+	 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+	 <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
 {% endblock %}
 
 {% block body %}
@@ -271,399 +275,399 @@
 	</div>
 {% endblock %}
 
-{% block customScript %} <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-	 <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
+{% block customScript %}
 
 	 <script>
-			document.addEventListener('DOMContentLoaded', function() {
-				const ctx = document.getElementById('tradingChart');
-				const loadingOverlay = document.getElementById('chartLoading');
-				const errorElement = document.getElementById('chartError');
-				
-				console.log("Élément canvas:", ctx);
-				console.log("Dimensions canvas:", ctx ? { width: ctx.width, height: ctx.height, offsetWidth: ctx.offsetWidth, offsetHeight: ctx.offsetHeight } : 'Non trouvé');
-				
-				if (!ctx) {
-					console.error("Élément canvas introuvable");
-					return;
-				}
-			
-				let chartInstance = null;
-				const productSlug = '{{ prod.slug }}';
-				let updateInterval;
-			
-				// Récupération des boutons de plage de temps
-				const rangeButtons = document.querySelectorAll('.range-btn');
-			
-				/**
-				 * Met à jour le graphique en fonction de la plage sélectionnée.
-				 * @param {String} range - "1d", "5d", "1m", "ytd", "1y", "5y", "max"
-				 */
-				async function updateChart(range) {
-					try {
-						console.log(`Mise à jour du graphique avec la plage: ${range}`);
-						loadingOverlay.style.display = 'flex';
-						errorElement.style.display = 'none';
-						
-						const response = await fetch(`/products/${productSlug}/dashboard/data?range=${range}`);
-						console.log("Statut de la réponse:", response.status);
-						
-						if (!response.ok) {
-							throw new Error(`Erreur HTTP: ${response.status}`);
-						}
-						
-						const newData = await response.json();
-						console.log("Données reçues pour la plage", range, ":", newData);
-						
-						if (!newData.price || newData.price.length === 0) {
-							throw new Error("Aucune donnée disponible");
-						}
-						
-						if (chartInstance) {
-							console.log("Mise à jour du graphique existant");
-							// Mise à jour des données existantes
-							const processedData = processData(newData.price);
-							chartInstance.data.datasets[0].data = processedData;
-							chartInstance.update('none');
-							console.log("Graphique mis à jour avec", processedData.length, "points");
-						} else {
-							console.log("Création d'un nouveau graphique");
-							// Création initiale du graphique
-							initChart(newData);
-						}
-						
-						// Mise à jour de l'affichage du prix
-						updatePriceDisplay(newData);
-						
-					} catch (error) {
-						console.error('Erreur lors de la mise à jour du graphique:', error);
-						errorElement.style.display = 'block';
-						errorElement.querySelector('span').textContent = 
-							`Erreur lors du chargement des données: ${error.message}`;
-					} finally {
-						loadingOverlay.style.display = 'none';
-					}
-				}
-			
-				function initChart(chartData) {
-					console.log("Initialisation du graphique avec les données:", chartData);
+				document.addEventListener('turbo:load', function() {
+					const ctx = document.getElementById('tradingChart');
+					const loadingOverlay = document.getElementById('chartLoading');
+					const errorElement = document.getElementById('chartError');
+	
+					alert("ok")
 					
-					if (chartInstance) {
-						console.log("Destruction du graphique existant");
-						chartInstance.destroy();
-					}
+					console.log("Élément canvas:", ctx);
+					console.log("Dimensions canvas:", ctx ? { width: ctx.width, height: ctx.height, offsetWidth: ctx.offsetWidth, offsetHeight: ctx.offsetHeight } : 'Non trouvé');
 					
-					const processedData = processData(chartData.price);
-					console.log("Données processées pour le graphique:", processedData);
-					
-					try {
-						chartInstance = new Chart(ctx, {
-							type: 'line',
-							data: {
-								datasets: [{
-									label: 'Prix',
-									data: processedData,
-									borderColor: '#1a73e8',
-									borderWidth: 2,
-									backgroundColor: 'rgba(26, 115, 232, 0.1)',
-									fill: true,
-									tension: 0.4,
-									pointRadius: 0
-								}]
-							},
-							options: getChartOptions()
-						});
-						console.log("Graphique initialisé avec succès");
-					} catch (e) {
-						console.error("Erreur lors de la création du graphique:", e);
-						fallbackInitChart();
-					}
-			
-					// Actualiser les données toutes les minutes
-					if (updateInterval) {
-						clearInterval(updateInterval);
-					}
-					
-					updateInterval = setInterval(() => {
-						const activeButton = document.querySelector('.range-btn.active');
-						const currentRange = activeButton ? activeButton.dataset.range : '1d';
-						console.log("Actualisation automatique des données pour la plage:", currentRange);
-						updateChart(currentRange);
-					}, 60000);
-				}
-				
-				function getChartOptions() {
-					return {
-						responsive: true,
-						maintainAspectRatio: false,
-						interaction: {
-							mode: 'nearest',
-							axis: 'x',
-							intersect: false
-						},
-						plugins: {
-							legend: { display: false },
-							tooltip: {
-								mode: 'nearest',
-								intersect: false,
-								backgroundColor: '#1e1e1e',
-								titleColor: '#e0e0e0',
-								bodyColor: '#b0b0b0',
-								borderColor: '#333',
-								borderWidth: 1,
-								padding: 10,
-								displayColors: false,
-								callbacks: {
-									label: (context) => `Prix: $${context.parsed.y.toFixed(2)}`,
-									title: (items) => new Date(items[0].parsed.x).toLocaleString()
-								}
-							}
-						},
-						scales: {
-							x: {
-								type: 'time',
-								time: {
-									tooltipFormat: 'PPpp',
-									displayFormats: {
-										day: 'MMM d'
-									}
-								},
-								grid: { display: false, drawBorder: false },
-								ticks: { color: '#b0b0b0' }
-							},
-							y: {
-								position: 'right',
-								grid: { color: '#333', drawBorder: false },
-								ticks: {
-									color: '#b0b0b0',
-									callback: (value) => `$${value}`
-								}
-							}
-						}
-					};
-				}
-				
-				function updatePriceDisplay(data) {
-					console.log("Mise à jour de l'affichage du prix:", data);
-					
-					if (!data.price || data.price.length === 0) {
-						console.warn("Aucune donnée pour mettre à jour l'affichage du prix");
+					if (!ctx) {
+						console.error("Élément canvas introuvable");
 						return;
 					}
-					
-					const latestPrice = data.price[data.price.length - 1].y;
-					const previousPrice = data.price[data.price.length - 2]?.y || latestPrice;
-					const priceDiff = latestPrice - previousPrice;
-					const pricePercent = (priceDiff / previousPrice) * 100;
-					
-					console.log("Dernier prix:", latestPrice);
-					console.log("Prix précédent:", previousPrice);
-					console.log("Différence:", priceDiff);
-					console.log("Pourcentage:", pricePercent);
-					
-					const priceElement = document.querySelector('.chart-price');
-					const changeElement = document.querySelector('.chart-change');
-					
-					if (priceElement) {
-						priceElement.textContent = `$${latestPrice.toFixed(2)}`;
-						console.log("Élément de prix mis à jour:", priceElement.textContent);
-					} else {
-						console.warn("Élément d'affichage du prix introuvable");
-					}
-					
-					if (changeElement) {
-						changeElement.textContent = `${pricePercent.toFixed(2)}% (${priceDiff.toFixed(2)})`;
-						changeElement.className = `chart-change ${priceDiff >= 0 ? 'positive' : 'negative'}`;
-						console.log("Élément de variation mis à jour:", changeElement.textContent);
-					} else {
-						console.warn("Élément d'affichage de la variation introuvable");
-					}
-				}
-			
-				function processData(rawData) {
-					console.log("Traitement des données brutes:", rawData);
-					
-					if (!Array.isArray(rawData)) {
-						console.error("Les données brutes ne sont pas un tableau:", rawData);
-						return [];
-					}
-					
-					const processed = rawData.map(item => {
+				
+					let chartInstance = null;
+					const productSlug = '{{ prod.slug }}';
+					let updateInterval;
+				
+					// Récupération des boutons de plage de temps
+					const rangeButtons = document.querySelectorAll('.range-btn');
+				
+					/**
+					 * Met à jour le graphique en fonction de la plage sélectionnée.
+					 * @param {String} range - "1d", "5d", "1m", "ytd", "1y", "5y", "max"
+					 */
+					async function updateChart(range) {
 						try {
-							if (!item || typeof item !== 'object') {
-								console.warn("Donnée invalide, pas un objet:", item);
-								return null;
+							console.log(`Mise à jour du graphique avec la plage: ${range}`);
+							loadingOverlay.style.display = 'flex';
+							errorElement.style.display = 'none';
+							
+							const response = await fetch(`/products/${productSlug}/dashboard/data?range=${range}`);
+							console.log("Statut de la réponse:", response.status);
+							
+							if (!response.ok) {
+								throw new Error(`Erreur HTTP: ${response.status}`);
 							}
 							
-							if (!item.x || !item.y) {
-								console.warn("Donnée invalide, missing x or y:", item);
-								return null;
+							const newData = await response.json();
+							console.log("Données reçues pour la plage", range, ":", newData);
+							
+							if (!newData.price || newData.price.length === 0) {
+								throw new Error("Aucune donnée disponible");
 							}
 							
-							const dateObj = new Date(item.x);
-							const numValue = parseFloat(item.y);
-							
-							if (isNaN(dateObj.getTime())) {
-								console.warn(`Date invalide: "${item.x}"`);
-								return null;
-							}
-							
-							if (isNaN(numValue)) {
-								console.warn(`Valeur numérique invalide: "${item.y}"`);
-								return null;
-							}
-							
-							const result = { 
-								x: dateObj, 
-								y: numValue 
-							};
-							console.log(`Conversion: ${item.x} → ${result.x}, ${item.y} → ${result.y}`);
-							return result;
-						} catch (e) {
-							console.warn("Erreur lors du traitement de la donnée:", item, e);
-							return null;
-						}
-					}).filter(item => item !== null);
-					
-					console.log("Données traitées:", processed);
-					
-					if (processed.length === 0) {
-						console.warn("Aucune donnée valide après traitement!");
-					}
-					
-					return processed;
-				}
-			
-				function fallbackInitChart() {
-					console.log("Tentative d'initialisation de secours du graphique");
-					
-					// Données de test simples
-					const testData = [
-						{ x: new Date(Date.now() - 86400000), y: 100 },
-						{ x: new Date(Date.now() - 43200000), y: 150 },
-						{ x: new Date(), y: 200 }
-					];
-					
-					try {
-						chartInstance = new Chart(ctx, {
-							type: 'line',
-							data: {
-								datasets: [{
-									label: 'Prix test',
-									data: testData,
-									borderColor: '#1a73e8',
-									borderWidth: 2,
-									backgroundColor: 'rgba(26, 115, 232, 0.1)',
-									fill: true,
-									tension: 0.4,
-									pointRadius: 0
-								}]
-							},
-							options: getChartOptions()
-						});
-						
-						console.log("Graphique de secours initialisé");
-					} catch (e) {
-						console.error("Échec de l'initialisation du graphique de secours:", e);
-					}
-				}
-			
-				// Ajouter un bouton pour tester manuellement
-				const chartContainer = document.querySelector('.chart-container');
-				const testButton = document.createElement('button');
-				testButton.textContent = "Tester graphique";
-				testButton.style.position = "absolute";
-				testButton.style.top = "10px";
-				testButton.style.left = "10px";
-				testButton.style.zIndex = "100";
-				testButton.style.backgroundColor = "#2e2e2e";
-				testButton.style.color = "#e0e0e0";
-				testButton.style.border = "1px solid #444";
-				testButton.style.padding = "6px 12px";
-				testButton.style.borderRadius = "4px";
-				testButton.style.cursor = "pointer";
-				testButton.addEventListener('click', fallbackInitChart);
-				chartContainer.appendChild(testButton);
-			
-				// Initialisation avec les données Twig
-				try {
-					// Vérifiez d'abord si la variable chartData existe
-					if (typeof chartData === 'undefined') {
-						console.log("Tentative de récupération des données depuis le template Twig");
-						
-						// Tentative de récupération des données encodées par Twig
-						const chartDataScript = document.createElement('script');
-						chartDataScript.textContent = `
-							try {
-								window.initialChartData = {{ chartData|json_encode|raw }};
-								console.log("Données Twig récupérées:", window.initialChartData);
-							} catch (e) {
-								console.error("Erreur lors de la récupération des données Twig:", e);
-							}
-						`;
-						document.head.appendChild(chartDataScript);
-						
-						// Attendre un peu pour que le script s'exécute
-						setTimeout(() => {
-							const initialData = window.initialChartData;
-							
-							if (initialData && initialData.price && initialData.price.length > 0) {
-								console.log("Initialisation avec les données Twig récupérées");
-								initChart(initialData);
+							if (chartInstance) {
+								console.log("Mise à jour du graphique existant");
+								// Mise à jour des données existantes
+								const processedData = processData(newData.price);
+								chartInstance.data.datasets[0].data = processedData;
+								chartInstance.update('none');
+								console.log("Graphique mis à jour avec", processedData.length, "points");
 							} else {
-								console.error("Données Twig invalides ou vides");
+								console.log("Création d'un nouveau graphique");
+								// Création initiale du graphique
+								initChart(newData);
+							}
+							
+							// Mise à jour de l'affichage du prix
+							updatePriceDisplay(newData);
+							
+						} catch (error) {
+							console.error('Erreur lors de la mise à jour du graphique:', error);
+							errorElement.style.display = 'block';
+							errorElement.querySelector('span').textContent = 
+								`Erreur lors du chargement des données: ${error.message}`;
+						} finally {
+							loadingOverlay.style.display = 'none';
+						}
+					}
+				
+					function initChart(chartData) {
+						console.log("Initialisation du graphique avec les données:", chartData);
+						
+						if (chartInstance) {
+							console.log("Destruction du graphique existant");
+							chartInstance.destroy();
+						}
+						
+						const processedData = processData(chartData.price);
+						console.log("Données processées pour le graphique:", processedData);
+						
+						try {
+							chartInstance = new Chart(ctx, {
+								type: 'line',
+								data: {
+									datasets: [{
+										label: 'Prix',
+										data: processedData,
+										borderColor: '#1a73e8',
+										borderWidth: 2,
+										backgroundColor: 'rgba(26, 115, 232, 0.1)',
+										fill: true,
+										tension: 0.4,
+										pointRadius: 0
+									}]
+								},
+								options: getChartOptions()
+							});
+							console.log("Graphique initialisé avec succès");
+						} catch (e) {
+							console.error("Erreur lors de la création du graphique:", e);
+							fallbackInitChart();
+						}
+				
+						// Actualiser les données toutes les minutes
+						if (updateInterval) {
+							clearInterval(updateInterval);
+						}
+						
+						updateInterval = setInterval(() => {
+							const activeButton = document.querySelector('.range-btn.active');
+							const currentRange = activeButton ? activeButton.dataset.range : '1d';
+							console.log("Actualisation automatique des données pour la plage:", currentRange);
+							updateChart(currentRange);
+						}, 60000);
+					}
+					
+					function getChartOptions() {
+						return {
+							responsive: true,
+							maintainAspectRatio: false,
+							interaction: {
+								mode: 'nearest',
+								axis: 'x',
+								intersect: false
+							},
+							plugins: {
+								legend: { display: false },
+								tooltip: {
+									mode: 'nearest',
+									intersect: false,
+									backgroundColor: '#1e1e1e',
+									titleColor: '#e0e0e0',
+									bodyColor: '#b0b0b0',
+									borderColor: '#333',
+									borderWidth: 1,
+									padding: 10,
+									displayColors: false,
+									callbacks: {
+										label: (context) => `Prix: $${context.parsed.y.toFixed(2)}`,
+										title: (items) => new Date(items[0].parsed.x).toLocaleString()
+									}
+								}
+							},
+							scales: {
+								x: {
+									type: 'time',
+									time: {
+										tooltipFormat: 'PPpp',
+										displayFormats: {
+											day: 'MMM d'
+										}
+									},
+									grid: { display: false, drawBorder: false },
+									ticks: { color: '#b0b0b0' }
+								},
+								y: {
+									position: 'right',
+									grid: { color: '#333', drawBorder: false },
+									ticks: {
+										color: '#b0b0b0',
+										callback: (value) => `$${value}`
+									}
+								}
+							}
+						};
+					}
+					
+					function updatePriceDisplay(data) {
+						console.log("Mise à jour de l'affichage du prix:", data);
+						
+						if (!data.price || data.price.length === 0) {
+							console.warn("Aucune donnée pour mettre à jour l'affichage du prix");
+							return;
+						}
+						
+						const latestPrice = data.price[data.price.length - 1].y;
+						const previousPrice = data.price[data.price.length - 2]?.y || latestPrice;
+						const priceDiff = latestPrice - previousPrice;
+						const pricePercent = (priceDiff / previousPrice) * 100;
+						
+						console.log("Dernier prix:", latestPrice);
+						console.log("Prix précédent:", previousPrice);
+						console.log("Différence:", priceDiff);
+						console.log("Pourcentage:", pricePercent);
+						
+						const priceElement = document.querySelector('.chart-price');
+						const changeElement = document.querySelector('.chart-change');
+						
+						if (priceElement) {
+							priceElement.textContent = `$${latestPrice.toFixed(2)}`;
+							console.log("Élément de prix mis à jour:", priceElement.textContent);
+						} else {
+							console.warn("Élément d'affichage du prix introuvable");
+						}
+						
+						if (changeElement) {
+							changeElement.textContent = `${pricePercent.toFixed(2)}% (${priceDiff.toFixed(2)})`;
+							changeElement.className = `chart-change ${priceDiff >= 0 ? 'positive' : 'negative'}`;
+							console.log("Élément de variation mis à jour:", changeElement.textContent);
+						} else {
+							console.warn("Élément d'affichage de la variation introuvable");
+						}
+					}
+				
+					function processData(rawData) {
+						console.log("Traitement des données brutes:", rawData);
+						
+						if (!Array.isArray(rawData)) {
+							console.error("Les données brutes ne sont pas un tableau:", rawData);
+							return [];
+						}
+						
+						const processed = rawData.map(item => {
+							try {
+								if (!item || typeof item !== 'object') {
+									console.warn("Donnée invalide, pas un objet:", item);
+									return null;
+								}
+								
+								if (!item.x || !item.y) {
+									console.warn("Donnée invalide, missing x or y:", item);
+									return null;
+								}
+								
+								const dateObj = new Date(item.x);
+								const numValue = parseFloat(item.y);
+								
+								if (isNaN(dateObj.getTime())) {
+									console.warn(`Date invalide: "${item.x}"`);
+									return null;
+								}
+								
+								if (isNaN(numValue)) {
+									console.warn(`Valeur numérique invalide: "${item.y}"`);
+									return null;
+								}
+								
+								const result = { 
+									x: dateObj, 
+									y: numValue 
+								};
+								console.log(`Conversion: ${item.x} → ${result.x}, ${item.y} → ${result.y}`);
+								return result;
+							} catch (e) {
+								console.warn("Erreur lors du traitement de la donnée:", item, e);
+								return null;
+							}
+						}).filter(item => item !== null);
+						
+						console.log("Données traitées:", processed);
+						
+						if (processed.length === 0) {
+							console.warn("Aucune donnée valide après traitement!");
+						}
+						
+						return processed;
+					}
+				
+					function fallbackInitChart() {
+						console.log("Tentative d'initialisation de secours du graphique");
+						
+						// Données de test simples
+						const testData = [
+							{ x: new Date(Date.now() - 86400000), y: 100 },
+							{ x: new Date(Date.now() - 43200000), y: 150 },
+							{ x: new Date(), y: 200 }
+						];
+						
+						try {
+							chartInstance = new Chart(ctx, {
+								type: 'line',
+								data: {
+									datasets: [{
+										label: 'Prix test',
+										data: testData,
+										borderColor: '#1a73e8',
+										borderWidth: 2,
+										backgroundColor: 'rgba(26, 115, 232, 0.1)',
+										fill: true,
+										tension: 0.4,
+										pointRadius: 0
+									}]
+								},
+								options: getChartOptions()
+							});
+							
+							console.log("Graphique de secours initialisé");
+						} catch (e) {
+							console.error("Échec de l'initialisation du graphique de secours:", e);
+						}
+					}
+				
+					// Ajouter un bouton pour tester manuellement
+					const chartContainer = document.querySelector('.chart-container');
+					const testButton = document.createElement('button');
+					testButton.textContent = "Tester graphique";
+					testButton.style.position = "absolute";
+					testButton.style.top = "10px";
+					testButton.style.left = "10px";
+					testButton.style.zIndex = "100";
+					testButton.style.backgroundColor = "#2e2e2e";
+					testButton.style.color = "#e0e0e0";
+					testButton.style.border = "1px solid #444";
+					testButton.style.padding = "6px 12px";
+					testButton.style.borderRadius = "4px";
+					testButton.style.cursor = "pointer";
+					testButton.addEventListener('click', fallbackInitChart);
+					chartContainer.appendChild(testButton);
+				
+					// Initialisation avec les données Twig
+					try {
+						// Vérifiez d'abord si la variable chartData existe
+						if (typeof chartData === 'undefined') {
+							console.log("Tentative de récupération des données depuis le template Twig");
+							
+							// Tentative de récupération des données encodées par Twig
+							const chartDataScript = document.createElement('script');
+							chartDataScript.textContent = `
+								try {
+									window.initialChartData = {{ chartData|json_encode|raw }};
+									console.log("Données Twig récupérées:", window.initialChartData);
+								} catch (e) {
+									console.error("Erreur lors de la récupération des données Twig:", e);
+								}
+							`;
+							document.head.appendChild(chartDataScript);
+							
+							// Attendre un peu pour que le script s'exécute
+							setTimeout(() => {
+								const initialData = window.initialChartData;
+								
+								if (initialData && initialData.price && initialData.price.length > 0) {
+									console.log("Initialisation avec les données Twig récupérées");
+									initChart(initialData);
+								} else {
+									console.error("Données Twig invalides ou vides");
+									throw new Error("Aucune donnée initiale disponible");
+								}
+							}, 100);
+						} else {
+							console.log("Données chartData disponibles directement:", chartData);
+							
+							if (chartData.price && chartData.price.length > 0) {
+								console.log("Nombre de points de données prix:", chartData.price.length);
+								console.log("Premier point de données:", chartData.price[0]);
+								console.log("Dernier point de données:", chartData.price[chartData.price.length - 1]);
+								initChart(chartData);
+							} else {
 								throw new Error("Aucune donnée initiale disponible");
 							}
-						}, 100);
-					} else {
-						console.log("Données chartData disponibles directement:", chartData);
-						
-						if (chartData.price && chartData.price.length > 0) {
-							console.log("Nombre de points de données prix:", chartData.price.length);
-							console.log("Premier point de données:", chartData.price[0]);
-							console.log("Dernier point de données:", chartData.price[chartData.price.length - 1]);
-							initChart(chartData);
-						} else {
-							throw new Error("Aucune donnée initiale disponible");
 						}
+					} catch (e) {
+						console.error("Erreur lors de l'initialisation du graphique:", e);
+						errorElement.style.display = 'block';
+						errorElement.querySelector('span').textContent = 
+							`Erreur lors de l'initialisation du graphique: ${e.message}`;
+						
+						// Essayer la méthode de secours après un court délai
+						setTimeout(fallbackInitChart, 500);
 					}
-				} catch (e) {
-					console.error("Erreur lors de l'initialisation du graphique:", e);
-					errorElement.style.display = 'block';
-					errorElement.querySelector('span').textContent = 
-						`Erreur lors de l'initialisation du graphique: ${e.message}`;
+				
+					// Gestion des boutons de plage de temps
+					rangeButtons.forEach(button => {
+						button.addEventListener('click', () => {
+							console.log("Bouton de plage cliqué:", button.dataset.range);
+							rangeButtons.forEach(btn => btn.classList.remove('active'));
+							button.classList.add('active');
+							updateChart(button.dataset.range);
+						});
+					});
 					
-					// Essayer la méthode de secours après un court délai
-					setTimeout(fallbackInitChart, 500);
-				}
-			
-				// Gestion des boutons de plage de temps
-				rangeButtons.forEach(button => {
-					button.addEventListener('click', () => {
-						console.log("Bouton de plage cliqué:", button.dataset.range);
-						rangeButtons.forEach(btn => btn.classList.remove('active'));
-						button.classList.add('active');
-						updateChart(button.dataset.range);
+					// Vérifier si le graphique s'initialise correctement
+					setTimeout(() => {
+						if (!chartInstance) {
+							console.warn("Le graphique n'a pas été initialisé après 2 secondes, tentative de secours");
+							fallbackInitChart();
+						}
+					}, 2000);
+					
+					// Nettoyage lorsque la page est quittée
+					window.addEventListener('beforeunload', () => {
+						if (chartInstance) {
+							console.log("Destruction du graphique lors de la fermeture de la page");
+							chartInstance.destroy();
+						}
+						clearInterval(updateInterval);
 					});
 				});
-				
-				// Vérifier si le graphique s'initialise correctement
-				setTimeout(() => {
-					if (!chartInstance) {
-						console.warn("Le graphique n'a pas été initialisé après 2 secondes, tentative de secours");
-						fallbackInitChart();
-					}
-				}, 2000);
-				
-				// Nettoyage lorsque la page est quittée
-				window.addEventListener('beforeunload', () => {
-					if (chartInstance) {
-						console.log("Destruction du graphique lors de la fermeture de la page");
-						chartInstance.destroy();
-					}
-					clearInterval(updateInterval);
-				});
-			});
-				</script>
+					</script>
 {% endblock %}

@@ -20,6 +20,31 @@ class PaymentController extends AbstractController
     private const MAX_DEPOSIT_AMOUNT = 10000.0;
     private const MAX_WITHDRAWAL_AMOUNT = 5000.0;
 
+    private const SUPPORTED_CRYPTOS = [
+        'BNB' => 'Binance Coin (BNB)',
+        'BUSD.BEP20' => 'BUSD Token (BSC Chain) - BEP20',
+        'BTC' => 'Bitcoin (BTC)',
+        'BCH' => 'Bitcoin Cash (BCH)',
+        'ADA' => 'Cardano (ADA)',
+        'DASH' => 'Dash (DASH)',
+        'DOGE' => 'Dogecoin (DOGE)',
+        'EOS' => 'EOS (EOS)',
+        'ETH' => 'Ethereum (ETH)',
+        'ETC' => 'Ethereum Classic (ETC)',
+        'LTC' => 'Litecoin (LTC)',
+        'XMR' => 'Monero (XMR)',
+        'USDT.PRC20' => 'POLYGON (USDT.PRC20)',
+        'XRP' => 'Ripple (XRP)',
+        'XLM' => 'Stellar (XLM)',
+        'TRX' => 'TRON (TRX)',
+        'USDT.BEP20' => 'USDT (BEP20)',
+        'USDT.ERC20' => 'USDT (ERC20)',
+        'USDT.MATIC' => 'USDT (Polygon/MATIC)',
+        'USDT.TON' => 'USDT (TON)',
+        'USDT.TRC20' => 'USDT (TRC20)',
+        'ZEC' => 'Zcash (ZEC)'
+    ];
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RequestStack $requestStack
@@ -56,6 +81,7 @@ class PaymentController extends AbstractController
         $currency = strtoupper(trim($request->request->get('currency')));
         $address = trim($request->request->get('recipient'));
 
+        // Validation du montant
         if ($amountUsd < self::MIN_WITHDRAWAL_AMOUNT) {
             return $this->redirectWithFlash('danger', sprintf(
                 'Le montant de retrait doit être d\'au moins %.2f USD.',
@@ -63,10 +89,23 @@ class PaymentController extends AbstractController
             ));
         }
 
+        if ($amountUsd > self::MAX_WITHDRAWAL_AMOUNT) {
+            return $this->redirectWithFlash('danger', sprintf(
+                'Le montant maximum de retrait est de %.2f USD.',
+                self::MAX_WITHDRAWAL_AMOUNT
+            ));
+        }
+
+        // Validation de l'adresse et de la crypto
         if (empty($address)) {
             return $this->redirectWithFlash('danger', 'Veuillez fournir une adresse de portefeuille valide.');
         }
 
+        if (!array_key_exists($currency, self::SUPPORTED_CRYPTOS)) {
+            return $this->redirectWithFlash('danger', 'Cryptomonnaie non supportée.');
+        }
+
+        // Calcul des frais
         $fees = $this->calculateWithdrawalFees($amountUsd);
         $totalAmount = $amountUsd + $fees;
 
@@ -79,12 +118,13 @@ class PaymentController extends AbstractController
             ));
         }
 
+        // Création de la transaction
         $transaction = (new Transactions())
             ->setUser($user)
             ->setType('withdrawal')
             ->setAmount($amountUsd)
             ->setFees($fees)
-            ->setMethod("Crypto ($currency)")
+            ->setMethod("Crypto (" . self::SUPPORTED_CRYPTOS[$currency] . ")")
             ->setStatus('pending')
             ->setCreatedAt(new DateTimeImmutable());
 
@@ -169,39 +209,60 @@ class PaymentController extends AbstractController
             ));
         }
 
-        switch ($paymentMethod) {
-            case 'paypal':
-                return $this->redirectToRoute('app_paypal_redirect', ['amount' => $amount]);
-            case 'crypto':
-                return $this->handleCryptoDeposit($amount);
-            default:
-                return $this->redirectWithFlash('danger', 'Méthode de paiement invalide');
+        if ($amount > self::MAX_DEPOSIT_AMOUNT) {
+            return $this->redirectWithFlash('danger', sprintf(
+                'Le montant maximum de dépôt est de %.2f USD.',
+                self::MAX_DEPOSIT_AMOUNT
+            ));
         }
-    }
 
-    private function handleCryptoDeposit(float $amount): Response
-    {
         $user = $this->getUser();
         $transaction = (new Transactions())
             ->setUser($user)
             ->setAmount($amount)
             ->setType('deposit')
-            ->setMethod('crypto')
+            ->setMethod($paymentMethod)
             ->setStatus('pending')
             ->setCreatedAt(new DateTimeImmutable());
 
         $this->entityManager->persist($transaction);
         $this->entityManager->flush();
 
+        switch ($paymentMethod) {
+            case 'paypal':
+                return $this->redirectToRoute('app_paypal_redirect', ['amount' => $amount]);
+            case 'crypto':
+                return $this->redirectToRoute('app_crypto_deposit', ['id' => $transaction->getId()]);
+            default:
+                return $this->redirectWithFlash('danger', 'Méthode de paiement invalide');
+        }
+    }
+
+    #[Route('/crypto/deposit/{id}', name: 'app_crypto_deposit')]
+    public function cryptoDeposit(int $id): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
+        
+        if (!$transaction || $transaction->getUser() !== $this->getUser()) {
+            return $this->redirectWithFlash('danger', 'Transaction invalide');
+        }
+
+        if ($transaction->getMethod() !== 'crypto') {
+            return $this->redirectWithFlash('danger', 'Méthode de paiement invalide');
+        }
+
         return $this->render('payment/crypto_deposit.html.twig', [
             'transaction' => $transaction,
-            'amount' => $amount,
-            'expiresAt' => (new \DateTime('+15 minutes'))->format('Y-m-d H:i:s')
+            'amount' => $transaction->getAmount(),
+            'expiresAt' => (new \DateTime('+15 minutes'))->format('Y-m-d H:i:s'),
+            'supportedCryptos' => self::SUPPORTED_CRYPTOS
         ]);
     }
 
-    #[Route('/deposit/confirm/{id}', name: 'app_deposit_confirm', methods: ['POST'])]
-    public function confirmDeposit(int $id, Request $request): Response
+    #[Route('/crypto/confirm/{id}', name: 'app_crypto_confirm', methods: ['POST'])]
+    public function confirmCryptoDeposit(int $id, Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
@@ -210,15 +271,19 @@ class PaymentController extends AbstractController
             return $this->redirectWithFlash('danger', 'Transaction invalide');
         }
 
-        $cryptoType = strtoupper($request->request->get('cryptoType'));
+        $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
         $txHash = trim($request->request->get('txHash'));
 
         if (empty($cryptoType) || empty($txHash)) {
             return $this->redirectWithFlash('danger', 'Veuillez fournir tous les détails de la transaction');
         }
 
+        if (!array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
+            return $this->redirectWithFlash('danger', 'Cryptomonnaie non supportée');
+        }
+
         $transaction
-            ->setMethod("crypto_$cryptoType")
+            ->setMethod("crypto_" . self::SUPPORTED_CRYPTOS[$cryptoType])
             ->setExternalId($txHash)
             ->setStatus('pending_verification');
 

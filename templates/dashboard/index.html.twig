@@ -1,165 +1,179 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}
-	Dashboard
-{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
 {% block body %}
-	<style>
-		.price-card {
-			background: rgba(255, 255, 255, 0.1);
-			border: none;
-			border-radius: 10px;
-			transition: transform 0.3s;
-			margin-top: 30px;
-		}
-		.price-card img {
-			border-top-left-radius: 10px;
-			border-top-right-radius: 10px;
-		}
-		.price-card:hover {
-			transform: translateY(-10px);
-		}
-		.price-card h3 {
-			margin-top: 15px;
-			margin-bottom: 15px;
-		}
-		/* Skeleton Loader */
-		.skeleton {
-			background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
-			background-size: 200% 100%;
-			animation: loading 1.5s infinite linear;
-			border-radius: 10px;
-			position: relative;
-		}
-		@keyframes loading {
-			0% {
-				background-position: 200% 0;
-			}
-			100% {
-				background-position: -200% 0;
-			}
-		}
-		/* Squelette pour l'image */
-		.skeleton-image {
-			height: 200px;
-			width: 100%;
-			background-color: #2a2a2a;
-			margin-bottom: 20px;
-		}
-		/* Squelette pour le titre */
-		.skeleton-title {
-			height: 20px;
-			width: 80%;
-			background-color: #2a2a2a;
-			margin-bottom: 10px;
-			border-radius: 5px;
-		}
-		/* Squelette pour le texte */
-		.skeleton-text {
-			height: 15px;
-			width: 60%;
-			background-color: #2a2a2a;
-			margin-bottom: 10px;
-			border-radius: 5px;
-		}
-		/* Squelette pour le bouton */
-		.skeleton-btn {
-			width: 120px;
-			height: 35px;
-			background-color: #2a2a2a;
-			border-radius: 5px;
-			margin-top: 15px;
-		}
-	</style>
+  <style>
+    .price-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 10px;
+      transition: transform 0.3s;
+      margin-top: 30px;
+      overflow: hidden;
+    }
 
-	{# main #}
-	<main id="main" class="main container py-5">
-		<h2 class="text-center text-warning py-4 fw-bold" data-aos-duration="2000" data-aos="flip-left" data-aos-delay="300">Nos Boutiques</h2>
-		<div
-			class="row" id="shop-container">
-			{# Afficher les skeleton loaders tant que les données ne sont pas disponibles #}
-			<div class="col-md-4" id="skeleton-template" style="display: none;">
-				<div class="card price-card skeleton">
-					<div class="skeleton-image"></div>
-					<div class="card-body">
-						<div class="skeleton-title"></div>
-						<div class="skeleton-text"></div>
-						<div class="skeleton-text"></div>
-						<div class="skeleton-btn"></div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</main>
+    .price-card:hover {
+      transform: translateY(-10px);
+    }
+
+    /* Skeleton Loader */
+    .skeleton {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .skeleton::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0) 0%, 
+        rgba(255, 255, 255, 0.05) 50%, 
+        rgba(255, 255, 255, 0) 100%);
+      animation: shimmer 1.5s infinite;
+      z-index: 1;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .skeleton-image {
+      height: 200px;
+      width: 100%;
+      background-color: #3a3b5a;
+    }
+
+    .skeleton-title {
+      height: 20px;
+      width: 80%;
+      background-color: #3a3b5a;
+      margin: 15px 0 10px 0;
+      border-radius: 4px;
+    }
+
+    .skeleton-text {
+      height: 15px;
+      width: 90%;
+      background-color: #3a3b5a;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+
+    .skeleton-text.short {
+      width: 60%;
+    }
+
+    .skeleton-btn {
+      width: 120px;
+      height: 35px;
+      background-color: #3a3b5a;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+  </style>
+
+  <main id="main" class="main container py-5">
+    <h2 class="text-center text-warning py-4 fw-bold" data-aos="fade-down">Nos Boutiques</h2>
+
+    <div class="row" id="shop-container">
+      {# Skeleton loader - affiché par défaut #}
+      {% for i in 1..3 %}
+        <div class="col-md-4 mb-4">
+          <div class="card price-card skeleton">
+            <div class="skeleton-image"></div>
+            <div class="card-body">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-text"></div>
+              <div class="skeleton-text short"></div>
+              <div class="skeleton-btn"></div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </main>
 {% endblock %}
 
 {% block customScript %}
-	 <script>
-	      // Fonction pour afficher les skeleton loaders
-	      function showSkeletonLoaders(count = 3) {
-	        const shopContainer = document.getElementById('shop-container');
-	        const skeletonTemplate = document.getElementById('skeleton-template');
-	  
-	        if (shopContainer && skeletonTemplate) {
-	          shopContainer.innerHTML = ''; // Effacer tout contenu précédent
-	          for (let i = 0; i < count; i++) {
-	            const clone = skeletonTemplate.cloneNode(true);
-	            clone.style.display = 'block'; // Rendre visible le loader cloné
-	            shopContainer.appendChild(clone);
-	          }
-	        }
-	      }
-	  
-	      // Fonction pour remplacer les loaders par le contenu réel
-	      function renderShops(shops) {
-	        const shopContainer = document.getElementById('shop-container');
-	  
-	        if (shopContainer) {
-	          shopContainer.innerHTML = ''; // Effacer les loaders
-	  
-	          if (shops.length > 0) {
-	            shops.forEach(shop => {
-	              const shopCard = `
-	                <div class="col-md-4">
-	                  <div class="card price-card">
-	                    <img src="${shop.image}" class="card-img-top" alt="${shop.name}" />
-	                    <div class="card-body">
-	                      <h5 class="card-title">
-	                        <a class="text-decoration-none" href="${shop.slug}">${shop.name}</a>
-	                      </h5>
-	                      <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
-	                      <p class="card-text">${shop.description}</p>
-	                      <br />
-	                      <a href="${shop.slug}" class="btn btn-warning float-end">Voir plus...</a>
-	                    </div>
-	                  </div>
-	                </div>
-	              `;
-	              shopContainer.insertAdjacentHTML('beforeend', shopCard);
-	            });
-	          } else {
-	            shopContainer.innerHTML = '<h5 class="text-center text-danger">Aucune boutique disponible pour le moment.</h5>';
-	          }
-	        }
-	      }
-	  
-	      // Événement Turbo:load
-	      document.addEventListener('turbo:load', function () {
-	        // Simuler un appel API pour récupérer les boutiques (remplacez cela par une vraie requête si nécessaire)
-	        const mockShops = [
-	          { name: 'Boutique 1', image: 'https://via.placeholder.com/300', description: 'Description de la boutique 1', slug: '/boutique-1' },
-	          { name: 'Boutique 2', image: 'https://via.placeholder.com/300', description: 'Description de la boutique 2', slug: '/boutique-2' },
-	          { name: 'Boutique 3', image: 'https://via.placeholder.com/300', description: 'Description de la boutique 3', slug: '/boutique-3' }
-	        ];
-	  
-	        // Afficher les loaders pendant 2 secondes (simule un délai de chargement)
-	        showSkeletonLoaders(3);
-	  
-	        setTimeout(() => {
-	          // Remplacer les loaders par le contenu réel
-	          renderShops(mockShops);
-	        }, 2000);
-	      });
-	    </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      loadShops();
+    });
+
+    document.addEventListener('turbo:load', function() {
+      loadShops();
+    });
+
+    function loadShops() {
+      const shopContainer = document.getElementById('shop-container');
+      
+      if (!shopContainer) return;
+
+      // Simulation de délai de chargement (remplacer par un vrai appel API)
+      setTimeout(() => {
+        fetchShopsData()
+          .then(shops => {
+            renderShops(shops);
+          })
+          .catch(error => {
+            console.error('Error loading shops:', error);
+            shopContainer.innerHTML = `
+              <div class="col-12 text-center text-danger py-5">
+                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                <p>Impossible de charger les boutiques. Veuillez réessayer.</p>
+              </div>
+            `;
+          });
+      }, 800); // Délai artificiel pour voir le skeleton
+    }
+
+    // Fonction simulée pour récupérer les données
+    function fetchShopsData() {
+      return new Promise((resolve) => {
+        // En réalité, vous feriez une requête fetch() vers votre API
+        const shops = {{ shops|json_encode|raw }} || [];
+        resolve(shops);
+      });
+    }
+
+    // Fonction pour afficher les boutiques
+    function renderShops(shops) {
+      const shopContainer = document.getElementById('shop-container');
+      
+      if (shops && shops.length > 0) {
+        shopContainer.innerHTML = shops.map(shop => `
+          <div class="col-md-4 mb-4">
+            <div class="card price-card" data-aos="fade-up">
+              <img src="${shop.image}" class="card-img-top" alt="${shop.name}" loading="lazy">
+              <div class="card-body">
+                <h5 class="card-title">
+                  <a class="text-decoration-none" href="/shop/${shop.slug}">${shop.name}</a>
+                </h5>
+                <p class="card-text">${shop.description}</p>
+                <a href="/shop/${shop.slug}" class="btn btn-warning float-end">Voir plus...</a>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+        // Réinitialiser AOS pour les nouvelles animations
+        if (typeof AOS !== 'undefined') {
+          AOS.init({ duration: 800 });
+        }
+      } else {
+        shopContainer.innerHTML = `
+          <div class="col-12 text-center text-muted py-5">
+            <i class="fas fa-store-slash fa-2x mb-3"></i>
+            <h5>Aucune boutique disponible pour le moment.</h5>
+          </div>
+        `;
+      }
+    }
+  </script>
 {% endblock %}

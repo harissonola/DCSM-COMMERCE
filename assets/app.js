@@ -17,7 +17,7 @@ document.addEventListener('turbo:before-fetch-request', () => {
     if (spinner) spinner.classList.remove('hidden');
 });
 
-document.addEventListener('turbo:before-render', (event) => {
+document.addEventListener('turbo:before-render', () => {
     if (spinner) spinner.classList.add('hidden');
     
     // Nettoie les scripts dupliqués avant le rendu
@@ -35,28 +35,15 @@ document.addEventListener('turbo:load', () => {
 function cleanDuplicateScripts() {
     const scripts = document.querySelectorAll('script[src]');
     const loadedScripts = new Set();
-    
+
     scripts.forEach(script => {
         const src = script.src;
-        
-        // Liste des motifs à conserver (ajustez selon vos besoins)
-        const keepPatterns = [
-            /tidio/,
-            /sweetalert2/,
-            /jquery/,
-            /datatables/,
-            /aos/,
-            /bootstrap/,
-            /apexcharts/,
-            /perfect-scrollbar/,
-            /sneat/
-        ];
-        
-        const shouldKeep = keepPatterns.some(pattern => pattern.test(src));
-        
-        if (!shouldKeep || loadedScripts.has(src)) {
+
+        // Si le script a déjà été chargé, on le supprime
+        if (loadedScripts.has(src)) {
             script.remove();
         } else {
+            // Sinon, on l'ajoute à la liste des scripts chargés
             loadedScripts.add(src);
         }
     });

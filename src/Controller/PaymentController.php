@@ -183,7 +183,7 @@ class PaymentController extends AbstractController
         $cancelUrl   = $this->urlGenerator->generate('payment_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $charge = $this->coinbase->createCharge(
-            'Dépôt BICTRARY #' . $transaction->getId(),
+            'Dépôt DCSM #' . $transaction->getId(),
             $walletAddress,
             $amount,
             'USD',

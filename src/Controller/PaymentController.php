@@ -501,13 +501,16 @@ class PaymentController extends AbstractController
         $privateKey = $_ENV['COINPAYMENTS_API_SECRET'];
         $publicKey  = $_ENV['COINPAYMENTS_API_KEY'];
 
-        // On ajoute le nonce (timestamp) et les autres paramètres obligatoires
+        // Utiliser microtime pour un nonce plus précis et unique
+        $nonce = (int)(microtime(true) * 1000); // Millisecondes depuis l'époque Unix
+
+        // On ajoute le nonce et les autres paramètres obligatoires
         $params += [
             'version' => 1,
             'cmd'     => $cmd,
             'key'     => $publicKey,
             'format'  => 'json',
-            'nonce'   => time(),            // <<<--- ici !
+            'nonce'   => $nonce, // Utilisation du nonce plus précis
         ];
 
         $postData = http_build_query($params, '', '&');

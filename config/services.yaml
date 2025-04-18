@@ -12,9 +12,9 @@ services:
             $apiKey: '%env(COINPAYMENTS_API_KEY)%'
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
     
-    App\Controller\PaymentController:
-        arguments:
-        $paymentRateLimiter: '@limiter.payment_limiter'
+    # App\Controller\PaymentController:
+    #     arguments:
+    #     $paymentRateLimiter: '@limiter.payment_limiter'
 
     NumberFormatter:
         class: 'NumberFormatter'

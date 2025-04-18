@@ -4,23 +4,290 @@
 {% endblock %}
 
 {% block body %}
-	<div style="max-width: 600px; margin: 50px auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); text-align: center;">
-		<h2 style="color: #333;">Email envoyé !</h2>
+	<div
+		class="password-reset-wrapper">
+		<!-- Background animé -->
+		<div class="auth-bg">
+			<div class="gradient"></div>
+			<div class="particles"></div>
+		</div>
 
-		<p style="color: #555; font-size: 16px; line-height: 1.6;">
-			Si un compte correspondant à votre adresse e-mail existe, vous allez recevoir un e-mail contenant un lien pour réinitialiser votre mot de passe.
-		</p>
+		<div
+			class="password-reset-container">
+			<!-- Carte de confirmation -->
+			<div
+				class="confirmation-card">
+				<!-- Icône animée -->
+				<div class="confirmation-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewbox="0 0 24 24" fill="none" stroke="#6c5ce7" stroke-width="2">
+						<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+						<polyline points="22 4 12 14.01 9 11.01"></polyline>
+					</svg>
+					<div class="circle-animation"></div>
+				</div>
 
-		<p style="color: #555; font-size: 16px;">
-			Ce lien expirera dans
-			<strong>{{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}</strong>.
-		</p>
+				<h2 class="confirmation-title">Email envoyé !</h2>
 
-		<p style="color: #777; font-size: 14px;">
-			Si vous ne recevez pas d'e-mail, veuillez vérifier votre dossier de spam ou
-			<a href="{{ path('app_forgot_password_request') }}" style="color: #007bff; text-decoration: none; font-weight: bold;">essayez à nouveau</a>.
-		</p>
+				<div class="confirmation-message">
+					<p>Si un compte correspondant à votre adresse e-mail existe, vous allez recevoir un e-mail contenant un lien pour réinitialiser votre mot de passe.</p>
 
-		<a href="/" style="display: inline-block; margin-top: 20px; padding: 12px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">Retour à l'accueil</a>
+					<p class="expiration-info">
+						Ce lien expirera dans
+						<strong>{{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}</strong>.
+					</p>
+
+					<p class="spam-notice">
+						Si vous ne recevez pas d'e-mail, veuillez vérifier votre dossier de spam ou
+						<a href="{{ path('app_forgot_password_request') }}" class="retry-link">essayez à nouveau</a>.
+					</p>
+				</div>
+
+				<a href="{{ path('app_home') }}" class="home-button">
+					Retour à l'accueil
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+						<polyline points="9 22 9 12 15 12 15 22"></polyline>
+					</svg>
+				</a>
+			</div>
+		</div>
 	</div>
-{% endblock %}
+
+	<style>:root
+	{
+		--primary: #6c5ce7;
+		--primary-light: #a29bfe;
+		--primary-dark: #5649c0;
+		--text: #2d3436;
+		--text-light: #636e72;
+		--bg-dark: #0f1521;
+		--bg-darker: #0a0e17;
+		--card-bg: rgba(255, 255, 255, 0.95);
+		--success: #00b894;
+	}
+
+	/* Structure de base */
+	.password-reset-wrapper {
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+		color: var(--text);
+		position: relative;
+		overflow: hidden;
+	}
+
+	/* Background animé */
+	.auth-bg {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 0;
+	}
+
+	.gradient {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+	}
+
+	.particles {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		background-image: radial-gradient(circle at 20% 30%, rgba(108, 92, 231, 0.1) 0%, transparent 25%), radial-gradient(circle at 80% 70%, rgba(0, 206, 201, 0.1) 0%, transparent 25%);
+		animation: float 20s infinite ease-in-out alternate;
+	}
+
+	@keyframes float {
+		0,
+		100% {
+			transform: translate(0, 0) rotate(0deg);
+		}
+		25% {
+			transform: translate(-10px, -10px) rotate(-1deg);
+		}
+		50% {
+			transform: translate(0, -20px) rotate(0deg);
+		}
+		75% {
+			transform: translate(10px, -10px) rotate(1deg);
+		}
+	}
+
+	/* Conteneur */
+	.password-reset-container {
+		width: 100%;
+		max-width: 500px;
+		padding: 1rem;
+		position: relative;
+		z-index: 1;
+	}
+
+	/* Carte de confirmation */
+	.confirmation-card {
+		background: var(--card-bg);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		border-radius: 16px;
+		padding: 2.5rem;
+		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+		text-align: center;
+		transform: translateY(0);
+		transition: all 0.4s ease;
+	}
+
+	.confirmation-card:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+	}
+
+	/* Icône de confirmation */
+	.confirmation-icon {
+		position: relative;
+		margin: 0 auto 1.5rem;
+		width: 100px;
+		height: 100px;
+	}
+
+	.confirmation-icon svg {
+		position: relative;
+		z-index: 2;
+		animation: checkmark 0.6s ease;
+	}
+
+	.circle-animation {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(108, 92, 231, 0.1);
+		border-radius: 50%;
+		animation: circlePulse 2s infinite ease-out;
+	}
+
+	@keyframes checkmark {
+		0% {
+			transform: scale(0);
+			opacity: 0;
+		}
+		80% {
+			transform: scale(1.2);
+		}
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+	@keyframes circlePulse {
+		0% {
+			transform: scale(0.8);
+			opacity: 0.8;
+		}
+		70% {
+			transform: scale(1.3);
+			opacity: 0;
+		}
+		100% {
+			transform: scale(0.8);
+			opacity: 0;
+		}
+	}
+
+	/* Titre */
+	.confirmation-title {
+		font-size: 1.8rem;
+		color: var(--primary);
+		margin-bottom: 1.5rem;
+		font-weight: 600;
+	}
+
+	/* Message */
+	.confirmation-message {
+		color: var(--text);
+		font-size: 1rem;
+		line-height: 1.6;
+		margin-bottom: 2rem;
+	}
+
+	.confirmation-message p {
+		margin-bottom: 1rem;
+	}
+
+	.expiration-info {
+		font-size: 1.1rem;
+		color: var(--text);
+	}
+
+	.expiration-info strong {
+		color: var(--primary-dark);
+	}
+
+	.spam-notice {
+		color: var(--text-light);
+		font-size: 0.95rem;
+	}
+
+	.retry-link {
+		color: var(--primary);
+		text-decoration: none;
+		font-weight: 500;
+		transition: all 0.3s ease;
+	}
+
+	.retry-link:hover {
+		text-decoration: underline;
+	}
+
+	/* Bouton */
+	.home-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.875rem 1.5rem;
+		background: var(--primary);
+		color: white;
+		border-radius: 8px;
+		text-decoration: none;
+		font-weight: 500;
+		transition: all 0.3s ease;
+		margin-top: 1rem;
+	}
+
+	.home-button:hover {
+		background: var(--primary-dark);
+		transform: translateY(-2px);
+		box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+	}
+
+	.home-button svg {
+		transition: transform 0.3s ease;
+	}
+
+	.home-button:hover svg {
+		transform: translateX(3px);
+	}
+
+	/* Responsive */
+	@media(max-width: 576px) {
+		.confirmation-card {
+			padding: 1.5rem;
+		}
+
+		.confirmation-title {
+			font-size: 1.5rem;
+		}
+
+		.confirmation-icon {
+			width: 80px;
+			height: 80px;
+		}
+	}
+</style>{% endblock %}

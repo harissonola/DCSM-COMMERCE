@@ -34,8 +34,7 @@
 		 <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
 
 		<!-- 2. Fonts & Icons -->
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/> <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css"/>
 		<link
 		href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
@@ -62,8 +61,6 @@
 		{# 7. Page-specific CSS #}
 		{% block stylesheets %}{% endblock %}
 
-		<link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" type="image/x-icon">
-		<link rel="icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" type="image/x-icon">
 		{# 8. Custom Dark-mode overrides #}
 		<style>:root
 		{
@@ -122,6 +119,12 @@
 			background-color: #ff3e1d !important;
 		}
 	</style>
+
+	{% block javascripts %}
+		{% block importmap %}
+			{{ importmap('app') }}
+		{% endblock %}
+	{% endblock %}
 </head>
 
 <body
@@ -165,16 +168,16 @@
 
 		<!-- Turbo loader events & init -->
 		 <script>
-		      document.addEventListener('turbo:before-fetch-request', () => {
-		        document.getElementById('custom-spinner').classList.remove('hidden');
-		      });
-		      document.addEventListener('turbo:before-render', () => {
-		        document.getElementById('custom-spinner').classList.add('hidden');
-		      });
-		      document.addEventListener('turbo:load', function() {
-		        AOS.init();
-		      });
-		    </script>
+						      document.addEventListener('turbo:before-fetch-request', () => {
+						        document.getElementById('custom-spinner').classList.remove('hidden');
+						      });
+						      document.addEventListener('turbo:before-render', () => {
+						        document.getElementById('custom-spinner').classList.add('hidden');
+						      });
+						      document.addEventListener('turbo:load', function() {
+						        AOS.init();
+						      });
+						    </script>
 
 		<!-- 8. Tidio Chat -->
 		 <script src="//code.tidio.co/1ke8d6pi5gzmnbfqlibfj63nxob1djzm.js" async></script>

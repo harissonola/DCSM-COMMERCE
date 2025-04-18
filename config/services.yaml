@@ -13,7 +13,7 @@ services:
             $merchantId: '%env(COINPAYMENTS_MERCHANT_ID)%'
     
     App\Controller\PaymentController:
-    arguments:
+        arguments:
         $paymentRateLimiter: '@limiter.payment_limiter'
 
     NumberFormatter:

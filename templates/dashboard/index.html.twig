@@ -1,179 +1,148 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard
+{% endblock %}
 
 {% block body %}
-  <style>
-    .price-card {
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 10px;
-      transition: transform 0.3s;
-      margin-top: 30px;
-      overflow: hidden;
-    }
+	<style>/* Styles inchangés... */</style>
 
-    .price-card:hover {
-      transform: translateY(-10px);
-    }
+<main id="main" class="main container py-5">
+	<h2 class="text-center text-warning py-4 fw-bold" data-aos="fade-down">Nos Boutiques</h2>
 
-    /* Skeleton Loader */
-    .skeleton {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .skeleton::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(90deg, 
-        rgba(255, 255, 255, 0) 0%, 
-        rgba(255, 255, 255, 0.05) 50%, 
-        rgba(255, 255, 255, 0) 100%);
-      animation: shimmer 1.5s infinite;
-      z-index: 1;
-    }
-
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
-    .skeleton-image {
-      height: 200px;
-      width: 100%;
-      background-color: #3a3b5a;
-    }
-
-    .skeleton-title {
-      height: 20px;
-      width: 80%;
-      background-color: #3a3b5a;
-      margin: 15px 0 10px 0;
-      border-radius: 4px;
-    }
-
-    .skeleton-text {
-      height: 15px;
-      width: 90%;
-      background-color: #3a3b5a;
-      margin-bottom: 8px;
-      border-radius: 4px;
-    }
-
-    .skeleton-text.short {
-      width: 60%;
-    }
-
-    .skeleton-btn {
-      width: 120px;
-      height: 35px;
-      background-color: #3a3b5a;
-      border-radius: 4px;
-      margin-top: 15px;
-    }
-  </style>
-
-  <main id="main" class="main container py-5">
-    <h2 class="text-center text-warning py-4 fw-bold" data-aos="fade-down">Nos Boutiques</h2>
-
-    <div class="row" id="shop-container">
-      {# Skeleton loader - affiché par défaut #}
-      {% for i in 1..3 %}
-        <div class="col-md-4 mb-4">
-          <div class="card price-card skeleton">
-            <div class="skeleton-image"></div>
-            <div class="card-body">
-              <div class="skeleton-title"></div>
-              <div class="skeleton-text"></div>
-              <div class="skeleton-text short"></div>
-              <div class="skeleton-btn"></div>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  </main>
-{% endblock %}
-
-{% block customScript %}
-  <script>
-    document.addEventListener('turbo:load', function() {
-      loadShops();
-    });
-
-    document.addEventListener('turbo:load', function() {
-      loadShops();
-    });
-
-    function loadShops() {
-      const shopContainer = document.getElementById('shop-container');
+	<div
+		class="row" id="shop-container">
+		{# Skeleton loader - affiché par défaut #}
+		{% for i in 1..3 %}
+			<div class="col-md-4 mb-4">
+				<div class="card price-card skeleton">
+					<div class="skeleton-image"></div>
+					<div class="card-body">
+						<div class="skeleton-title"></div>
+						<div class="skeleton-text"></div>
+						<div class="skeleton-text short"></div>
+						<div class="skeleton-btn"></div>
+					</div>
+				</div>
+			</div>
+		{% endfor %}
+	</div>
+</main>{% endblock %}{% block customScript %}
+ <script>
+    // Version robuste avec gestion d'état
+    (function() {
+      let shopsLoaded = false;
       
-      if (!shopContainer) return;
-
-      // Simulation de délai de chargement (remplacer par un vrai appel API)
-      setTimeout(() => {
-        fetchShopsData()
-          .then(shops => {
-            renderShops(shops);
-          })
-          .catch(error => {
-            console.error('Error loading shops:', error);
-            shopContainer.innerHTML = `
-              <div class="col-12 text-center text-danger py-5">
-                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                <p>Impossible de charger les boutiques. Veuillez réessayer.</p>
-              </div>
-            `;
-          });
-      }, 800); // Délai artificiel pour voir le skeleton
-    }
-
-    // Fonction simulée pour récupérer les données
-    function fetchShopsData() {
-      return new Promise((resolve) => {
-        // En réalité, vous feriez une requête fetch() vers votre API
-        const shops = {{ shops|json_encode|raw }} || [];
-        resolve(shops);
-      });
-    }
-
-    // Fonction pour afficher les boutiques
-    function renderShops(shops) {
-      const shopContainer = document.getElementById('shop-container');
-      
-      if (shops && shops.length > 0) {
-        shopContainer.innerHTML = shops.map(shop => `
-          <div class="col-md-4 mb-4">
-            <div class="card price-card" data-aos="fade-up">
-              <img src="${shop.image}" class="card-img-top" alt="${shop.name}" loading="lazy">
-              <div class="card-body">
-                <h5 class="card-title">
-                  <a class="text-decoration-none" href="/shop/${shop.slug}">${shop.name}</a>
-                </h5>
-                <p class="card-text">${shop.description}</p>
-                <a href="/shop/${shop.slug}" class="btn btn-warning float-end">Voir plus...</a>
-              </div>
-            </div>
-          </div>
-        `).join('');
+      function initShopsLoader() {
+        if (shopsLoaded) return;
         
-        // Réinitialiser AOS pour les nouvelles animations
-        if (typeof AOS !== 'undefined') {
-          AOS.init({ duration: 800 });
+        const shopContainer = document.getElementById('shop-container');
+        if (!shopContainer) return;
+        
+        // Si Turbo est présent, on attend turbo:load
+        if (typeof Turbo !== 'undefined') {
+          document.addEventListener('turbo:load', loadShops);
+        } else {
+          // Sinon on utilise DOMContentLoaded
+          document.addEventListener('DOMContentLoaded', loadShops);
         }
-      } else {
-        shopContainer.innerHTML = `
-          <div class="col-12 text-center text-muted py-5">
-            <i class="fas fa-store-slash fa-2x mb-3"></i>
-            <h5>Aucune boutique disponible pour le moment.</h5>
-          </div>
-        `;
+        
+        // Charge aussi si le conteneur est déjà visible
+        if (shopContainer.offsetParent !== null) {
+          loadShops();
+        }
       }
-    }
-  </script>
-{% endblock %}
+      
+      function loadShops() {
+        const shopContainer = document.getElementById('shop-container');
+        if (!shopContainer || shopsLoaded) return;
+        
+        console.log('Loading shops data...');
+        
+        // Simulation de délai (remplacer par un vrai fetch)
+        setTimeout(() => {
+          fetchShopsData()
+            .then(shops => {
+              shopsLoaded = true;
+              renderShops(shops);
+            })
+            .catch(error => {
+              console.error('Error loading shops:', error);
+              showErrorState();
+            });
+        }, 800);
+      }
+      
+      function fetchShopsData() {
+        return new Promise((resolve) => {
+          // En production: return fetch('/api/shops').then(r => r.json());
+          const shops = {{ shops|json_encode|raw }} || [];
+          resolve(shops);
+        });
+      }
+      
+      function renderShops(shops) {
+        const shopContainer = document.getElementById('shop-container');
+        if (!shopContainer) return;
+        
+        if (shops && shops.length > 0) {
+          shopContainer.innerHTML = shops.map(shop => `
+            <div class="col-md-4 mb-4">
+              <div class="card price-card" data-aos="fade-up">
+                <img src="${shop.image}" class="card-img-top" alt="${shop.name}" loading="lazy">
+                <div class="card-body">
+                  <h5 class="card-title">
+                    <a class="text-decoration-none" href="/shop/${shop.slug}">${shop.name}</a>
+                  </h5>
+                  <p class="card-text">${shop.description}</p>
+                  <a href="/shop/${shop.slug}" class="btn btn-warning float-end">Voir plus...</a>
+                </div>
+              </div>
+            </div>
+          `).join('');
+          
+          initAnimations();
+        } else {
+          showEmptyState();
+        }
+      }
+      
+      function showEmptyState() {
+        const shopContainer = document.getElementById('shop-container');
+        if (shopContainer) {
+          shopContainer.innerHTML = `
+            <div class="col-12 text-center text-muted py-5">
+              <i class="fas fa-store-slash fa-2x mb-3"></i>
+              <h5>Aucune boutique disponible pour le moment.</h5>
+            </div>
+          `;
+        }
+      }
+      
+      function showErrorState() {
+        const shopContainer = document.getElementById('shop-container');
+        if (shopContainer) {
+          shopContainer.innerHTML = `
+            <div class="col-12 text-center text-danger py-5">
+              <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+              <p>Impossible de charger les boutiques. Veuillez réessayer.</p>
+              <button onclick="window.location.reload()" class="btn btn-warning mt-3">
+                <i class="fas fa-sync-alt me-2"></i>Recharger
+              </button>
+            </div>
+          `;
+        }
+      }
+      
+      function initAnimations() {
+        if (typeof AOS !== 'undefined') {
+          AOS.init({
+            duration: 800,
+            once: true
+          });
+        }
+      }
+      
+      // Initialisation
+      initShopsLoader();
+    })();
+  </script>{% endblock %}

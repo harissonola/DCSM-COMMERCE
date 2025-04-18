@@ -4,6 +4,8 @@ import './styles/app.css';
 // Configuration globale de Turbo
 Turbo.setProgressBarDelay(0); // Désactive complètement la barre de progression native
 
+console.log('Application Turbo chargée avec succès !');
+
 // Gestion du spinner personnalisé
 const spinner = document.getElementById('custom-spinner');
 

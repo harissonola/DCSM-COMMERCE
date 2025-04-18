@@ -61,6 +61,10 @@
 		{# 7. Page-specific CSS #}
 		{% block stylesheets %}{% endblock %}
 
+
+		<link rel="shortcut icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" type="image/x-icon">
+		<link
+		rel="icon" href="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" type="image/x-icon">
 		{# 8. Custom Dark-mode overrides #}
 		<style>:root
 		{
@@ -125,6 +129,7 @@
 			{{ importmap('app') }}
 		{% endblock %}
 	{% endblock %}
+
 </head>
 
 <body
@@ -168,16 +173,16 @@
 
 		<!-- Turbo loader events & init -->
 		 <script>
-						      document.addEventListener('turbo:before-fetch-request', () => {
-						        document.getElementById('custom-spinner').classList.remove('hidden');
-						      });
-						      document.addEventListener('turbo:before-render', () => {
-						        document.getElementById('custom-spinner').classList.add('hidden');
-						      });
-						      document.addEventListener('turbo:load', function() {
-						        AOS.init();
-						      });
-						    </script>
+								      document.addEventListener('turbo:before-fetch-request', () => {
+								        document.getElementById('custom-spinner').classList.remove('hidden');
+								      });
+								      document.addEventListener('turbo:before-render', () => {
+								        document.getElementById('custom-spinner').classList.add('hidden');
+								      });
+								      document.addEventListener('turbo:load', function() {
+								        AOS.init();
+								      });
+								    </script>
 
 		<!-- 8. Tidio Chat -->
 		 <script src="//code.tidio.co/1ke8d6pi5gzmnbfqlibfj63nxob1djzm.js" async></script>

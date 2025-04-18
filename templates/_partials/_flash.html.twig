@@ -1,35 +1,35 @@
 {% if app.user and app.user.isVerified == 0 %}
-	 <script>
-	    document.addEventListener('turbo:load', function () {
-	      Swal.fire({
-	        title: 'Compte inactif',
-	        text: "Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !",
-	        icon: 'error',
-	        showCancelButton: true,
-	        confirmButtonText: 'Renvoyer le lien',
-	        cancelButtonText: 'Fermer',
-	        customClass: {
-	          confirmButton: 'btn btn-primary',
-	          cancelButton: 'btn btn-secondary'
-	        },
-	        buttonsStyling: false
-	      }).then((result) => {
-	        if (result.isConfirmed) {
-	          window.location.href = '{{ path('app_verify_email_send') }}';
-	        }
-	      });
-	    });
-	  </script>
+  <script>
+    document.addEventListener('turbo:load', function () {
+      Swal.fire({
+        title: 'Compte inactif',
+        text: "Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !",
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonText: 'Renvoyer le lien',
+        cancelButtonText: 'Fermer',
+        customClass: {
+          confirmButton: 'btn btn-primary',
+          cancelButton: 'btn btn-secondary'
+        },
+        buttonsStyling: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = '{{ path('app_verify_email_send') }}';
+        }
+      });
+    });
+  </script>
 {% endif %}
 
- <script>
+<script>
   document.addEventListener('turbo:load', function () {
     {% for label, messages in app.flashes %}
       {% for message in messages %}
         Swal.fire({
           title: '{{ label|capitalize }}',
           text: '{{ message|e('js') }}',
-          icon: '{{ label == 'danger' ? 'error' : label }}',
+          icon: '{% if label in ['danger','error'] %}error{% else %}{{ label }}{% endif %}',
           toast: true,
           position: 'top-end',
           showConfirmButton: false,
@@ -45,9 +45,9 @@
 </script>
 
 <style>
-	.swal2-popup.colored-toast {
-		box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-		border-radius: 1rem;
-		font-size: 1rem;
-	}
+  .swal2-popup.colored-toast {
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 1rem;
+    font-size: 1rem;
+  }
 </style>

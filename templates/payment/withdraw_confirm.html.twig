@@ -1,0 +1,121 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Confirmation de retrait{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .withdraw-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .detail-value {
+            font-weight: 700;
+        }
+        #confirmBtn {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            font-size: 1.1rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="withdraw-container">
+        <h2 class="text-center mb-4">Confirmer le retrait</h2>
+        
+        <div class="mb-4">
+            <div class="detail-row">
+                <span class="detail-label">Montant à recevoir :</span>
+                <span class="detail-value">{{ cryptoAmount|number_format(6) }} {{ cryptoType }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Frais réseau :</span>
+                <span class="detail-value">{{ networkFee|number_format(6) }} {{ cryptoType }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Total envoyé :</span>
+                <span class="detail-value">{{ (cryptoAmount + networkFee)|number_format(6) }} {{ cryptoType }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Adresse de réception :</span>
+                <span class="detail-value text-truncate d-inline-block" style="max-width: 200px;">{{ recipientAddress }}</span>
+            </div>
+        </div>
+
+        <button id="confirmBtn" class="btn btn-primary btn-block">
+            <i class="fas fa-check-circle mr-2"></i> Confirmer le retrait
+        </button>
+
+        <div id="walletSection" class="mt-4" style="display: none;">
+            <div class="alert alert-info">
+                <p>Veuillez confirmer la transaction dans votre wallet</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('confirmBtn').addEventListener('click', async function() {
+    if (typeof window.tronWeb === 'undefined') {
+        alert('Veuillez installer TronLink pour continuer');
+        return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Traitement...';
+    
+    try {
+        const transaction = await tronWeb.transactionBuilder.sendTrx(
+            '{{ recipientAddress }}',
+            {{ ((cryptoAmount - networkFee) * 1000000)|round }},
+            '{{ app.user.tronAddress }}'
+        );
+        
+        const signedTx = await tronWeb.trx.sign(transaction);
+        const result = await tronWeb.trx.sendRawTransaction(signedTx);
+        
+        if (result.result) {
+            // Envoyer la confirmation au serveur
+            await fetch('{{ path("app_withdraw_confirm") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    transactionId: {{ transactionId }},
+                    txHash: result.txid
+                })
+            });
+            
+            alert('Retrait confirmé avec succès !');
+            window.location.href = '{{ path("app_profile") }}';
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Erreur: ' + error.message);
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Confirmer le retrait';
+    }
+});
+</script>
+{% endblock %}

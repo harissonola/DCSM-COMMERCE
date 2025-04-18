@@ -2,6 +2,39 @@
 
 {% block title %}Dépôt Crypto{% endblock %}
 
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const expiresAt = new Date("{{ expiresAt|date('Y-m-d H:i:s') }}").getTime();
+            
+            function updateCountdown() {
+                const now = new Date().getTime();
+                const distance = expiresAt - now;
+                
+                // Calcul des minutes et secondes restantes
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                // Affichage du résultat
+                document.getElementById("countdown").innerHTML = 
+                    `Expire dans: ${Math.floor(minutes)}m ${seconds}s`;
+                
+                // Si le compte à rebours est terminé
+                if (distance < 0) {
+                    clearInterval(countdownTimer);
+                    document.getElementById("countdown").innerHTML = "Temps expiré!";
+                    document.querySelector("form button").disabled = true;
+                }
+            }
+            
+            // Mise à jour toutes les secondes
+            updateCountdown();
+            const countdownTimer = setInterval(updateCountdown, 1000);
+        });
+    </script>
+{% endblock %}
+
 {% block body %}
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -15,7 +48,7 @@
                         <h4 class="alert-heading">Instructions</h4>
                         <p>Veuillez effectuer un transfert de <strong>${{ amount|number_format(2) }}</strong> en crypto-monnaie et fournir les détails ci-dessous.</p>
                         <hr>
-                        <p class="mb-0">Expire à: {{ expiresAt }}</p>
+                        <p class="mb-0" id="countdown">Expire dans: calcul en cours...</p>
                     </div>
 
                     <form method="post" action="{{ path('app_crypto_confirm', {'id': transaction.id}) }}">

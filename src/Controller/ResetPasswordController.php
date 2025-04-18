@@ -39,88 +39,109 @@ class ResetPasswordController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $email = $form->get('email')->getData();
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+            $user = $this->entityManager->getRepository(User::class)->findOneBy([
+                'email' => $email,
+                'isVerified' => true // Assure que l'email est vérifié
+            ]);
 
             if (!$user) {
-                $message = 'Aucun compte n’est associé à cet email.';
+                $message = $translator->trans('Aucun compte vérifié n\'est associé à cet email.');
 
                 if ($request->isXmlHttpRequest()) {
-                    return new JsonResponse(['error' => $message], 404);
+                    return new JsonResponse([
+                        'success' => false,
+                        'message' => $message
+                    ], Response::HTTP_NOT_FOUND);
                 }
 
-                $this->addFlash('reset_password_error', $message);
+                $this->addFlash('error', $message);
                 return $this->redirectToRoute('app_forgot_password_request');
             }
 
             try {
                 $resetToken = $this->resetPasswordHelper->generateResetToken($user);
             } catch (ResetPasswordExceptionInterface $e) {
+                $errorMessage = $translator->trans($e->getReason(), [], 'ResetPasswordBundle');
+
                 if ($request->isXmlHttpRequest()) {
                     return new JsonResponse([
-                        'error' => $translator->trans($e->getReason(), [], 'ResetPasswordBundle')
-                    ], 400);
+                        'success' => false,
+                        'message' => $errorMessage
+                    ], Response::HTTP_BAD_REQUEST);
                 }
 
-                $this->addFlash('reset_password_error', $translator->trans($e->getReason(), [], 'ResetPasswordBundle'));
+                $this->addFlash('error', $errorMessage);
                 return $this->redirectToRoute('app_forgot_password_request');
             }
 
-            $emailMessage = (new TemplatedEmail())
+            $email = (new TemplatedEmail())
                 ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
                 ->to($user->getEmail())
-                ->subject('Réinitialisation de votre mot de passe')
+                ->subject($translator->trans('Réinitialisation de votre mot de passe'))
                 ->htmlTemplate('reset_password/email.html.twig')
                 ->context([
                     'resetToken' => $resetToken,
+                    'user' => $user,
+                    'tokenLifetime' => $this->resetPasswordHelper->getTokenLifetime(),
                 ]);
 
-            $mailer->send($emailMessage);
+            $mailer->send($email);
             $this->setTokenObjectInSession($resetToken);
 
             if ($request->isXmlHttpRequest()) {
-                return new JsonResponse(['success' => 'Email de réinitialisation envoyé.']);
+                return new JsonResponse([
+                    'success' => true,
+                    'message' => $translator->trans('Un email de réinitialisation a été envoyé.')
+                ]);
             }
 
             return $this->redirectToRoute('app_check_email');
         }
 
         return $this->render('reset_password/request.html.twig', [
-            'requestForm' => $form,
+            'requestForm' => $form->createView(),
         ]);
     }
 
     #[Route('/check-email', name: 'app_check_email')]
     public function checkEmail(): Response
     {
-        $resetToken = $this->getTokenObjectFromSession() ?? $this->resetPasswordHelper->generateFakeResetToken();
+        $resetToken = $this->getTokenObjectFromSession();
+        
+        if (null === $resetToken) {
+            return $this->redirectToRoute('app_forgot_password_request');
+        }
 
         return $this->render('reset_password/check_email.html.twig', [
             'resetToken' => $resetToken,
+            'tokenLifetime' => $this->resetPasswordHelper->getTokenLifetime(),
         ]);
     }
 
     #[Route('/reset/{token}', name: 'app_reset_password')]
-    public function reset(Request $request, UserPasswordHasherInterface $passwordHasher, TranslatorInterface $translator, ?string $token = null): Response
-    {
+    public function reset(
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        TranslatorInterface $translator,
+        ?string $token = null
+    ): Response {
         if ($token) {
             $this->storeTokenInSession($token);
             return $this->redirectToRoute('app_reset_password');
         }
 
         $token = $this->getTokenFromSession();
-
         if (null === $token) {
-            throw $this->createNotFoundException('Aucun token de réinitialisation trouvé.');
+            $this->addFlash('error', $translator->trans('Aucun token de réinitialisation trouvé.'));
+            return $this->redirectToRoute('app_forgot_password_request');
         }
 
         try {
-            /** @var User $user */
             $user = $this->resetPasswordHelper->validateTokenAndFetchUser($token);
         } catch (ResetPasswordExceptionInterface $e) {
-            $this->addFlash('reset_password_error', sprintf(
-                '%s - %s',
-                $translator->trans(ResetPasswordExceptionInterface::MESSAGE_PROBLEM_VALIDATE, [], 'ResetPasswordBundle'),
-                $translator->trans($e->getReason(), [], 'ResetPasswordBundle')
+            $this->addFlash('error', $translator->trans(
+                'Il y a eu un problème avec votre demande de réinitialisation - %s',
+                ['%s' => $translator->trans($e->getReason(), [], 'ResetPasswordBundle')]
             ));
 
             return $this->redirectToRoute('app_forgot_password_request');
@@ -131,18 +152,24 @@ class ResetPasswordController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $this->resetPasswordHelper->removeResetRequest($token);
-            $plainPassword = $form->get('plainPassword')->getData();
 
-            $user->setPassword($passwordHasher->hashPassword($user, $plainPassword));
+            $encodedPassword = $passwordHasher->hashPassword(
+                $user,
+                $form->get('plainPassword')->getData()
+            );
+
+            $user->setPassword($encodedPassword);
             $this->entityManager->flush();
 
             $this->cleanSessionAfterReset();
 
-            return $this->redirectToRoute('app_dashboard');
+            $this->addFlash('success', $translator->trans('Votre mot de passe a été réinitialisé avec succès.'));
+
+            return $this->redirectToRoute('app_login');
         }
 
         return $this->render('reset_password/reset.html.twig', [
-            'resetForm' => $form,
+            'resetForm' => $form->createView(),
         ]);
     }
 }

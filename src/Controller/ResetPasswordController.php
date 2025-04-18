@@ -6,6 +6,7 @@ use App\Entity\User;
 use App\Form\ChangePasswordFormType;
 use App\Form\ResetPasswordRequestFormType;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,7 +30,8 @@ class ResetPasswordController extends AbstractController
 
     public function __construct(
         private ResetPasswordHelperInterface $resetPasswordHelper,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private LoggerInterface $logger
     ) {}
 
     /**
@@ -57,6 +59,7 @@ class ResetPasswordController extends AbstractController
                 $resetToken = $this->resetPasswordHelper->generateResetToken($user);
             } catch (ResetPasswordExceptionInterface $e) {
                 $errorMessage = $translator->trans($e->getReason(), [], 'ResetPasswordBundle');
+                $this->logger->error('Erreur lors de la génération du token de réinitialisation : ' . $errorMessage);
                 return $this->handleErrorResponse($errorMessage, $request, Response::HTTP_BAD_REQUEST);
             }
 
@@ -78,6 +81,7 @@ class ResetPasswordController extends AbstractController
                 $successMessage = $translator->trans('Un email de réinitialisation a été envoyé.');
                 return $this->handleSuccessResponse($successMessage, $request, 'app_check_email');
             } catch (TransportExceptionInterface $e) {
+                $this->logger->error('Erreur lors de l\'envoi de l\'email de réinitialisation : ' . $e->getMessage());
                 $this->addFlash('error', $translator->trans('Une erreur est survenue lors de l\'envoi de l\'email.'));
                 return $this->redirectToRoute('app_forgot_password_request');
             }
@@ -97,6 +101,7 @@ class ResetPasswordController extends AbstractController
         $resetToken = $this->getTokenObjectFromSession();
 
         if (!$resetToken) {
+            $this->logger->warning('Tentative d\'accès à la page de confirmation sans token.');
             return $this->redirectToRoute('app_forgot_password_request');
         }
 
@@ -123,6 +128,7 @@ class ResetPasswordController extends AbstractController
 
         $token = $this->getTokenFromSession();
         if (!$token) {
+            $this->logger->warning('Tentative de réinitialisation sans token valide.');
             $this->addFlash('error', $translator->trans('Aucun token de réinitialisation trouvé.'));
             return $this->redirectToRoute('app_forgot_password_request');
         }
@@ -134,6 +140,7 @@ class ResetPasswordController extends AbstractController
                 'Il y a eu un problème avec votre demande de réinitialisation - %s',
                 ['%s' => $translator->trans($e->getReason(), [], 'ResetPasswordBundle')]
             );
+            $this->logger->error('Erreur lors de la validation du token : ' . $errorMessage);
             $this->addFlash('error', $errorMessage);
             return $this->redirectToRoute('app_forgot_password_request');
         }

@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -31,7 +32,10 @@ class ResetPasswordController extends AbstractController
         private EntityManagerInterface $entityManager
     ) {}
 
-    #[Route('', name: 'app_forgot_password_request')]
+    /**
+     * Demande de réinitialisation de mot de passe.
+     */
+    #[Route('', name: 'app_forgot_password_request', methods: ['GET', 'POST'])]
     public function request(Request $request, MailerInterface $mailer, TranslatorInterface $translator): Response
     {
         $form = $this->createForm(ResetPasswordRequestFormType::class);
@@ -41,61 +45,42 @@ class ResetPasswordController extends AbstractController
             $email = $form->get('email')->getData();
             $user = $this->entityManager->getRepository(User::class)->findOneBy([
                 'email' => $email,
-                'isVerified' => true // Assure que l'email est vérifié
+                'isVerified' => true // Vérifie que l'utilisateur est vérifié
             ]);
 
             if (!$user) {
                 $message = $translator->trans('Aucun compte vérifié n\'est associé à cet email.');
-
-                if ($request->isXmlHttpRequest()) {
-                    return new JsonResponse([
-                        'success' => false,
-                        'message' => $message
-                    ], Response::HTTP_NOT_FOUND);
-                }
-
-                $this->addFlash('error', $message);
-                return $this->redirectToRoute('app_forgot_password_request');
+                return $this->handleErrorResponse($message, $request, Response::HTTP_NOT_FOUND);
             }
 
             try {
                 $resetToken = $this->resetPasswordHelper->generateResetToken($user);
             } catch (ResetPasswordExceptionInterface $e) {
                 $errorMessage = $translator->trans($e->getReason(), [], 'ResetPasswordBundle');
+                return $this->handleErrorResponse($errorMessage, $request, Response::HTTP_BAD_REQUEST);
+            }
 
-                if ($request->isXmlHttpRequest()) {
-                    return new JsonResponse([
-                        'success' => false,
-                        'message' => $errorMessage
-                    ], Response::HTTP_BAD_REQUEST);
-                }
+            try {
+                $emailMessage = (new TemplatedEmail())
+                    ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+                    ->to($user->getEmail())
+                    ->subject($translator->trans('Réinitialisation de votre mot de passe'))
+                    ->htmlTemplate('reset_password/email.html.twig')
+                    ->context([
+                        'resetToken' => $resetToken,
+                        'user' => $user,
+                        'tokenLifetime' => $this->resetPasswordHelper->getTokenLifetime(),
+                    ]);
 
-                $this->addFlash('error', $errorMessage);
+                $mailer->send($emailMessage);
+                $this->setTokenObjectInSession($resetToken);
+
+                $successMessage = $translator->trans('Un email de réinitialisation a été envoyé.');
+                return $this->handleSuccessResponse($successMessage, $request, 'app_check_email');
+            } catch (TransportExceptionInterface $e) {
+                $this->addFlash('error', $translator->trans('Une erreur est survenue lors de l\'envoi de l\'email.'));
                 return $this->redirectToRoute('app_forgot_password_request');
             }
-
-            $email = (new TemplatedEmail())
-                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
-                ->to($user->getEmail())
-                ->subject($translator->trans('Réinitialisation de votre mot de passe'))
-                ->htmlTemplate('reset_password/email.html.twig')
-                ->context([
-                    'resetToken' => $resetToken,
-                    'user' => $user,
-                    'tokenLifetime' => $this->resetPasswordHelper->getTokenLifetime(),
-                ]);
-
-            $mailer->send($email);
-            $this->setTokenObjectInSession($resetToken);
-
-            if ($request->isXmlHttpRequest()) {
-                return new JsonResponse([
-                    'success' => true,
-                    'message' => $translator->trans('Un email de réinitialisation a été envoyé.')
-                ]);
-            }
-
-            return $this->redirectToRoute('app_check_email');
         }
 
         return $this->render('reset_password/request.html.twig', [
@@ -103,12 +88,15 @@ class ResetPasswordController extends AbstractController
         ]);
     }
 
-    #[Route('/check-email', name: 'app_check_email')]
+    /**
+     * Affiche la page de confirmation après l'envoi de l'email.
+     */
+    #[Route('/check-email', name: 'app_check_email', methods: ['GET'])]
     public function checkEmail(): Response
     {
         $resetToken = $this->getTokenObjectFromSession();
-        
-        if (null === $resetToken) {
+
+        if (!$resetToken) {
             return $this->redirectToRoute('app_forgot_password_request');
         }
 
@@ -118,7 +106,10 @@ class ResetPasswordController extends AbstractController
         ]);
     }
 
-    #[Route('/reset/{token}', name: 'app_reset_password')]
+    /**
+     * Réinitialisation du mot de passe via le token.
+     */
+    #[Route('/reset/{token}', name: 'app_reset_password', methods: ['GET', 'POST'])]
     public function reset(
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
@@ -131,7 +122,7 @@ class ResetPasswordController extends AbstractController
         }
 
         $token = $this->getTokenFromSession();
-        if (null === $token) {
+        if (!$token) {
             $this->addFlash('error', $translator->trans('Aucun token de réinitialisation trouvé.'));
             return $this->redirectToRoute('app_forgot_password_request');
         }
@@ -139,11 +130,11 @@ class ResetPasswordController extends AbstractController
         try {
             $user = $this->resetPasswordHelper->validateTokenAndFetchUser($token);
         } catch (ResetPasswordExceptionInterface $e) {
-            $this->addFlash('error', $translator->trans(
+            $errorMessage = $translator->trans(
                 'Il y a eu un problème avec votre demande de réinitialisation - %s',
                 ['%s' => $translator->trans($e->getReason(), [], 'ResetPasswordBundle')]
-            ));
-
+            );
+            $this->addFlash('error', $errorMessage);
             return $this->redirectToRoute('app_forgot_password_request');
         }
 
@@ -162,7 +153,6 @@ class ResetPasswordController extends AbstractController
             $this->entityManager->flush();
 
             $this->cleanSessionAfterReset();
-
             $this->addFlash('success', $translator->trans('Votre mot de passe a été réinitialisé avec succès.'));
 
             return $this->redirectToRoute('app_login');
@@ -171,5 +161,30 @@ class ResetPasswordController extends AbstractController
         return $this->render('reset_password/reset.html.twig', [
             'resetForm' => $form->createView(),
         ]);
+    }
+
+    /**
+     * Gère les réponses d'erreur pour les requêtes AJAX ou les redirections classiques.
+     */
+    private function handleErrorResponse(string $message, Request $request, int $statusCode): Response
+    {
+        if ($request->isXmlHttpRequest()) {
+            return new JsonResponse(['success' => false, 'message' => $message], $statusCode);
+        }
+
+        $this->addFlash('error', $message);
+        return $this->redirectToRoute('app_forgot_password_request');
+    }
+
+    /**
+     * Gère les réponses de succès pour les requêtes AJAX ou les redirections classiques.
+     */
+    private function handleSuccessResponse(string $message, Request $request, string $redirectRoute): Response
+    {
+        if ($request->isXmlHttpRequest()) {
+            return new JsonResponse(['success' => true, 'message' => $message]);
+        }
+
+        return $this->redirectToRoute($redirectRoute);
     }
 }

@@ -10,38 +10,40 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\{Transactions, User};
 use PayPalCheckoutSdk\Core\{PayPalHttpClient, SandboxEnvironment, ProductionEnvironment};
 use PayPalCheckoutSdk\Orders\{OrdersCreateRequest, OrdersCaptureRequest};
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use DateTimeImmutable;
 
 class PaymentController extends AbstractController
 {
-    private const MIN_WITHDRAWAL_AMOUNT = 2.0; // Minimum 2 USD
-    private const MIN_DEPOSIT_AMOUNT = 1.0; // Minimum 1 USD
+    private const MIN_WITHDRAWAL_AMOUNT = 2.0;
+    private const MIN_DEPOSIT_AMOUNT = 1.0;
     private const MAX_DEPOSIT_AMOUNT = 10000.0;
     private const MAX_WITHDRAWAL_AMOUNT = 5000.0;
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private SessionInterface $session
+        private RequestStack $requestStack
     ) {
     }
 
-    /**
-     * Calcule les frais de retrait en fonction du montant demandé
-     */
+    private function getSession()
+    {
+        return $this->requestStack->getSession();
+    }
+
     private function calculateWithdrawalFees(float $amount): float
     {
         if ($amount <= 20) {
-            $feePercentage = 0.05; // 5% pour $2-$20
+            $feePercentage = 0.05;
         } elseif ($amount <= 100) {
-            $feePercentage = 0.03; // 3% pour $20.01-$100
+            $feePercentage = 0.03;
         } elseif ($amount <= 500) {
-            $feePercentage = 0.02; // 2% pour $100.01-$500
+            $feePercentage = 0.02;
         } else {
-            $feePercentage = 0.01; // 1% pour $500.01+
+            $feePercentage = 0.01;
         }
 
-        return max($amount * $feePercentage, 1.0); // Frais minimum de $1
+        return max($amount * $feePercentage, 1.0);
     }
 
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
@@ -54,7 +56,6 @@ class PaymentController extends AbstractController
         $currency = strtoupper(trim($request->request->get('currency')));
         $address = trim($request->request->get('recipient'));
 
-        // Validation
         if ($amountUsd < self::MIN_WITHDRAWAL_AMOUNT) {
             return $this->redirectWithFlash('danger', sprintf(
                 'Le montant de retrait doit être d\'au moins %.2f USD.',
@@ -66,11 +67,9 @@ class PaymentController extends AbstractController
             return $this->redirectWithFlash('danger', 'Veuillez fournir une adresse de portefeuille valide.');
         }
 
-        // Calcul des frais
         $fees = $this->calculateWithdrawalFees($amountUsd);
         $totalAmount = $amountUsd + $fees;
 
-        // Vérification du solde
         if ($totalAmount > $user->getBalance()) {
             return $this->redirectWithFlash('danger', sprintf(
                 'Solde insuffisant. Le retrait de %.2f USD nécessite %.2f USD de frais, soit un total de %.2f USD.',
@@ -80,7 +79,6 @@ class PaymentController extends AbstractController
             ));
         }
 
-        // Création de la transaction
         $transaction = (new Transactions())
             ->setUser($user)
             ->setType('withdrawal')
@@ -92,14 +90,12 @@ class PaymentController extends AbstractController
 
         $this->entityManager->beginTransaction();
         try {
-            // Déduire le montant total du solde
             $user->setBalance($user->getBalance() - $totalAmount);
             
             $this->entityManager->persist($transaction);
             $this->entityManager->persist($user);
             $this->entityManager->flush();
 
-            // Envoi à CoinPayments
             $response = $this->coinPaymentsWithdrawal($transaction, $currency, $address);
             
             $this->entityManager->commit();
@@ -110,11 +106,7 @@ class PaymentController extends AbstractController
             ));
         } catch (\Exception $e) {
             $this->entityManager->rollback();
-            $this->logError('Withdrawal failed', [
-                'error' => $e->getMessage(),
-                'user' => $user->getId(),
-                'amount' => $amountUsd
-            ]);
+            $this->logError('Withdrawal failed', ['error' => $e->getMessage()]);
             return $this->redirectWithFlash('danger', 'Erreur lors du traitement: ' . $e->getMessage());
         }
     }
@@ -122,13 +114,13 @@ class PaymentController extends AbstractController
     private function coinPaymentsWithdrawal(Transactions $transaction, string $currency, string $address): array
     {
         $params = [
-            'amount'       => $transaction->getAmount(),
-            'currency'     => $currency,
-            'currency2'   => 'USD',
-            'address'      => $address,
+            'amount' => $transaction->getAmount(),
+            'currency' => $currency,
+            'currency2' => 'USD',
+            'address' => $address,
             'auto_confirm' => 1,
-            'ipn_url'      => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-            'custom'       => $transaction->getId()
+            'ipn_url' => $this->generateUrl('coinpayments_withdrawal_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+            'custom' => $transaction->getId()
         ];
 
         $this->logInfo('CoinPayments withdrawal request', $params);
@@ -170,7 +162,6 @@ class PaymentController extends AbstractController
         $amount = (float)$request->request->get('amount');
         $paymentMethod = $request->request->get('paymentMethod');
 
-        // Validation
         if ($amount < self::MIN_DEPOSIT_AMOUNT) {
             return $this->redirectWithFlash('danger', sprintf(
                 'Le montant minimum de dépôt est de %.2f USD.',
@@ -226,7 +217,6 @@ class PaymentController extends AbstractController
             return $this->redirectWithFlash('danger', 'Veuillez fournir tous les détails de la transaction');
         }
 
-        // Enregistrer les détails de la transaction crypto
         $transaction
             ->setMethod("crypto_$cryptoType")
             ->setExternalId($txHash)
@@ -270,8 +260,8 @@ class PaymentController extends AbstractController
                 throw new \Exception('URL PayPal introuvable');
             }
 
-            $this->session->set('paypal_order_id', $response->result->id);
-            $this->session->set('paypal_amount', $amount);
+            $this->getSession()->set('paypal_order_id', $response->result->id);
+            $this->getSession()->set('paypal_amount', $amount);
             return $this->redirect($approveUrl);
         } catch (\Exception $e) {
             $this->logError('PayPal redirect failed', ['error' => $e->getMessage()]);
@@ -282,8 +272,8 @@ class PaymentController extends AbstractController
     #[Route('/paypal/return', name: 'paypal_return')]
     public function paypalReturn(Request $request): Response
     {
-        $orderId = $request->query->get('token') ?? $this->session->get('paypal_order_id');
-        $amount = $this->session->get('paypal_amount');
+        $orderId = $request->query->get('token') ?? $this->getSession()->get('paypal_order_id');
+        $amount = $this->getSession()->get('paypal_amount');
 
         if (!$orderId || !$amount) {
             return $this->redirectWithFlash('danger', 'Commande PayPal introuvable');
@@ -316,8 +306,8 @@ class PaymentController extends AbstractController
             $this->entityManager->flush();
             $this->entityManager->commit();
 
-            $this->session->remove('paypal_order_id');
-            $this->session->remove('paypal_amount');
+            $this->getSession()->remove('paypal_order_id');
+            $this->getSession()->remove('paypal_amount');
             
             return $this->redirectWithFlash('success', sprintf(
                 'Dépôt de %.2f USD effectué avec succès',
@@ -333,8 +323,8 @@ class PaymentController extends AbstractController
     #[Route('/paypal/cancel', name: 'paypal_cancel')]
     public function paypalCancel(): Response
     {
-        $this->session->remove('paypal_order_id');
-        $this->session->remove('paypal_amount');
+        $this->getSession()->remove('paypal_order_id');
+        $this->getSession()->remove('paypal_amount');
         return $this->redirectWithFlash('warning', 'Paiement PayPal annulé');
     }
 

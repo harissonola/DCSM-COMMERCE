@@ -28,20 +28,38 @@
 				{{ form_start(resetForm, {'attr': {'class': 'auth-form'}}) }}
 				<div class="form-group">
 					<div class="password-input">
-						{{ form_widget(resetForm.plainPassword, {'attr': {
+						{{ form_widget(resetForm.plainPassword.first, {'attr': {
 				  'class': 'form-control',
 				  'placeholder': ' ',
 				  'autocomplete': 'new-password'
 				}}) }}
-						<label for="{{ resetForm.plainPassword.vars.id }}">Nouveau mot de passe</label>
+						<label for="{{ resetForm.plainPassword.first.vars.id }}">Nouveau mot de passe</label>
 						<button type="button" class="toggle-password">
 							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
 								<circle cx="12" cy="12" r="3"></circle>
 							</svg>
 						</button>
+						<div class="password-strength"></div>
 					</div>
-					<div class="password-strength"></div>
+				</div>
+
+				<div class="form-group">
+					<div class="password-input">
+						{{ form_widget(resetForm.plainPassword.second, {'attr': {
+				  'class': 'form-control',
+				  'placeholder': ' ',
+				  'autocomplete': 'new-password'
+				}}) }}
+						<label for="{{ resetForm.plainPassword.second.vars.id }}">Confirmez le mot de passe</label>
+						<button type="button" class="toggle-password">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+								<circle cx="12" cy="12" r="3"></circle>
+							</svg>
+						</button>
+						<div class="password-strength"></div>
+					</div>
 				</div>
 
 				<button type="submit" class="btn-auth">
@@ -309,23 +327,43 @@
 </style>
 
  <script>
-	document.addEventListener('turbo:load', function() {
-	  // Toggle password visibility
-	  const togglePassword = document.querySelector('.toggle-password');
-	  const passwordInput = document.getElementById('{{ resetForm.plainPassword.vars.id }}');
-	  const passwordIcon = togglePassword.querySelector('svg');
-	  
-	  togglePassword.addEventListener('click', function() {
+	document.addEventListener('DOMContentLoaded', function() {
+	  // Récupérer les deux champs de mot de passe
+	  const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
+	  const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
+	
+	  // Boutons pour afficher/masquer le mot de passe
+	  const togglePassword1 = document.querySelector('.password-input:nth-child(1) .toggle-password');
+	  const togglePassword2 = document.querySelector('.password-input:nth-child(2) .toggle-password');
+	
+	  // Fonction pour gérer l'affichage/masquage du mot de passe
+	  function togglePasswordVisibility(passwordInput, passwordIcon) {
 		const isPassword = passwordInput.type === 'password';
 		passwordInput.type = isPassword ? 'text' : 'password';
 		passwordIcon.style.color = isPassword ? 'var(--primary)' : 'var(--text-light)';
+	  }
+	
+	  // Écouteurs d'événements pour les boutons de toggle
+	  togglePassword1.addEventListener('click', function() {
+		togglePasswordVisibility(passwordInput1, this.querySelector('svg'));
 	  });
 	
-	  // Password strength indicator
-	  passwordInput.addEventListener('input', function() {
-		const strengthBar = document.querySelector('.password-strength');
+	  togglePassword2.addEventListener('click', function() {
+		togglePasswordVisibility(passwordInput2, this.querySelector('svg'));
+	  });
+	
+	  // Indicateur de force du mot de passe pour le premier champ
+	  passwordInput1.addEventListener('input', function() {
+		const strengthBar1 = document.querySelector('.password-input:nth-child(1) .password-strength');
 		const strength = calculatePasswordStrength(this.value);
-		strengthBar.style.setProperty('--strength', strength + '%');
+		strengthBar1.style.setProperty('--strength', strength + '%');
+	  });
+	
+	  // Indicateur de force du mot de passe pour le deuxième champ
+	  passwordInput2.addEventListener('input', function() {
+		const strengthBar2 = document.querySelector('.password-input:nth-child(2) .password-strength');
+		const strength = calculatePasswordStrength(this.value);
+		strengthBar2.style.setProperty('--strength', strength + '%');
 	  });
 	
 	  function calculatePasswordStrength(password) {

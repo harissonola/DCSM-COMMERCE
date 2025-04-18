@@ -327,100 +327,106 @@
 </style>
 
  <script>
-document.addEventListener('turbo:load', function () {
-    // Récupérer le formulaire
-    const resetPasswordForm = document.querySelector('.auth-form');
-
-    if (resetPasswordForm) {
-        resetPasswordForm.addEventListener('submit', function (event) {
-            event.preventDefault(); // Empêcher la soumission classique
-
-            // Récupérer les champs de mot de passe
-            const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
-            const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
-
-            // Vérifier que les deux mots de passe correspondent
-            if (passwordInput1.value !== passwordInput2.value) {
-                alert('Les deux mots de passe ne correspondent pas.');
-                return;
-            }
-
-            // Créer un objet FormData avec les données du formulaire
-            const formData = new FormData(resetPasswordForm);
-
-            // Envoyer la requête AJAX
-            fetch('/reset-password/reset', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest', // Indiquer que c'est une requête AJAX
-                },
-            })
-                .then((response) => response.json()) // Attendre une réponse JSON
-                .then((data) => {
-                    if (data.success) {
-                        // Afficher un message de succès
-                        alert(data.message);
-                        window.location.href = '/login'; // Rediriger vers la page de connexion
-                    } else {
-                        // Afficher un message d'erreur
-                        alert(data.message);
-                    }
-                })
-                .catch((error) => {
-                    console.error('Erreur lors de la requête AJAX :', error);
-                    alert('Une erreur est survenue. Veuillez réessayer.');
-                });
-        });
-    }
-
-    // Fonctionnalité pour afficher/masquer le mot de passe
-    const togglePassword1 = document.querySelector('.password-input:nth-child(1) .toggle-password');
-    const togglePassword2 = document.querySelector('.password-input:nth-child(2) .toggle-password');
-
-	console.log(togglePassword1);
-	console.log(togglePassword2);
-
-    function togglePasswordVisibility(passwordInput, passwordIcon) {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        passwordIcon.style.color = isPassword ? 'var(--primary)' : 'var(--text-light)';
-    }
-
-    togglePassword1.addEventListener('click', function () {
-        const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
-        togglePasswordVisibility(passwordInput1, this.querySelector('svg'));
-    });
-
-    togglePassword2.addEventListener('click', function () {
-        const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
-        togglePasswordVisibility(passwordInput2, this.querySelector('svg'));
-    });
-
-    // Indicateur de force du mot de passe
-    const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
-    const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
-
-    passwordInput1.addEventListener('input', function () {
-        const strengthBar1 = document.querySelector('.password-input:nth-child(1) .password-strength');
-        const strength = calculatePasswordStrength(this.value);
-        strengthBar1.style.setProperty('--strength', strength + '%');
-    });
-
-    passwordInput2.addEventListener('input', function () {
-        const strengthBar2 = document.querySelector('.password-input:nth-child(2) .password-strength');
-        const strength = calculatePasswordStrength(this.value);
-        strengthBar2.style.setProperty('--strength', strength + '%');
-    });
-
-    function calculatePasswordStrength(password) {
-        let strength = 0;
-        if (password.length > 0) strength += 20;
-        if (password.length > 5) strength += 20;
-        if (password.match(/[A-Z]/)) strength += 20;
-        if (password.match(/[0-9]/)) strength += 20;
-        if (password.match(/[^A-Za-z0-9]/)) strength += 20;
-        return Math.min(strength, 100);
-    }
-});
+	document.addEventListener('turbo:load', function () {
+		// Récupérer le formulaire
+		const resetPasswordForm = document.querySelector('.auth-form');
+		if (resetPasswordForm) {
+			resetPasswordForm.addEventListener('submit', function (event) {
+				event.preventDefault(); // Empêcher la soumission classique
+	
+				// Récupérer les champs de mot de passe
+				const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
+				const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
+	
+				// Vérifier que les deux mots de passe correspondent
+				if (passwordInput1.value !== passwordInput2.value) {
+					alert('Les deux mots de passe ne correspondent pas.');
+					return;
+				}
+	
+				// Créer un objet FormData avec les données du formulaire
+				const formData = new FormData(resetPasswordForm);
+	
+				// Envoyer la requête AJAX
+				fetch('/reset-password/reset', {
+					method: 'POST',
+					body: formData,
+					headers: {
+						'X-Requested-With': 'XMLHttpRequest', // Indiquer que c'est une requête AJAX
+					},
+				})
+					.then((response) => response.json()) // Attendre une réponse JSON
+					.then((data) => {
+						if (data.success) {
+							// Afficher un message de succès
+							alert(data.message);
+							window.location.href = '/login'; // Rediriger vers la page de connexion
+						} else {
+							// Afficher un message d'erreur
+							alert(data.message);
+						}
+					})
+					.catch((error) => {
+						console.error('Erreur lors de la requête AJAX :', error);
+						alert('Une erreur est survenue. Veuillez réessayer.');
+					});
+			});
+		}
+	
+		// Fonctionnalité pour afficher/masquer le mot de passe
+		const togglePassword1 = document.querySelector('.password-input:first-child .toggle-password');
+		const togglePassword2 = document.querySelector('.password-input:last-child .toggle-password');
+	
+		if (!togglePassword1 || !togglePassword2) {
+			console.error('Un ou plusieurs boutons toggle-password sont manquants dans le DOM.');
+			return;
+		}
+	
+		function togglePasswordVisibility(passwordInput, passwordIcon) {
+			const isPassword = passwordInput.type === 'password';
+			passwordInput.type = isPassword ? 'text' : 'password';
+			passwordIcon.style.color = isPassword ? 'var(--primary)' : 'var(--text-light)';
+		}
+	
+		togglePassword1.addEventListener('click', function () {
+			const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
+			togglePasswordVisibility(passwordInput1, this.querySelector('svg'));
+		});
+	
+		togglePassword2.addEventListener('click', function () {
+			const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
+			togglePasswordVisibility(passwordInput2, this.querySelector('svg'));
+		});
+	
+		// Indicateur de force du mot de passe
+		const passwordInput1 = document.getElementById('{{ resetForm.plainPassword.first.vars.id }}');
+		const passwordInput2 = document.getElementById('{{ resetForm.plainPassword.second.vars.id }}');
+	
+		if (!passwordInput1 || !passwordInput2) {
+			console.error('Un ou plusieurs champs de mot de passe sont manquants dans le DOM.');
+			return;
+		}
+	
+		passwordInput1.addEventListener('input', function () {
+			const strengthBar1 = document.querySelector('.password-input:first-child .password-strength');
+			const strength = calculatePasswordStrength(this.value);
+			strengthBar1.style.setProperty('--strength', strength + '%');
+		});
+	
+		passwordInput2.addEventListener('input', function () {
+			const strengthBar2 = document.querySelector('.password-input:last-child .password-strength');
+			const strength = calculatePasswordStrength(this.value);
+			strengthBar2.style.setProperty('--strength', strength + '%');
+		});
+	
+		function calculatePasswordStrength(password) {
+			let strength = 0;
+			if (password.length > 0) strength += 20;
+			if (password.length > 5) strength += 20;
+			if (password.match(/[A-Z]/)) strength += 20;
+			if (password.match(/[0-9]/)) strength += 20;
+			if (password.match(/[^A-Za-z0-9]/)) strength += 20;
+			return Math.min(strength, 100);
+		}
+	});
 </script>{% endblock %}

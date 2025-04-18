@@ -21,12 +21,12 @@ use Psr\Log\LoggerInterface;
 #[Route('/products', name: 'app_products_')]
 class ProductsController extends AbstractController
 {
+    private const EXCHANGE_RATE = 601.5;
     private NumberFormatter $numberFormatter;
     private LoggerInterface $logger;
 
     public function __construct(LoggerInterface $logger)
     {
-
         $this->logger = $logger;
         $this->numberFormatter = new NumberFormatter('en_US', NumberFormatter::CURRENCY);
     }
@@ -65,21 +65,24 @@ class ProductsController extends AbstractController
             return $this->redirectToRoute('app_dashboard');
         }
 
-        // Nouveau système : on parcourt les produits possédés par l'utilisateur
-        // et on attribue la récompense correspondante si 24h se sont écoulées depuis la dernière attribution.
         $this->handleReferralRewards($em, $user);
+
+        $chartData = $this->generateChartData($product, $priceRepository);
+        
+        // Log pour débogage
+        $this->logger->debug('Chart data generated', [
+            'product' => $product->getName(),
+            'data_points' => count($chartData['price']),
+            'has_market_cap' => !empty($chartData['market_cap'])
+        ]);
 
         return $this->render('products/dash.html.twig', [
             'prod'      => $product,
-            'chartData' => $this->generateChartData($product, $priceRepository),
+            'chartData' => $chartData,
             'balance'   => $user->getBalance()
         ]);
     }
 
-    /**
-     * Nouvelle action pour renvoyer les données du graphique en fonction d'une plage de temps.
-     * Exemple d'URL : /products/{slug}/dashboard/data?range=1d
-     */
     #[Route('/{slug}/dashboard/data', name: 'dashboard_data')]
     public function dashboardData(
         string $slug,
@@ -92,74 +95,27 @@ class ProductsController extends AbstractController
             throw $this->createNotFoundException("Produit introuvable");
         }
 
-        // Récupérer la plage de temps souhaitée via le paramètre "range"
         $range = $request->query->get('range', '1d');
-        $startDate = null;
+        $startDate = $this->getStartDateForRange($range);
 
-        switch ($range) {
-            case '1d':
-                $startDate = (new \DateTime())->modify('-1 day');
-                break;
-            case '5d':
-                $startDate = (new \DateTime())->modify('-5 day');
-                break;
-            case '1m':
-                $startDate = (new \DateTime())->modify('-1 month');
-                break;
-            case 'ytd':
-                // Premier jour de l'année en cours
-                $startDate = new \DateTime('first day of January ' . date('Y'));
-                break;
-            case '1y':
-                $startDate = (new \DateTime())->modify('-1 year');
-                break;
-            case '5y':
-                $startDate = (new \DateTime())->modify('-5 year');
-                break;
-            case 'max':
-                $startDate = null;
-                break;
-            default:
-                $startDate = (new \DateTime())->modify('-1 day');
-        }
+        $prices = $this->getPricesForRange($priceRepository, $product, $startDate);
+        $data = $this->formatChartData($prices);
 
-        // Récupérer les prix filtrés par date si nécessaire
-        if ($startDate) {
-            $prices = $priceRepository->createQueryBuilder('pp')
-                ->andWhere('pp.product = :product')
-                ->andWhere('pp.timestamp >= :startDate')
-                ->setParameter('product', $product)
-                ->setParameter('startDate', $startDate)
-                ->orderBy('pp.timestamp', 'ASC')
-                ->getQuery()
-                ->getResult();
-        } else {
-            $prices = $priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']);
-        }
+        // Log pour débogage
+        $this->logger->debug('Dashboard data response', [
+            'range' => $range,
+            'start_date' => $startDate ? $startDate->format('Y-m-d H:i:s') : null,
+            'data_points' => count($data['price'])
+        ]);
 
-        $data = ['price' => [], 'market_cap' => []];
-        $exchangeRate = 601.5;
-
-        foreach ($prices as $price) {
-            $timestamp = $price->getTimestamp()->format('c');
-            $data['price'][] = ['x' => $timestamp, 'y' => round($price->getPrice() / $exchangeRate, 2)];
-            if ($price->getMarketCap() !== null) {
-                $data['market_cap'][] = ['x' => $timestamp, 'y' => round($price->getMarketCap() / $exchangeRate, 2)];
-            }
-        }
         return new JsonResponse($data);
     }
 
-    /**
-     * Attribue des récompenses à tous les utilisateurs qui possèdent au moins un produit,
-     * qu'ils soient connectés ou non, si 24 heures se sont écoulées depuis la dernière attribution.
-     */
     private function handleReferralRewards(EntityManagerInterface $em, User $currentUser): void
     {
         $now = new \DateTimeImmutable();
-
-        // Récupérer tous les utilisateurs possédant au moins un produit
         $userRepository = $em->getRepository(User::class);
+        
         $usersWithProducts = $userRepository->createQueryBuilder('u')
             ->join('u.product', 'p')
             ->distinct()
@@ -169,39 +125,17 @@ class ProductsController extends AbstractController
         foreach ($usersWithProducts as $user) {
             $lastRewardTime = $user->getLastReferralRewardAt();
 
-            // Si moins de 24h se sont écoulées depuis la dernière récompense, on passe au suivant
-            if (
-                $lastRewardTime instanceof \DateTimeImmutable &&
-                (($now->getTimestamp() - $lastRewardTime->getTimestamp()) < 86400)
-            ) {
+            if ($lastRewardTime instanceof \DateTimeImmutable && 
+                ($now->getTimestamp() - $lastRewardTime->getTimestamp()) < 86400) {
                 continue;
             }
 
-            $totalReward = 0;
-            foreach ($user->getProduct() as $product) {
-                // Récupère le dernier prix du produit
-                $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
-                if (!$latestPrice) {
-                    continue;
-                }
-
-                // Conversion du prix de CFA en USD en divisant par 601.50
-                $priceCFA = $latestPrice->getPrice();
-                $priceUSD = $priceCFA / 601.50;
-
-                // Calcul de la récompense basée sur le pourcentage referralRewardRate
-                $rewardRate = $user->getReferralRewardRate();
-                $reward = $priceUSD * ($rewardRate / 100);
-                $totalReward += $reward;
-            }
+            $totalReward = $this->calculateTotalReward($em, $user);
 
             if ($totalReward > 0) {
-                // Mise à jour du solde de l'utilisateur
                 $user->setBalance($user->getBalance() + $totalReward);
-                // Mise à jour de la date de la dernière récompense
                 $user->setLastReferralRewardAt($now);
 
-                // Affichage d'un message flash pour l'utilisateur actuel
                 if ($user->getId() === $currentUser->getId()) {
                     $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
                     $this->addFlash('success', sprintf(
@@ -210,10 +144,9 @@ class ProductsController extends AbstractController
                     ));
                 }
 
-                // Journalisation de l'attribution de récompense
                 $this->logger->info('Récompense attribuée', [
-                    'user_id'   => $user->getId(),
-                    'reward'    => $totalReward,
+                    'user_id' => $user->getId(),
+                    'reward' => $totalReward,
                     'timestamp' => $now->format('Y-m-d H:i:s')
                 ]);
             }
@@ -224,18 +157,81 @@ class ProductsController extends AbstractController
 
     private function generateChartData(Product $product, ProductPriceRepository $priceRepository): array
     {
-        $data = ['price' => [], 'market_cap' => []];
-        $exchangeRate = 601.5;
+        $prices = $priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']);
+        return $this->formatChartData($prices);
+    }
 
-        foreach ($priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']) as $price) {
+    private function getStartDateForRange(string $range): ?\DateTime
+    {
+        switch ($range) {
+            case '1d': return (new \DateTime())->modify('-1 day');
+            case '5d': return (new \DateTime())->modify('-5 day');
+            case '1m': return (new \DateTime())->modify('-1 month');
+            case 'ytd': return new \DateTime('first day of January ' . date('Y'));
+            case '1y': return (new \DateTime())->modify('-1 year');
+            case '5y': return (new \DateTime())->modify('-5 year');
+            case 'max': return null;
+            default: return (new \DateTime())->modify('-1 day');
+        }
+    }
+
+    private function getPricesForRange(
+        ProductPriceRepository $priceRepository,
+        Product $product,
+        ?\DateTime $startDate
+    ): array {
+        if ($startDate) {
+            return $priceRepository->createQueryBuilder('pp')
+                ->andWhere('pp.product = :product')
+                ->andWhere('pp.timestamp >= :startDate')
+                ->setParameter('product', $product)
+                ->setParameter('startDate', $startDate)
+                ->orderBy('pp.timestamp', 'ASC')
+                ->getQuery()
+                ->getResult();
+        }
+        
+        return $priceRepository->findBy(['product' => $product], ['timestamp' => 'ASC']);
+    }
+
+    private function formatChartData(array $prices): array
+    {
+        $data = ['price' => [], 'market_cap' => []];
+
+        foreach ($prices as $price) {
             $timestamp = $price->getTimestamp()->format('c');
-            $data['price'][] = ['x' => $timestamp, 'y' => round($price->getPrice() / $exchangeRate, 2)];
+            $data['price'][] = [
+                'x' => $timestamp, 
+                'y' => round($price->getPrice() / self::EXCHANGE_RATE, 2)
+            ];
 
             if ($price->getMarketCap() !== null) {
-                $data['market_cap'][] = ['x' => $timestamp, 'y' => round($price->getMarketCap() / $exchangeRate, 2)];
+                $data['market_cap'][] = [
+                    'x' => $timestamp, 
+                    'y' => round($price->getMarketCap() / self::EXCHANGE_RATE, 2)
+                ];
             }
         }
+
         return $data;
+    }
+
+    private function calculateTotalReward(EntityManagerInterface $em, User $user): float
+    {
+        $totalReward = 0;
+        
+        foreach ($user->getProduct() as $product) {
+            $latestPrice = $em->getRepository(ProductPrice::class)->findLatestPrice($product);
+            if (!$latestPrice) {
+                continue;
+            }
+
+            $priceUSD = $latestPrice->getPrice() / self::EXCHANGE_RATE;
+            $reward = $priceUSD * ($user->getReferralRewardRate() / 100);
+            $totalReward += $reward;
+        }
+
+        return $totalReward;
     }
 
     private function generateAccessMessage(string $slug): string
@@ -251,8 +247,7 @@ class ProductsController extends AbstractController
         Request $request,
         ProductRepository $productRepository,
         EntityManagerInterface $em,
-        string $slug,
-        NumberFormatter $numberFormatter
+        string $slug
     ): Response {
         try {
             /** @var User $user */
@@ -268,15 +263,12 @@ class ProductsController extends AbstractController
                 return $this->redirectToRoute('app_dashboard');
             }
 
-            // Utiliser la même logique que {{ (prod.price/601.50) }}
-            $formattedPrice = (($product->getPrice() / 601.50));
-            // Convertir la chaîne formatée en nombre sans le symbole $
-            $priceUSD = $formattedPrice;
+            $priceUSD = $product->getPrice() / self::EXCHANGE_RATE;
 
             $this->logger->info('Tentative d\'achat', [
                 'balance' => $user->getBalance(),
                 'price_usd' => $priceUSD,
-                'formatted_price' => $formattedPrice
+                'product' => $product->getName()
             ]);
 
             if ($user->getBalance() < $priceUSD) {
@@ -292,7 +284,8 @@ class ProductsController extends AbstractController
             return $this->redirectToRoute('app_dashboard');
         } catch (\Throwable $e) {
             $this->logger->error('Erreur transaction produit', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             $this->addFlash('error', 'Une erreur est survenue lors du traitement de l\'achat');
@@ -306,9 +299,7 @@ class ProductsController extends AbstractController
         $status = $request->query->get('status');
         $this->addFlash(
             $status === 'ACCEPTED' ? 'success' : 'error',
-            $status === 'ACCEPTED'
-                ? 'Paiement accepté !'
-                : 'Échec du paiement'
+            $status === 'ACCEPTED' ? 'Paiement accepté !' : 'Échec du paiement'
         );
         return $this->redirectToRoute('app_dashboard');
     }
@@ -319,9 +310,7 @@ class ProductsController extends AbstractController
         $status = $request->query->get('status');
         $this->addFlash(
             $status === 'completed' ? 'success' : 'error',
-            $status === 'completed'
-                ? 'Paiement réussi avec PayDunya'
-                : 'Échec du paiement PayDunya'
+            $status === 'completed' ? 'Paiement réussi avec PayDunya' : 'Échec du paiement PayDunya'
         );
         return $this->redirectToRoute('app_dashboard');
     }
@@ -342,4 +331,3 @@ class ProductsController extends AbstractController
         ]);
     }
 }
-// src/Controller/ProductsController.php

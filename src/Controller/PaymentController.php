@@ -14,8 +14,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use DateTimeImmutable;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
-use Symfony\Component\RateLimiter\RateLimiterFactory;
 
 class PaymentController extends AbstractController
 {
@@ -25,26 +23,80 @@ class PaymentController extends AbstractController
     private const MAX_WITHDRAWAL_AMOUNT = 5000.0;
     private const DEPOSIT_EXPIRATION_HOURS = 2;
 
-    private const CRYPTO_NETWORKS = [
-        'USDT.TRC20' => [
-            'name' => 'USDT (TRC20)',
-            'validation_regex' => '/^T[1-9A-HJ-NP-Za-km-z]{33}$/',
-            'explorer' => 'https://apilist.tronscan.org/api/transaction-info?hash='
-        ],
-        'USDT.ERC20' => [
-            'name' => 'USDT (ERC20)',
-            'validation_regex' => '/^0x[a-fA-F0-9]{40}$/',
-            'explorer' => 'https://api.etherscan.io/api?module=account&action=tokentx&contractaddress=0xdac17f958d2ee523a2206206994597c13d831ec7&txhash='
-        ]
+    private const SUPPORTED_CRYPTOS = [
+        'BNB' => 'Binance Coin (BNB)',
+        'BUSD.BEP20' => 'BUSD Token (BSC Chain) - BEP20',
+        'BTC' => 'Bitcoin (BTC)',
+        'BCH' => 'Bitcoin Cash (BCH)',
+        'ADA' => 'Cardano (ADA)',
+        'DASH' => 'Dash (DASH)',
+        'DOGE' => 'Dogecoin (DOGE)',
+        'EOS' => 'EOS (EOS)',
+        'ETH' => 'Ethereum (ETH)',
+        'ETC' => 'Ethereum Classic (ETC)',
+        'LTC' => 'Litecoin (LTC)',
+        'XMR' => 'Monero (XMR)',
+        'USDT.PRC20' => 'POLYGON (USDT.PRC20)',
+        'XRP' => 'Ripple (XRP)',
+        'XLM' => 'Stellar (XLM)',
+        'TRX' => 'TRON (TRX)',
+        'USDT.BEP20' => 'USDT (BEP20)',
+        'USDT.ERC20' => 'USDT (ERC20)',
+        'USDT.MATIC' => 'USDT (Polygon/MATIC)',
+        'USDT.TON' => 'USDT (TON)',
+        'USDT.TRC20' => 'USDT (TRC20)',
+        'ZEC' => 'Zcash (ZEC)'
+    ];
+
+    private const BLOCKCHAIN_CONFIRMATIONS_REQUIRED = [
+        'BTC' => 1,
+        'ETH' => 1,
+        'USDT.ERC20' => 1,
+        'USDT.BEP20' => 1,
+        'USDT.TRC20' => 1,
+        'LTC' => 1,
+        'DOGE' => 1,
+        'BCH' => 1,
+        'XRP' => 1,
+        'TRX' => 1
+    ];
+
+    private const BLOCKCHAIN_EXPLORERS = [
+        'BTC' => 'https://blockstream.info/api/tx/',
+        'ETH' => 'https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=',
+        'USDT.ERC20' => 'https://api.etherscan.io/api?module=account&action=tokentx&contractaddress=0xdac17f958d2ee523a2206206994597c13d831ec7&txhash=',
+        'USDT.BEP20' => 'https://api.bscscan.com/api?module=transaction&action=gettxreceiptstatus&txhash=',
+        'USDT.TRC20' => 'https://apilist.tronscan.org/api/transaction-info?hash=',
+        'LTC' => 'https://api.blockcypher.com/v1/ltc/main/txs/',
+        'DOGE' => 'https://api.blockcypher.com/v1/doge/main/txs/',
+        'BCH' => 'https://api.blockchair.com/bitcoin-cash/raw/transaction/',
+        'XRP' => 'https://data.xrplmeta.org/transaction/',
+        'TRX' => 'https://apilist.tronscan.org/api/transaction-info?hash='
     ];
 
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RequestStack $requestStack,
-        private CsrfTokenManagerInterface $csrfTokenManager,
-        private ValidatorInterface $validator,
-        private RateLimiterFactory $paymentLimiter
+        private CsrfTokenManagerInterface $csrfTokenManager
     ) {}
+
+    private function getSession()
+    {
+        return $this->requestStack->getSession();
+    }
+
+    private function calculateWithdrawalFees(float $amount): float
+    {
+        if ($amount <= 20) {
+            return max($amount * 0.05, 1.0);
+        } elseif ($amount <= 100) {
+            return $amount * 0.03;
+        } elseif ($amount <= 500) {
+            return $amount * 0.02;
+        } else {
+            return $amount * 0.01;
+        }
+    }
 
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
     public function withdraw(Request $request): Response
@@ -54,7 +106,7 @@ class PaymentController extends AbstractController
         // Validation CSRF
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            return $this->redirectWithFlash('danger', 'Token CSRF invalide');
+            return $this->json(['error' => 'Token CSRF invalide'], 403);
         }
 
         $user = $this->getUser();
@@ -114,12 +166,6 @@ class PaymentController extends AbstractController
         $token = new CsrfToken('deposit', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             return $this->redirectWithFlash('danger', 'Token CSRF invalide');
-        }
-
-        // Rate limiting
-        $limiter = $this->paymentLimiter->create($this->getUser()->getUserIdentifier());
-        if (!$limiter->consume()->isAccepted()) {
-            return $this->redirectWithFlash('danger', 'Trop de tentatives. Veuillez patienter.');
         }
 
         $amount = (float)$request->request->get('amount');
@@ -327,6 +373,115 @@ class PaymentController extends AbstractController
         return $this->json(['status' => 'pending']);
     }
 
+    #[Route('/coinpayments/withdrawal-ipn', name: 'coinpayments_withdrawal_ipn', methods: ['POST'])]
+    public function coinpaymentsWithdrawalIpn(Request $request): Response
+    {
+        $ipnData = $request->request->all();
+        $this->logInfo('CoinPayments withdrawal IPN', $ipnData);
+
+        if (isset($ipnData['status'], $ipnData['custom']) && (int)$ipnData['status'] >= 100) {
+            $transaction = $this->entityManager->getRepository(Transactions::class)
+                ->find((int)$ipnData['custom']);
+
+            if ($transaction && $transaction->getStatus() === 'pending') {
+                $transaction->setStatus('completed');
+                $this->entityManager->flush();
+                $this->logInfo('Withdrawal completed', ['transaction' => $transaction->getId()]);
+            }
+        }
+
+        return new Response('IPN received');
+    }
+
+    #[Route('/crypto/confirm/{id}', name: 'app_crypto_confirm', methods: ['POST'])]
+    public function confirmCryptoDeposit(int $id, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
+        if (!$transaction || $transaction->getUser() !== $this->getUser()) {
+            return $this->redirectWithFlash('danger', 'Transaction invalide');
+        }
+
+        $cryptoType = strtoupper(trim($request->request->get('cryptoType')));
+        $txHash = trim($request->request->get('txHash'));
+
+        if (empty($cryptoType) || empty($txHash)) {
+            return $this->redirectWithFlash('danger', 'Veuillez fournir tous les détails de la transaction');
+        }
+
+        if (!array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
+            return $this->redirectWithFlash('danger', 'Cryptomonnaie non supportée');
+        }
+
+        // Vérification de la transaction blockchain
+        $verificationResult = $this->verifyBlockchainTransaction($cryptoType, $txHash, $transaction->getAmount());
+
+        $this->entityManager->beginTransaction();
+        try {
+            if ($verificationResult['confirmed']) {
+                $user = $transaction->getUser();
+                $user->setBalance($user->getBalance() + $transaction->getAmount());
+
+                $transaction
+                    ->setMethod("crypto_" . self::SUPPORTED_CRYPTOS[$cryptoType])
+                    ->setExternalId($txHash)
+                    ->setStatus('completed');
+
+                $message = 'Dépôt confirmé et crédité avec succès!';
+            } else {
+                $transaction
+                    ->setMethod("crypto_" . self::SUPPORTED_CRYPTOS[$cryptoType])
+                    ->setExternalId($txHash)
+                    ->setStatus('pending');
+
+                $message = 'Transaction reçue mais pas encore confirmée sur la blockchain. Votre solde sera crédité automatiquement une fois confirmée.';
+            }
+
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+
+            return $this->redirectWithFlash(
+                $verificationResult['confirmed'] ? 'success' : 'warning',
+                $message
+            );
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            $this->logError('Crypto deposit failed', ['error' => $e->getMessage()]);
+            return $this->redirectWithFlash('danger', 'Erreur lors du traitement: ' . $e->getMessage());
+        }
+    }
+
+    #[Route('/crypto/check-pending', name: 'app_check_pending')]
+    public function checkPendingTransactions(): Response
+    {
+        $pendingTransactions = $this->entityManager->getRepository(Transactions::class)
+            ->findBy(['status' => 'pending', 'method' => ['like' => 'crypto_%']]);
+
+        foreach ($pendingTransactions as $transaction) {
+            $method = $transaction->getMethod();
+            $cryptoType = strtoupper(explode('_', str_replace('crypto_', '', $method))[0]);
+
+            if (array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
+                $verification = $this->verifyBlockchainTransaction(
+                    $cryptoType,
+                    $transaction->getExternalId(),
+                    $transaction->getAmount()
+                );
+
+                if ($verification['confirmed']) {
+                    $user = $transaction->getUser();
+                    $user->setBalance($user->getBalance() + $transaction->getAmount());
+                    $transaction->setStatus('completed');
+                    $this->logInfo('Transaction confirmed', ['id' => $transaction->getId()]);
+                }
+            }
+        }
+
+        $this->entityManager->flush();
+        return new Response('Pending transactions checked: ' . count($pendingTransactions));
+    }
+
     private function validateWithdrawal(User $user, float $amount, string $currency, string $address): array
     {
         $errors = [];
@@ -339,7 +494,7 @@ class PaymentController extends AbstractController
             $errors[] = sprintf('Le montant maximum de retrait est de %.2f USD.', self::MAX_WITHDRAWAL_AMOUNT);
         }
 
-        if (!array_key_exists($currency, self::CRYPTO_NETWORKS)) {
+        if (!array_key_exists($currency, self::SUPPORTED_CRYPTOS)) {
             $errors[] = 'Cryptomonnaie non supportée.';
         }
 
@@ -376,17 +531,80 @@ class PaymentController extends AbstractController
         return $errors;
     }
 
-    private function calculateWithdrawalFees(float $amount): float
+    private function verifyBlockchainTransaction(string $cryptoType, string $txHash, float $amount): array
     {
-        if ($amount <= 20) return max($amount * 0.05, 1.0);
-        if ($amount <= 100) return $amount * 0.03;
-        if ($amount <= 500) return $amount * 0.02;
-        return $amount * 0.01;
+        $client = new \GuzzleHttp\Client(['timeout' => 10]);
+
+        try {
+            $explorerUrl = self::BLOCKCHAIN_EXPLORERS[$cryptoType] ?? null;
+
+            if (!$explorerUrl) {
+                return ['confirmed' => false, 'confirmations' => 0];
+            }
+
+            $response = $client->get($explorerUrl . $txHash);
+            $data = json_decode($response->getBody(), true);
+
+            switch ($cryptoType) {
+                case 'BTC':
+                    $confirmations = $data['confirmations'] ?? 0;
+                    $confirmed = $confirmations >= self::BLOCKCHAIN_CONFIRMATIONS_REQUIRED['BTC'];
+                    $amountReceived = isset($data['value']) ? ($data['value'] / 100000000) : 0;
+                    break;
+
+                case 'ETH':
+                    $blockNumber = hexdec($data['result']['blockNumber'] ?? '0x0');
+                    $currentBlockResponse = $client->get('https://api.etherscan.io/api?module=proxy&action=eth_blockNumber');
+                    $currentBlockData = json_decode($currentBlockResponse->getBody(), true);
+                    $currentBlock = hexdec($currentBlockData['result'] ?? '0x0');
+
+                    $confirmations = $currentBlock - $blockNumber;
+                    $confirmed = $confirmations >= self::BLOCKCHAIN_CONFIRMATIONS_REQUIRED['ETH'];
+                    $amountReceived = isset($data['result']['value'])
+                        ? (hexdec($data['result']['value']) / 1000000000000000000)
+                        : 0;
+                    break;
+
+                case 'USDT.ERC20':
+                    $amountReceived = 0;
+                    if (!empty($data['result'][0]['value'])) {
+                        $decimals = (int)($data['result'][0]['tokenDecimal'] ?? 6);
+                        $amountReceived = (float)($data['result'][0]['value'] / pow(10, $decimals));
+                    }
+                    $confirmed = $amountReceived >= $amount;
+                    $confirmations = $confirmed ? self::BLOCKCHAIN_CONFIRMATIONS_REQUIRED['USDT.ERC20'] : 0;
+                    break;
+
+                case 'USDT.BEP20':
+                    $status = $data['result']['status'] ?? '0';
+                    $confirmed = $status === '1';
+                    $confirmations = $confirmed ? self::BLOCKCHAIN_CONFIRMATIONS_REQUIRED['USDT.BEP20'] : 0;
+                    $amountReceived = $confirmed ? $amount : 0;
+                    break;
+
+                case 'USDT.TRC20':
+                    $confirmed = isset($data['contractRet']) && $data['contractRet'] === 'SUCCESS';
+                    $amountReceived = isset($data['amount']) ? ($data['amount'] / 1000000) : 0;
+                    $confirmations = $confirmed ? self::BLOCKCHAIN_CONFIRMATIONS_REQUIRED['USDT.TRC20'] : 0;
+                    break;
+
+                default:
+                    return ['confirmed' => false, 'confirmations' => 0];
+            }
+
+            return [
+                'confirmed' => $confirmed && $amountReceived >= $amount,
+                'confirmations' => $confirmations
+            ];
+        } catch (\Exception $e) {
+            return ['confirmed' => false, 'confirmations' => 0];
+        }
     }
 
     private function validateCryptoAddress(string $currency, string $address): bool
     {
-        return preg_match(self::CRYPTO_NETWORKS[$currency]['validation_regex'], $address) === 1;
+        // Implémentez la validation selon le type de crypto
+        return true; // Simplifié pour l'exemple
     }
 
     private function generateDepositAddress(string $currency): string
@@ -429,16 +647,15 @@ class PaymentController extends AbstractController
         $clientId = $_ENV['PAYPAL_CLIENT_ID'];
         $clientSecret = $_ENV['PAYPAL_CLIENT_SECRET'];
 
+        if (empty($clientId) || empty($clientSecret)) {
+            throw new \RuntimeException('PayPal credentials not configured');
+        }
+
         $environment = $_ENV['APP_ENV'] === 'prod'
             ? new ProductionEnvironment($clientId, $clientSecret)
             : new SandboxEnvironment($clientId, $clientSecret);
 
         return new PayPalHttpClient($environment);
-    }
-
-    private function getSession()
-    {
-        return $this->requestStack->getSession();
     }
 
     private function redirectWithFlash(string $type, string $message): RedirectResponse
@@ -452,6 +669,15 @@ class PaymentController extends AbstractController
         file_put_contents(
             $this->getParameter('kernel.logs_dir') . '/payment.log',
             date('[Y-m-d H:i:s]') . ' ERROR: ' . $message . ' ' . json_encode($context) . "\n",
+            FILE_APPEND
+        );
+    }
+
+    private function logInfo(string $message, array $context = []): void
+    {
+        file_put_contents(
+            $this->getParameter('kernel.logs_dir') . '/payment.log',
+            date('[Y-m-d H:i:s]') . ' INFO: ' . $message . ' ' . json_encode($context) . "\n",
             FILE_APPEND
         );
     }

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Repository\TransactionsRepository;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -134,7 +135,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $lastReferralRewardAt = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'referrals')]
-    #[ORM\JoinColumn(nullable: true)]  // Permettre que la colonne referrer_id soit NULL
+    #[ORM\JoinColumn(nullable: true)]
     private ?self $referrer = null;
 
     /**
@@ -148,9 +149,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->transactions = new ArrayCollection();
         $this->investissements = new ArrayCollection();
         $this->product = new ArrayCollection();
-        $this->balance = 0.00;  // Valeur par défaut dans le constructeur
-        $this->EmailNotifications = false;  // Valeur par défaut dans le constructeur
+        $this->balance = 0.00;
+        $this->EmailNotifications = false;
         $this->referrals = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -169,41 +171,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * A visual identifier that represents this user.
-     *
-     * @see UserInterface
-     */
     public function getUserIdentifier(): string
     {
         return (string) $this->username;
     }
 
-    /**
-     * @see UserInterface
-     *
-     * @return list<string>
-     */
     public function getRoles(): array
     {
         $roles = $this->roles;
-        // garantit que chaque utilisateur a au moins ROLE_USER
         $roles[] = 'ROLE_USER';
         return array_unique($roles);
     }
 
-    /**
-     * @param list<string> $roles
-     */
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
         return $this;
     }
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
     public function getPassword(): ?string
     {
         return $this->password;
@@ -215,13 +200,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @see UserInterface
-     */
-    public function eraseCredentials(): void
-    {
-        // Effacer les données sensibles temporaires si nécessaire
-    }
+    public function eraseCredentials(): void {}
 
     public function getFname(): ?string
     {
@@ -300,9 +279,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Transactions>
-     */
     public function getTransactions(): Collection
     {
         return $this->transactions;
@@ -327,9 +303,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Investissement>
-     */
     public function getInvestissements(): Collection
     {
         return $this->investissements;
@@ -354,9 +327,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Product>
-     */
     public function getProduct(): Collection
     {
         return $this->product;
@@ -497,7 +467,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getReferralRewardRate(): ?float
+    public function getReferralRewardRate(): float
     {
         return $this->referralRewardRate;
     }
@@ -519,9 +489,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * Retourne la date de la dernière récompense pour un produit donné.
-     */
     public function getLastReferralRewardTimeForProduct(Product $product): ?\DateTimeInterface
     {
         $lastReferralRewards = $this->getLastReferralRewards() ?? [];
@@ -531,13 +498,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return null;
     }
 
-    /**
-     * Met à jour la date de la dernière récompense pour un produit donné.
-     */
     public function setLastReferralRewardTimeForProduct(Product $product, \DateTimeInterface $date): self
     {
         $lastReferralRewards = $this->getLastReferralRewards() ?? [];
-        // Stocke la date au format ISO 8601
         $lastReferralRewards[$product->getId()] = $date->format('c');
         $this->setLastReferralRewards($lastReferralRewards);
         return $this;
@@ -565,9 +528,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, self>
-     */
     public function getReferrals(): Collection
     {
         return $this->referrals;
@@ -590,5 +550,44 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             }
         }
         return $this;
+    }
+
+    /**
+     * Récupère les filleuls ayant effectué au moins une transaction
+     */
+    public function getActiveReferrals(TransactionsRepository $transactionsRepo): array
+    {
+        $activeReferrals = [];
+
+        foreach ($this->referrals as $referral) {
+            $transactions = $transactionsRepo->findBy(['user' => $referral]);
+            if (count($transactions) > 0) {
+                $activeReferrals[] = $referral;
+            }
+        }
+
+        return $activeReferrals;
+    }
+
+    /**
+     * Calcule le nombre total de filleuls (actifs et inactifs)
+     */
+    public function getTotalReferralsCount(): int
+    {
+        return $this->referrals->count();
+    }
+
+    /**
+     * Calcule le montant total généré par le parrainage
+     */
+    public function getTotalReferralRewards(): float
+    {
+        $total = 0.0;
+        foreach ($this->referrals as $referral) {
+            if ($referral->getReward()) {
+                $total += $referral->getReward() * $this->referralRewardRate;
+            }
+        }
+        return $total;
     }
 }

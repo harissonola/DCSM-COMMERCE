@@ -34,8 +34,14 @@ class GoogleController extends AbstractController
     }
 
     #[Route('/connect/google', name: 'connect_google_start')]
-    public function connectGoogle(ClientRegistry $clientRegistry): Response
+    public function connectGoogle(ClientRegistry $clientRegistry, Request $request): Response
     {
+        // Stocker le paramètre ref dans la session avant la redirection vers Google
+        $ref = $request->query->get('ref');
+        if ($ref) {
+            $request->getSession()->set('google_referral_code', $ref);
+        }
+
         return $clientRegistry->getClient('google')->redirect(['profile', 'email']);
     }
 
@@ -94,8 +100,12 @@ class GoogleController extends AbstractController
                 ->setVerified(true)
                 ->setReferralCode($referralCode);
 
-            // Gestion du parrainage
-            $this->handleReferralSystem($user, $request, $entityManager);
+            // Gestion du parrainage - récupération depuis la session
+            $referredBy = $request->getSession()->get('google_referral_code');
+            if ($referredBy) {
+                $this->handleReferralSystem($user, $referredBy, $entityManager);
+                $request->getSession()->remove('google_referral_code'); // Nettoyer la session
+            }
 
             // Génération et upload du QR Code
             $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
@@ -115,25 +125,20 @@ class GoogleController extends AbstractController
         }
     }
 
-    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
+    private function handleReferralSystem(User $user, string $referredBy, EntityManagerInterface $entityManager): void
     {
-        // Récupération du code de parrainage depuis la query string
-        $referredBy = $request->query->get('ref');
-        if ($referredBy) {
-            // On recherche le parrain (User) grâce au code de referral
-            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
-            if ($referrer) {
-                // Lien bi-directionnel : on ajoute l'utilisateur dans les referrals du parrain.
-                $referrer->addReferral($user);
-                // On met à jour les récompenses du parrain en fonction du nombre de filleuls
-                $this->updateReferrerRewards($referrer, $entityManager);
+        // On recherche le parrain (User) grâce au code de referral
+        $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
+        if ($referrer) {
+            // Lien bi-directionnel : on ajoute l'utilisateur dans les referrals du parrain.
+            $referrer->addReferral($user);
+            // On met à jour les récompenses du parrain en fonction du nombre de filleuls
+            $this->updateReferrerRewards($referrer, $entityManager);
 
-                $entityManager->persist($referrer);
-                $entityManager->flush();
-            }
+            $entityManager->persist($referrer);
+            $entityManager->flush();
         }
     }
-
 
     private function generateAndSaveQrCode(
         User $user,

@@ -1,18 +1,11 @@
 nelmio_security:
-    # prevents framing of the entire site
     clickjacking:
         paths:
             '^/.*': DENY
 
-    # disables content type sniffing for script resources
     content_type:
         nosniff: true
 
-    # Send a full URL in the `Referer` header when performing a same-origin request,
-    # only send the origin of the document to secure destination (HTTPS->HTTPS),
-    # and send no header to a less secure destination (HTTPS->HTTP).
-    # If `strict-origin-when-cross-origin` is not supported, use `no-referrer` policy,
-    # no referrer information is sent along with requests.
     referrer_policy:
         enabled: true
         policies:
@@ -24,10 +17,14 @@ nelmio_security:
         report_logger_service: 'logger'
         hash:
             algorithm: sha256
-        report_only: false
-        scripts:
-            enabled: true
-            nonce: true
-        styles:
-            enabled: true
-            nonce: true
+        enforce:
+            level1_fallback: true
+        content_types:
+            js: ['text/javascript']
+        hosts:
+            scripts: ['self', 'cdnjs.cloudflare.com']
+            styles: ['self', 'cdnjs.cloudflare.com', 'unsafe-inline']
+            images: ['self', 'data:']
+            frames: ['self']
+            fonts: ['self']
+        report_uri: '/csp-report'

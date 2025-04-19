@@ -1,0 +1,42 @@
+{% extends 'emails/base_email.html.twig' %}
+
+{% block content %}
+  <h1 style="color: #2d3748; font-size: 24px; margin-bottom: 20px;">Instructions pour votre dépôt</h1>
+
+  <p style="margin-bottom: 16px;">
+    Bonjour,<br />
+    Voici les instructions pour effectuer votre dépôt de <strong>{{ amount|number_format(2) }} USD</strong> en {{ currency|upper }}.
+  </p>
+
+  <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h2 style="color: #2d3748; font-size: 18px; margin-bottom: 10px;">Adresse de dépôt</h2>
+    <div style="background: white; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 16px; word-break: break-all;">{{ address }}</div>
+
+    <div style="text-align: center; margin: 20px 0;">
+      <img src="{{ qr_code }}" alt="QR Code" style="max-width: 200px;" />
+    </div>
+
+    <p style="margin-bottom: 10px;">
+      <strong>Montant exact :</strong> {{ amount|number_format(2) }} USD<br />
+      <strong>Cryptomonnaie :</strong> {{ currency|upper }}<br />
+      <strong>Expire le :</strong> {{ expiry|date('d/m/Y à H:i') }}
+    </p>
+  </div>
+
+  <div style="background: #fffaf0; padding: 15px; border-left: 4px solid #ed8936; margin-bottom: 20px;">
+    <h3 style="color: #dd6b20; font-size: 16px; margin-top: 0;">Important</h3>
+    <ul style="margin-bottom: 0; padding-left: 20px;">
+      <li>Envoyez uniquement {{ currency|upper }} à cette adresse</li>
+      <li>Ne pas envoyer d'autres cryptomonnaies</li>
+      <li>Le montant doit être exact</li>
+      <li>Le dépôt expirera à la date indiquée</li>
+    </ul>
+  </div>
+
+  <p style="margin-bottom: 16px;">Si vous avez des questions, n'hésitez pas à répondre à cet email.</p>
+
+  <p style="margin-bottom: 0;">
+    Cordialement,<br />
+    L'équipe {{ app_name }}
+  </p>
+{% endblock %}

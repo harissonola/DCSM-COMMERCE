@@ -28,7 +28,7 @@ class Transactions
     private ?float $amount = null;
 
     #[ORM\Column(nullable: true)]
-    private ?float $fees = null; // Nouvelle propriété pour les frais
+    private ?float $fees = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $ExternalId = null;
@@ -44,6 +44,9 @@ class Transactions
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $verifiedAt = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $metadata = null;
 
     public function getId(): ?int
     {
@@ -166,6 +169,18 @@ class Transactions
     public function setVerifiedAt(?\DateTimeInterface $verifiedAt): static
     {
         $this->verifiedAt = $verifiedAt;
+
+        return $this;
+    }
+
+    public function getMetadata(): ?array
+    {
+        return $this->metadata;
+    }
+
+    public function setMetadata(?array $metadata): static
+    {
+        $this->metadata = $metadata;
 
         return $this;
     }

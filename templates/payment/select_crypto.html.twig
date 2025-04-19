@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Sélectionnez une cryptomonnaie{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Sélectionnez une cryptomonnaie</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Montant à déposer : <strong>{{ transaction.amount|number_format(2) }} USD</strong></p>
+                    
+                    <form method="post" action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('select_crypto') }}">
+                        
+                        <div class="mb-4">
+                            <label for="crypto_type" class="form-label">Cryptomonnaie</label>
+                            <select class="form-select" id="crypto_type" name="crypto_type" required>
+                                <option value="">-- Sélectionnez --</option>
+                                {% for key, name in supportedCryptos %}
+                                    <option value="{{ key }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                Continuer
+                            </button>
+                            <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

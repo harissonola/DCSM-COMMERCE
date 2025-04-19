@@ -1,354 +1,134 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Dépôt Crypto{% endblock %}
-
-{% block stylesheets %}
-    {{ parent() }}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <style>
-        .deposit-container {
-            max-width: 500px;
-            margin: 2rem auto;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .network-badge {
-            background: linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%);
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            display: inline-flex;
-            align-items: center;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .network-badge:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .network-icon {
-            width: 24px;
-            height: 24px;
-            margin-right: 0.5rem;
-            object-fit: contain;
-            border-radius: 50%;
-        }
-
-        .amount-display {
-            font-size: 2rem;
-            font-weight: bold;
-            background: linear-gradient(90deg, #6200ff, #9b4dff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin: 1rem 0;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .qr-container {
-            background: white;
-            padding: 1rem;
-            border-radius: 1rem;
-            display: inline-block;
-            margin: 1rem 0;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .qr-container:hover {
-            transform: scale(1.03);
-        }
-
-        .address-input {
-            background: rgba(0, 0, 0, 0.2) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
-            font-family: monospace;
-        }
-
-        .copy-btn {
-            transition: all 0.3s ease;
-        }
-
-        .copy-btn:hover {
-            background: #6200ff !important;
-            transform: scale(1.05);
-        }
-
-        #progressBar {
-            transition: width 1s linear;
-            background: linear-gradient(90deg, #6200ff, #9b4dff);
-        }
-
-        .instruction-step {
-            margin-bottom: 0.5rem;
-            padding-left: 0.5rem;
-            border-left: 3px solid #6200ff;
-            transition: all 0.3s ease;
-        }
-
-        .instruction-step:hover {
-            transform: translateX(5px);
-            background: rgba(98, 0, 255, 0.1);
-        }
-
-        .alert-warning {
-            background: rgba(255, 193, 7, 0.1);
-            border-color: rgba(255, 193, 7, 0.3);
-        }
-
-        .alert-danger {
-            background: rgba(220, 53, 69, 0.1);
-            border-color: rgba(220, 53, 69, 0.3);
-        }
-
-        .alert-success {
-            background: rgba(25, 135, 84, 0.1);
-            border-color: rgba(25, 135, 84, 0.3);
-        }
-
-        /* Toast notification */
-        .toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1100;
-        }
-    </style>
-{% endblock %}
-
-{% block body %}
-    {% set cryptoLogo = {
-        'BTC': 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
-        'ETH': 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
-        'USDT': 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
-        'USDT.BEP20': 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
-        'USDT.ERC20': 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
-        'USDT.TRC20': 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
-        'BNB': 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png',
-        'XRP': 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
-        'SOL': 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
-        'DOGE': 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png',
-        'ADA': 'https://assets.coingecko.com/coins/images/975/large/cardano.png',
-        'BCH': 'https://assets.coingecko.com/coins/images/780/large/bitcoin-cash-circle.png',
-        'LTC': 'https://assets.coingecko.com/coins/images/2/large/litecoin.png',
-        'TRX': 'https://assets.coingecko.com/coins/images/1094/large/tron-logo.png',
-        'DASH': 'https://assets.coingecko.com/coins/images/19/large/dash-logo.png',
-        'XMR': 'https://assets.coingecko.com/coins/images/69/large/monero_logo.png',
-        'XLM': 'https://assets.coingecko.com/coins/images/100/large/Stellar_symbol_black_RGB.png',
-        'ZEC': 'https://assets.coingecko.com/coins/images/486/large/circle-zcash-color.png',
-        'EOS': 'https://assets.coingecko.com/coins/images/738/large/eos-eos-logo.png',
-        'ETC': 'https://assets.coingecko.com/coins/images/453/large/ethereum-classic-logo.png'
-    } %}
-
-{% set cryptoKey = transaction.method|replace({'crypto_': ''}) %}
-{% set cryptoLogo = cryptoLogos[cryptoKey] ?? 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' %}
-
-<div class="deposit-container animate__animated animate__fadeIn">
-    <div class="text-center mb-4">
-        <h3 class="animate__animated animate__fadeInDown">Dépôt en {{ network }}</h3>
-        <div class="network-badge animate__animated animate__fadeIn animate__delay-1s">
-            <img src="{{ cryptoLogo }}" 
-                 alt="{{ network }}" 
-                 class="network-icon"
-                 onerror="this.onerror=null; this.src='https://assets.coingecko.com/coins/images/1/large/bitcoin.png'">
-            <span>{{ network }}</span>
-        </div>
-    </div>
-
-    <div class="text-center mb-4 animate__animated animate__fadeIn animate__delay-1s">
-        <div class="amount-display">${{ amount|number_format(2) }}</div>
-        <small class="text-muted">Montant à déposer</small>
-    </div>
-
-    <div class="text-center mb-4 animate__animated animate__fadeIn animate__delay-2s">
-        <div class="qr-container">
-            <img src="{{ qrCodeUrl }}" alt="QR Code pour {{ depositAddress }}" style="width: 200px; height: 200px;">
-        </div>
-        <p class="mt-2 text-muted">Scanner pour envoyer depuis un wallet mobile</p>
-    </div>
-
-    <div class="mb-4 animate__animated animate__fadeIn animate__delay-2s">
-        <h5 class="text-center">Adresse de dépôt</h5>
-        <div class="input-group mb-2">
-            <input type="text" class="form-control address-input" value="{{ depositAddress }}" id="depositAddress" readonly>
-            <button class="btn btn-outline-light copy-btn" onclick="copyToClipboard()">
-                <i class="fas fa-copy"></i> Copier
-            </button>
-        </div>
-        <small class="text-muted d-block text-center">
-            <i class="fas fa-exclamation-circle"></i>
-            N'envoyez que {{ network }} à cette adresse
-        </small>
-    </div>
-
-    <div class="alert alert-info animate__animated animate__fadeIn animate__delay-3s">
-        <div class="d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-clock"></i> Temps restant :</span>
-            <span id="countdown" class="fw-bold"></span>
-        </div>
-        <div class="progress mt-2" style="height: 5px;">
-            <div id="progressBar" class="progress-bar" role="progressbar"></div>
-        </div>
-    </div>
-
-    <div id="statusAlert" class="alert alert-warning animate__animated animate__fadeIn animate__delay-3s" style="display: none;">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-spinner fa-spin me-2"></i>
-            <span id="statusText">En attente du dépôt...</span>
-        </div>
-    </div>
-
-    <div class="mt-4 animate__animated animate__fadeIn animate__delay-4s">
-        <h5><i class="fas fa-list-ol me-2"></i>Instructions :</h5>
-        <ol class="list-unstyled">
-            <li class="instruction-step">1. Copiez l'adresse ou scannez le QR code</li>
-            <li class="instruction-step">2. Envoyez exactement <strong>${{ amount|number_format(2) }}</strong> en {{ network }}</li>
-            <li class="instruction-step">3. Le système détectera automatiquement votre dépôt</li>
-            <li class="instruction-step">4. Votre solde sera crédité après confirmation</li>
-        </ol>
-        <div class="alert alert-danger mt-3 animate__animated animate__shakeX animate__delay-4s">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            N'envoyez pas d'autres cryptomonnaies à cette adresse, elles seraient perdues.
-        </div>
-    </div>
-</div>
-
-<input type="hidden" id="initialExpiration" value="{{ initialExpiration }}">
-<input type="hidden" id="csrfToken" value="{{ csrf_token('crypto_deposit') }}">
-<input type="hidden" id="checkUrl" value="{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}">
-
-<!-- Toast notification -->
-<div class="toast-container">
-    <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-check-circle me-2"></i>
-                Adresse copiée avec succès !
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% block title %}Instructions de dépôt{% endblock %}
 
 {% block javascripts %}
     {{ parent() }}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Compte à rebours
-            const initialExpiration = parseInt(document.getElementById('initialExpiration').value);
-            const storageKey = 'depositExpiration_{{ transaction.id }}';
+            const expiresAt = new Date('{{ expiresAt|date('Y-m-d H:i:s') }}').getTime();
             
-            let remainingTime = localStorage.getItem(storageKey);
-            if (!remainingTime || remainingTime > initialExpiration) {
-                remainingTime = initialExpiration;
-                localStorage.setItem(storageKey, remainingTime);
-            }
-            
-            updateCountdown(remainingTime);
-            
-            function updateCountdown(seconds) {
-                if (seconds <= 0) {
-                    document.getElementById('countdown').innerHTML = '<span class="text-danger">Expiré</span>';
-                    document.getElementById('progressBar').style.width = '100%';
-                    document.getElementById('statusAlert').style.display = 'none';
-                    localStorage.removeItem(storageKey);
+            function updateTimer() {
+                const now = new Date().getTime();
+                const distance = expiresAt - now;
+                
+                if (distance < 0) {
+                    document.getElementById('timer').innerHTML = "Expiré";
                     return;
                 }
                 
-                const hours = Math.floor(seconds / 3600);
-                const minutes = Math.floor((seconds % 3600) / 60);
-                const secs = seconds % 60;
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                 
-                document.getElementById('countdown').innerHTML = `
-                    <span class="text-primary">${hours}h</span> 
-                    <span class="text-info">${minutes}m</span> 
-                    <span class="text-warning">${secs}s</span>
-                `;
-                const progressPercent = 100 - (seconds / initialExpiration * 100);
-                document.getElementById('progressBar').style.width = `${progressPercent}%`;
-                
-                localStorage.setItem(storageKey, seconds - 1);
-                setTimeout(() => updateCountdown(seconds - 1), 1000);
+                document.getElementById('timer').innerHTML = 
+                    `${hours}h ${minutes}m ${seconds}s`;
             }
             
-            // Vérification automatique du dépôt
-            checkDepositStatus();
+            updateTimer();
+            setInterval(updateTimer, 1000);
+            
+            // Vérification automatique du statut
+            setInterval(function() {
+                fetch('{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `_token={{ csrf_token('crypto_deposit') }}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        window.location.reload();
+                    } else if (data.status === 'expired') {
+                        window.location.reload();
+                    }
+                });
+            }, 30000); // Toutes les 30 secondes
         });
-
-        function copyToClipboard() {
-            const address = document.getElementById('depositAddress');
-            address.select();
-            document.execCommand('copy');
-            
-            // Afficher une notification toast
-            const toast = new bootstrap.Toast(document.getElementById('liveToast'));
-            toast.show();
-            
-            // Vibrer le bouton si supporté
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }
-
-        function checkDepositStatus() {
-            const statusAlert = document.getElementById('statusAlert');
-            const statusText = document.getElementById('statusText');
-            
-            statusAlert.style.display = 'flex';
-            
-            // Création du formulaire avec le token CSRF
-            const formData = new FormData();
-            formData.append('_token', document.getElementById('csrfToken').value);
-            
-            fetch(document.getElementById('checkUrl').value, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Erreur réseau');
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'completed') {
-                    statusAlert.className = 'alert alert-success';
-                    statusText.innerHTML = '<i class="fas fa-check-circle me-2"></i> Dépôt confirmé ! Redirection en cours...';
-                    localStorage.removeItem('depositExpiration_{{ transaction.id }}');
-                    
-                    // Redirection après 3 secondes
-                    setTimeout(() => {
-                        window.location.href = data.redirectUrl || '{{ path('app_profile') }}';
-                    }, 3000);
-                } else if (data.status === 'expired') {
-                    statusAlert.className = 'alert alert-danger';
-                    statusText.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i> Dépôt expiré';
-                } else {
-                    setTimeout(checkDepositStatus, 10000);
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                setTimeout(checkDepositStatus, 30000);
-            });
-        }
     </script>
+{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Instructions pour votre dépôt</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Attention :</strong> Ce dépôt expirera dans <span id="timer"></span>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <h5>Montant à envoyer</h5>
+                                <div class="display-4 text-success">
+                                    {{ amount|number_format(2) }} USD
+                                </div>
+                                <small class="text-muted">en {{ network }}</small>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5>Adresse de dépôt</h5>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" id="depositAddress" 
+                                           value="{{ depositAddress }}" readonly>
+                                    <button class="btn btn-outline-secondary" type="button"
+                                            onclick="copyToClipboard('depositAddress')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Envoyez uniquement {{ network }} à cette adresse</small>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                Les dépôts prennent généralement 1-3 confirmations avant d'être crédités.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 text-center">
+                            <div class="mb-3">
+                                <img src="{{ qrCodeUrl }}" alt="QR Code" class="img-fluid" style="max-width: 250px;">
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="window.location.reload()">
+                                <i class="bi bi-arrow-clockwise"></i> Actualiser
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary">
+                            Retour au profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard(elementId) {
+        const copyText = document.getElementById(elementId);
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        document.execCommand("copy");
+        
+        // Afficher un tooltip ou une notification
+        const originalText = event.target.innerHTML;
+        event.target.innerHTML = '<i class="bi bi-check"></i> Copié';
+        setTimeout(() => {
+            event.target.innerHTML = originalText;
+        }, 2000);
+    }
+</script>
 {% endblock %}

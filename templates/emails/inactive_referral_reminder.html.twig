@@ -1,118 +1,117 @@
 {# templates/emails/inactive_referral_reminder.html.twig #}
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rappel - Complétez votre inscription</title>
     <style type="text/css">
-      body {
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        line-height: 1.6;
-        color: #333;
-        margin: 0;
-        padding: 0;
-        background-color: #f8f9fa;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 30px;
-      }
-      .header {
-        background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-        padding: 20px;
-        border-radius: 8px 8px 0 0;
-        text-align: center;
-        color: white;
-      }
-      .content-card {
-        background: white;
-        padding: 25px;
-        border-radius: 0 0 8px 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      }
-      .sponsor-card {
-        background-color: #f1f1f6;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-      }
-      .btn-primary {
-        display: inline-block;
-        background: linear-gradient(135deg, #00b894, #00cec9);
-        color: white;
-        padding: 12px 30px;
-        text-decoration: none;
-        border-radius: 30px;
-        font-weight: bold;
-        box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
-      }
-      .footer {
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-        font-size: 12px;
-        color: #999;
-        text-align: center;
-      }
-      .profile-pic {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        object-fit: cover;
-        margin-right: 15px;
-        border: 2px solid #fff;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .header {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            color: white;
+        }
+        .content-card {
+            background: white;
+            padding: 25px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .sponsor-card {
+            background-color: #f1f1f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        .btn-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
+
+        .profile-pic {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <div class="header">
-        <h1 style="margin: 0; font-size: 24px;">Bonjour {{ referral.fname }} 👋</h1>
-      </div>
-
-      <div class="content-card">
-        <div class="sponsor-card">
-          {% if sender.profilePicture %}
-            <img src="{{ absolute_url(asset('uploads/profile_pictures/' ~ sender.profilePicture)) }}" alt="Photo de {{ sender.fname }}" class="profile-pic" />
-          {% else %}
-            <div style="width: 50px; height: 50px; background-color: #6c5ce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: white; font-weight: bold;">{{ sender.fname|first|upper }}{{ sender.lname|first|upper }}</div>
-          {% endif %}
-          <div>
-            <p style="margin: 0; font-size: 14px; color: #666;">Votre parrain vous envoie un message</p>
-            <p style="margin: 0; font-weight: bold; color: #2d3436;">{{ sender.fname }} {{ sender.lname }}</p>
-          </div>
+        <div class="header">
+            <h1 style="margin: 0; font-size: 24px;">Bonjour {{ referral.fname }} 👋</h1>
         </div>
-
-        <p style="color: #636e72; line-height: 1.6;">Vous avez créé un compte sur notre plateforme mais n'avez pas encore effectué votre premier achat. Nous pensons que vous pourriez trouver votre bonheur parmi nos produits !</p>
-
-        <div style="background: linear-gradient(to right, #f8f9fa, #fff); border-left: 4px solid #6c5ce7; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-          <h3 style="margin-top: 0; color: #2d3436;">Nos meilleures offres du moment</h3>
-          <p style="color: #636e72; margin-bottom: 15px;">Découvrez des produits sélectionnés spécialement pour vous.</p>
+        
+        <div class="content-card">
+            <div class="sponsor-card">
+                <img src="{{sender.photo}}" alt="Photo de {{ sender.fname }}" class="profile-pic">
+                <div>
+                    <p style="margin: 0; font-size: 14px; color: #666;">Votre parrain vous envoie un message</p>
+                    <p style="margin: 0; font-weight: bold; color: #2d3436;">{{ sender.fname }} {{ sender.lname }}</p>
+                </div>
+            </div>
+            
+            <p style="color: #636e72; line-height: 1.6;">Vous avez créé un compte sur notre plateforme mais n'avez pas encore effectué votre premier achat. Nous pensons que vous pourriez trouver votre bonheur parmi nos produits !</p>
+            
+            <div style="background: linear-gradient(to right, #f8f9fa, #fff); border-left: 4px solid #6c5ce7; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+                <h3 style="margin-top: 0; color: #2d3436;">Nos meilleures offres du moment</h3>
+                <p style="color: #636e72; margin-bottom: 15px;">Découvrez des produits sélectionnés spécialement pour vous.</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ url('app_products_index') }}" class="btn-primary">
+                    Découvrir nos produits
+                </a>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
+                <p style="color: #636e72; font-size: 14px;">Besoin d'aide pour faire votre choix ? Notre équipe est à votre disposition.</p>
+                <a href="{{ url('app_shop_index') }}" style="color: #6c5ce7; text-decoration: none; font-weight: bold;">Visiter notre boutique</a>
+            </div>
         </div>
-
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="{{ url('app_products_index') }}" class="btn-primary">Découvrir nos produits</a>
+        
+        <div class="footer">
+            <p>© {{ "now"|date("Y") }} {{ app_name }}. Tous droits réservés.</p>
+            <p>
+                <a href="{{ url('app_dashboard') }}" style="color: #999;">Accueil</a> | 
+                <a href="{{ url('app_faq') }}" style="color: #999;">FAQ</a> | 
+                <a href="{{ url('app_confidentialite') }}" style="color: #999;">Confidentialité</a>
+            </p>
         </div>
-
-        <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px;">
-          <p style="color: #636e72; font-size: 14px;">Besoin d'aide pour faire votre choix ? Notre équipe est à votre disposition.</p>
-          <a href="{{ url('app_shop_index') }}" style="color: #6c5ce7; text-decoration: none; font-weight: bold;">Visiter notre boutique</a>
-        </div>
-      </div>
-
-      <div class="footer">
-        <p>© {{ 'now'|date('Y') }} {{ app_name }}. Tous droits réservés.</p>
-        <p>
-          <a href="{{ url('app_dashboard') }}" style="color: #999;">Accueil</a> |
-          <a href="{{ url('app_faq') }}" style="color: #999;">FAQ</a> |
-          <a href="{{ url('app_confidentialite') }}" style="color: #999;">Confidentialité</a>
-        </p>
-      </div>
     </div>
-  </body>
+</body>
 </html>

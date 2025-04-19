@@ -1,361 +1,370 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}S'Inscrire{% endblock %}
+{% block title %}S'Inscrire
+{% endblock %}
 
 {% block body %}
-	<style>
-		:root {
-			--primary: #00c3ff;
-			--secondary: #0066ff;
-			--dark-blue: #1a1f35;
-			--darker-blue: #0f1521;
-			--light: #f8f9fa;
-			--text: #ffffff;
-			--text-secondary: #adb5bd;
-		}
+	<style>:root
+	{
+		--primary: #00c3ff;
+		--secondary: #0066ff;
+		--dark-blue: #1a1f35;
+		--darker-blue: #0f1521;
+		--light: #f8f9fa;
+		--text: #ffffff;
+		--text-secondary: #adb5bd;
+	}
 
-		body {
-			background: linear-gradient(180deg, var(--darker-blue) 0%, var(--dark-blue) 100%);
-			min-height: 100vh;
-			font-family: Arial, sans-serif;
-			overflow-x: hidden;
-		}
+	body {
+		background: linear-gradient(180deg, var(--darker-blue) 0%, var(--dark-blue) 100%);
+		min-height: 100vh;
+		font-family: Arial, sans-serif;
+		overflow-x: hidden;
+	}
 
-		/* Background animé */
-		.grid-bg {
-			position: fixed;
-			bottom: 0;
-			left: 0;
-			right: 0;
-			height: 50vh;
-			background-image: 
-				linear-gradient(0deg, rgba(0, 195, 255, 0.1) 1px, transparent 1px),
-				linear-gradient(90deg, rgba(0, 195, 255, 0.1) 1px, transparent 1px);
-			background-size: 40px 40px;
-			transform: rotateX(60deg);
-			transform-origin: bottom;
-			z-index: 0;
-			animation: gridMove 20s linear infinite;
-		}
+	/* Background animé */
+	.grid-bg {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 50vh;
+		background-image: linear-gradient(0deg, rgba(0, 195, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 195, 255, 0.1) 1px, transparent 1px);
+		background-size: 40px 40px;
+		transform: rotateX(60deg);
+		transform-origin: bottom;
+		z-index: 0;
+		animation: gridMove 20s linear infinite;
+	}
 
-		@keyframes gridMove {
-			from { background-position: 0 0; }
-			to { background-position: 40px 40px; }
+	@keyframes gridMove {
+		from {
+			background-position: 0 0;
 		}
-
-		/* Conteneur principal */
-		.container {
-			position: relative;
-			z-index: 1;
+		to {
+			background-position: 40px 40px;
 		}
+	}
 
-		/* Carte de connexion */
+	/* Conteneur principal */
+	.container {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* Carte de connexion */
+	.login-container {
+		background: rgba(26, 31, 53, 0.95);
+		border-radius: 20px;
+		padding: 2.5rem;
+		box-shadow: 0 10px 30px rgba(0, 195, 255, 0.2);
+		border: 1px solid rgba(0, 195, 255, 0.15);
+		position: relative;
+		overflow: hidden;
+		transition: all 0.4s ease;
+	}
+
+	.login-container::before {
+		content: '';
+		position: absolute;
+		top: -2px;
+		left: -2px;
+		right: -2px;
+		bottom: -2px;
+		background: linear-gradient(45deg, var(--primary), var(--secondary));
+		z-index: -1;
+		border-radius: 22px;
+		opacity: 0.3;
+	}
+
+	.login-container:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 15px 35px rgba(0, 195, 255, 0.3);
+	}
+
+	/* Titres */
+	.title {
+		font-size: 2.2rem;
+		color: white;
+		text-align: center;
+		margin-bottom: 2rem;
+		text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+		position: relative;
+	}
+
+	.title::after {
+		content: '';
+		position: absolute;
+		bottom: -10px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 80px;
+		height: 3px;
+		background: linear-gradient(90deg, var(--primary), var(--secondary));
+		border-radius: 3px;
+	}
+
+	/* Formulaires */
+	.form-control {
+		background: rgba(45, 45, 65, 0.7);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 10px;
+		color: var(--text);
+		padding: 0.875rem 1rem;
+		transition: all 0.3s ease;
+		margin-bottom: 1rem;
+	}
+
+	.form-control:focus {
+		background: rgba(45, 45, 65, 0.9);
+		border-color: var(--primary);
+		box-shadow: 0 0 0 3px rgba(0, 195, 255, 0.3);
+		color: white;
+	}
+
+	.form-control::placeholder {
+		color: var(--text-secondary);
+	}
+
+	/* Boutons */
+	.btn-wizard {
+		width: 100%;
+		padding: 1rem;
+		background: linear-gradient(45deg, var(--primary), var(--secondary));
+		border: none;
+		border-radius: 10px;
+		color: white;
+		font-weight: 600;
+		margin-top: 1rem;
+		box-shadow: 0 5px 15px rgba(0, 195, 255, 0.3);
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.btn-wizard:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 20px rgba(0, 195, 255, 0.4);
+	}
+
+	.btn-wizard::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -100%;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(45deg, var(--secondary), var(--primary));
+		transition: all 0.4s ease;
+		z-index: -1;
+	}
+
+	.btn-wizard:hover::after {
+		left: 0;
+	}
+
+	/* Bouton Google */
+	.btn-warning {
+		width: 100%;
+		padding: 0.875rem;
+		background: rgba(255, 193, 7, 0.9);
+		border: 1px solid rgba(255, 193, 7, 0.2);
+		border-radius: 10px;
+		color: #212529;
+		font-weight: 500;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		margin: 1.5rem 0;
+		transition: all 0.3s ease;
+	}
+
+	.btn-warning:hover {
+		background: rgba(255, 193, 7, 1);
+		transform: translateY(-2px);
+		box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
+	}
+
+	/* Liens */
+	.forgot-password {
+		color: var(--text-secondary);
+		text-align: center;
+		display: block;
+		margin-top: 1.5rem;
+		transition: all 0.3s ease;
+	}
+
+	.forgot-password:hover {
+		color: var(--primary);
+		text-decoration: none;
+	}
+
+	/* Wizard mobile */
+	.wizard-step {
+		animation: fadeIn 0.5s ease;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Responsive */
+	@media(max-width: 768px) {
 		.login-container {
-			background: rgba(26, 31, 53, 0.95);
-			border-radius: 20px;
-			padding: 2.5rem;
-			box-shadow: 0 10px 30px rgba(0, 195, 255, 0.2);
-			border: 1px solid rgba(0, 195, 255, 0.15);
-			position: relative;
-			overflow: hidden;
-			transition: all 0.4s ease;
+			padding: 1.5rem;
 		}
 
-		.login-container::before {
-			content: '';
-			position: absolute;
-			top: -2px;
-			left: -2px;
-			right: -2px;
-			bottom: -2px;
-			background: linear-gradient(45deg, var(--primary), var(--secondary));
-			z-index: -1;
-			border-radius: 22px;
-			opacity: 0.3;
-		}
-
-		.login-container:hover {
-			transform: translateY(-5px);
-			box-shadow: 0 15px 35px rgba(0, 195, 255, 0.3);
-		}
-
-		/* Titres */
 		.title {
-			font-size: 2.2rem;
-			color: white;
-			text-align: center;
-			margin-bottom: 2rem;
-			text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
-			position: relative;
+			font-size: 1.8rem;
 		}
+	}
+</style>
 
-		.title::after {
-			content: '';
-			position: absolute;
-			bottom: -10px;
-			left: 50%;
-			transform: translateX(-50%);
-			width: 80px;
-			height: 3px;
-			background: linear-gradient(90deg, var(--primary), var(--secondary));
-			border-radius: 3px;
-		}
+<div class="grid-bg"></div>
 
-		/* Formulaires */
-		.form-control {
-			background: rgba(45, 45, 65, 0.7);
-			border: 1px solid rgba(255, 255, 255, 0.1);
-			border-radius: 10px;
-			color: var(--text);
-			padding: 0.875rem 1rem;
-			transition: all 0.3s ease;
-			margin-bottom: 1rem;
-		}
+<div class="container">
+	<div class="row justify-content-center">
+		{% if app.request.headers.get('User-Agent') matches '/(android|iphone|ipad|mobile)/i' %}
+			<!-- Mobile Wizard -->
+			<div class="col-md-6">
+				<div class="login-container">
+					<h1 class="title">Inscription</h1>
 
-		.form-control:focus {
-			background: rgba(45, 45, 65, 0.9);
-			border-color: var(--primary);
-			box-shadow: 0 0 0 3px rgba(0, 195, 255, 0.3);
-			color: white;
-		}
+					{{ form_start(registrationForm, {'attr': {'data-turbo': 'false'}}) }}
 
-		.form-control::placeholder {
-			color: var(--text-secondary);
-		}
-
-		/* Boutons */
-		.btn-wizard {
-			width: 100%;
-			padding: 1rem;
-			background: linear-gradient(45deg, var(--primary), var(--secondary));
-			border: none;
-			border-radius: 10px;
-			color: white;
-			font-weight: 600;
-			margin-top: 1rem;
-			box-shadow: 0 5px 15px rgba(0, 195, 255, 0.3);
-			transition: all 0.3s ease;
-			position: relative;
-			overflow: hidden;
-		}
-
-		.btn-wizard:hover {
-			transform: translateY(-3px);
-			box-shadow: 0 8px 20px rgba(0, 195, 255, 0.4);
-		}
-
-		.btn-wizard::after {
-			content: '';
-			position: absolute;
-			top: 0;
-			left: -100%;
-			width: 100%;
-			height: 100%;
-			background: linear-gradient(45deg, var(--secondary), var(--primary));
-			transition: all 0.4s ease;
-			z-index: -1;
-		}
-
-		.btn-wizard:hover::after {
-			left: 0;
-		}
-
-		/* Bouton Google */
-		.btn-warning {
-			width: 100%;
-			padding: 0.875rem;
-			background: rgba(255, 193, 7, 0.9);
-			border: 1px solid rgba(255, 193, 7, 0.2);
-			border-radius: 10px;
-			color: #212529;
-			font-weight: 500;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 0.75rem;
-			margin: 1.5rem 0;
-			transition: all 0.3s ease;
-		}
-
-		.btn-warning:hover {
-			background: rgba(255, 193, 7, 1);
-			transform: translateY(-2px);
-			box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
-		}
-
-		/* Liens */
-		.forgot-password {
-			color: var(--text-secondary);
-			text-align: center;
-			display: block;
-			margin-top: 1.5rem;
-			transition: all 0.3s ease;
-		}
-
-		.forgot-password:hover {
-			color: var(--primary);
-			text-decoration: none;
-		}
-
-		/* Wizard mobile */
-		.wizard-step {
-			animation: fadeIn 0.5s ease;
-		}
-
-		@keyframes fadeIn {
-			from { opacity: 0; transform: translateY(10px); }
-			to { opacity: 1; transform: translateY(0); }
-		}
-
-		/* Responsive */
-		@media (max-width: 768px) {
-			.login-container {
-				padding: 1.5rem;
-			}
-			
-			.title {
-				font-size: 1.8rem;
-			}
-		}
-	</style>
-
-	<div class="grid-bg"></div>
-
-	<div class="container">
-		<div class="row justify-content-center">
-			{% if app.request.headers.get('User-Agent') matches '/(android|iphone|ipad|mobile)/i' %}
-				<!-- Mobile Wizard -->
-				<div class="col-md-6">
-					<div class="login-container">
-						<h1 class="title">Inscription</h1>
-
-						{{ form_start(registrationForm, {'attr': {'data-turbo': 'false'}}) }}
-
-						<div id="wizard-step-1" class="wizard-step">
-							<div class="mb-2">
-								{{ form_row(registrationForm.lname, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="mb-2">
-								{{ form_row(registrationForm.fname, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<button type="button" class="btn-wizard" onclick="nextStep(2)">Suivant</button>
+					<div id="wizard-step-1" class="wizard-step">
+						<div class="mb-2">
+							{{ form_row(registrationForm.lname, {'attr': {'class': 'form-control'}}) }}
 						</div>
-
-						<div id="wizard-step-2" class="wizard-step d-none">
-							<div class="mb-2">
-								{{ form_row(registrationForm.username, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="mb-2">
-								{{ form_row(registrationForm.email, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="d-flex justify-content-between">
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(1)">Précédent</button>
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="nextStep(3)">Suivant</button>
-							</div>
+						<div class="mb-2">
+							{{ form_row(registrationForm.fname, {'attr': {'class': 'form-control'}}) }}
 						</div>
-
-						<div id="wizard-step-3" class="wizard-step d-none">
-							<div class="mb-2">
-								{{ form_row(registrationForm.photo, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="mb-2">
-								{{ form_row(registrationForm.country, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="d-flex justify-content-between">
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(2)">Précédent</button>
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="nextStep(4)">Suivant</button>
-							</div>
-						</div>
-
-						<div id="wizard-step-4" class="wizard-step d-none">
-							<div class="mb-2">
-								{{ form_row(registrationForm.plainPassword, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="mb-2">
-								{{ form_row(registrationForm.confirmPassword, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="d-flex justify-content-between">
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(3)">Précédent</button>
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="nextStep(5)">Suivant</button>
-							</div>
-						</div>
-
-						<div id="wizard-step-5" class="wizard-step d-none">
-							<div class="mb-2">
-								{{ form_row(registrationForm.referredBy, {'attr': {'class': 'form-control'}}) }}
-							</div>
-							<div class="mb-2 form-check">
-								{{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'form-check-input'}}) }}
-								{{ form_label(registrationForm.agreeTerms, null, {'label_attr': {'class': 'form-check-label'}}) }}
-							</div>
-							<div class="d-flex justify-content-between">
-								<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(4)">Précédent</button>
-								<button type="submit" class="btn-wizard" style="width: 48%;">S'inscrire</button>
-							</div>
-						</div>
-
-						{{ form_end(registrationForm) }}
-
-						<a href="{{ path('connect_google_start') }}" class="btn btn-warning text-center">
-							<img src="data:image/jpeg;base64,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" width="20" style="margin-right: 10px;">
-							S'inscrire avec Google
-						</a>
-
-						<a href="{{ path('app_login') }}" class="forgot-password text-center">
-							Vous avez déjà un compte?
-						</a>
+						<button type="button" class="btn-wizard" onclick="nextStep(2)">Suivant</button>
 					</div>
-				</div>
-			{% else %}
-				<!-- Desktop Version -->
-				<div class="col-md-8">
-					<div class="login-container">
-						<h1 class="title text-uppercase">Inscription</h1>
-						{{ form_start(registrationForm, {'attr': {'data-turbo': 'false'}}) }}
 
-						<div class="row">
-							<div class="col-md mb-2">{{ form_row(registrationForm.lname, {'attr': {'class': 'form-control'}}) }}</div>
-							<div class="col-md mb-2">{{ form_row(registrationForm.fname, {'attr': {'class': 'form-control'}}) }}</div>
+					<div id="wizard-step-2" class="wizard-step d-none">
+						<div class="mb-2">
+							{{ form_row(registrationForm.username, {'attr': {'class': 'form-control'}}) }}
 						</div>
-						<div class="row">
-							<div class="col-md mb-2">{{ form_row(registrationForm.username, {'attr': {'class': 'form-control'}}) }}</div>
-							<div class="col-md mb-2">{{ form_row(registrationForm.email, {'attr': {'class': 'form-control'}}) }}</div>
+						<div class="mb-2">
+							{{ form_row(registrationForm.email, {'attr': {'class': 'form-control'}}) }}
 						</div>
-						<div class="row">
-							<div class="col-md mb-2">{{ form_row(registrationForm.photo, {'attr': {'class': 'form-control'}}) }}</div>
-							<div class="col-md mb-2">{{ form_row(registrationForm.country, {'attr': {'class': 'form-control'}}) }}</div>
+						<div class="d-flex justify-content-between">
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(1)">Précédent</button>
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="nextStep(3)">Suivant</button>
 						</div>
-						<div class="row">
-							<div class="col-md mb-2">{{ form_row(registrationForm.plainPassword, {'attr': {'class': 'form-control'}}) }}</div>
-							<div class="col-md mb-2">{{ form_row(registrationForm.confirmPassword, {'attr': {'class': 'form-control'}}) }}</div>
+					</div>
+
+					<div id="wizard-step-3" class="wizard-step d-none">
+						<div class="mb-2">
+							{{ form_row(registrationForm.photo, {'attr': {'class': 'form-control'}}) }}
 						</div>
-						<div class="row">
+						<div class="mb-2">
+							{{ form_row(registrationForm.country, {'attr': {'class': 'form-control'}}) }}
+						</div>
+						<div class="d-flex justify-content-between">
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(2)">Précédent</button>
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="nextStep(4)">Suivant</button>
+						</div>
+					</div>
+
+					<div id="wizard-step-4" class="wizard-step d-none">
+						<div class="mb-2">
+							{{ form_row(registrationForm.plainPassword, {'attr': {'class': 'form-control'}}) }}
+						</div>
+						<div class="mb-2">
+							{{ form_row(registrationForm.confirmPassword, {'attr': {'class': 'form-control'}}) }}
+						</div>
+						<div class="d-flex justify-content-between">
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(3)">Précédent</button>
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="nextStep(5)">Suivant</button>
+						</div>
+					</div>
+
+					<div id="wizard-step-5" class="wizard-step d-none">
+						<div class="mb-2">
 							{{ form_row(registrationForm.referredBy, {'attr': {'class': 'form-control'}}) }}
 						</div>
-						<div class="form-check mb-4">
+						<div class="mb-2 form-check">
 							{{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'form-check-input'}}) }}
 							{{ form_label(registrationForm.agreeTerms, null, {'label_attr': {'class': 'form-check-label'}}) }}
 						</div>
-
-						<button type="submit" class="btn-wizard">S'inscrire</button>
-
-						<a href="{{ path('connect_google_start') }}" class="btn btn-warning text-center mt-3">
-							<img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAMAAzAMBEQACEQEDEQH/xAAbAAACAgMBAAAAAAAAAAAAAAAABAEDAgUGB//EAEYQAAICAQIDBAYGBQoFBQAAAAECAAMRBCEFEjEGIkFRExRhcYGRFTJCUrHRI1VylKEkNDVTYnOSk6LBB4KD4fEzRVRj8P/EABsBAQACAwEBAAAAAAAAAAAAAAABBQMEBgIH/8QAMhEBAAIBAgUDAgUDBAMAAAAAAAECAwQRBRIhMVETQZEiUhQyYYGxM3HRNELh8QYkof/aAAwDAQACEQMRAD8A9fFthYAucE77wHGrRULBBkDriAqlljWKGbIJ3EBm5FStmVQCB1AgL0Mz2qrMSD1BMC+9VSksoCsB1G0Cmh2tu5X3XHQwLNQoqr5q9j5iBhp2NrkWbjHQwM9QvJymrun+zAKUNmTcCdtswM7Km29EQnnAiupgP0gDn2wIauzm/RsKx5CBklWUxaAx84FN/pEYhMqgHhAtoRbKwzDmPmRAouseu1lRiFHQCAzXWjorMuWIBJIgKPZYHYBiACQMGA4tacoJRc+eICbWuCcM3XzgONWgVjyL8oCaWubACzEFsEEwG7K0VGYKAQNsCAn6a375EB1q6wpIVQQPKAmrsbPrE79CSYDdlaBGYKM4O42gKU2O1igueXOCCYDN6KlTFFCkdCBvAo07F7QHZm28TAu1AWuslFCnPgIGGmVnZvSZZP7RzAYFaDogX9naBltAmBhZbXWM2Oqj+0cSN0xEz2VHW6MH+c0j/qCN4evTv4ZJq9M5wmoqY+QcRvBOO8d4XZz0kvAgYsuR1I9xxAgVIBuoY+bbkwErXZXYAsACcAEwHK0XkXur08oCT2OG5Vdtj5wHRWmA3IuSNyRASV3LAF2IzjAOIDj1oqEhF6dcQFEsY2qOZsE9MwHfRV/1an4QEVZywBJwT5wHWRfRnYDbygJUs5sUc2wxsYDlqqKm5QM+6ApQxNqAsW8wYDdy4Q+jADewQMKqgg5nyzeRMC4MPCBrOL8e4bwhc67VKr9RUvedvco3mLJmpjj6pbWn0WfUztirv+vs47iX/EPUP3eF6Fa1/rNQeY/4R/uZoX4j9kL3T/8Ajsd81/2j/Ln9X2j4zrA3puIXAH7NeEH8JqX1Wa3eVvj4XpMf5afPVrLLLbT+lsd8+LOT/vME3me8z8t2uKlY2rG37MOUfdHykbve0ADlORke6ImYRtEmtPxDXaZs6fW6moj7thEyVzZK9rMGTSafJ+akT+zdaLtvxzSlRZZVq0H2blwSP2h+RmzTiGWveN1bm4Fpcn5Ymv8AZ1HDO3vC9URVrks0NjeNnerP/N4fHE3cWux3/N0Ump4FqcUb4/qj9O/w6lLksQPW4ZDuGByDNyJieynmJr0mNmXMp+uAfhJQWuS1G5kJKnoM9IDSqpUEgEkbnEBFmYMwy3XpmA+yLgnAB84CKs3pAGLEZ33gO2Kq1sVUZ90BAM+PrN84GwcDkbAHSAijMXHePWA7Zy+jbAGw2xASoJNiAsSPHMBy5eashcZ8MQMF7g5Rn3nxgVavV0aPT2ajV3JTUgyzucATzNorG8vePHfJblpG8z2ef8e7canVlqOEK2no6G9h+kcewfZ+O8q8+vmfpxup0PAqU+vUdZ8e3/LkWLO7O5Lu3VnOSfeZXTabTvLoKVisbRG0JkPYgEAgEAgECDCGw4RxnX8HfOiuIrz3qX7yH4eHwmxi1OTHPSWnqtBh1UfXHXz7vQuzvarR8YxQ/wDJ9Zj/ANJ22f2qfH3dZbafVUy9PdyOv4Xl0vXvTz/nw6FWxt1E2lWrtrbOayceUBkcvL9npA14JLKSWwTAfcL6M4AG0BGpm9KoYtjG8DYcq+Qga9AQ67eIgPuR6MnPhARqDB03O5zmA7aA6MoIyRAqVRUgUAk+JgI8X4npuEaN9VrHwvRVHVz5ATHky1xxzWbGm02TU5Ix0/6eV8c41rOOar0uqPLUh/RUKe6nt9p9so8+otmnr2dxouH4tJXavWZ7y142GJrt5MJRAIBAIEwCAQDwgRGyN237N9n9Vxy9bKi1OlR+9qPaPBPM/hNvTaa2Wd+0KziPEcekrNZ62n2/y9bopNVapzM/KoHM5yT75eRG0bOFtPNO68LJQV1FJVuZScZ6QGTyhcDHTaAhWD6UZB+t4wH7CORsEbQNdud8Hf2GBsWZSpHMOkBFQRaMAgZgO2MpRlyOkCvT18qczfWOxgL8R1un0Gkt1mqfkpqXLH/YDxJnm14pHNLNhw3zXjHWN5l5Dxvi2p43rjqbzyou1NYOyL+fmZQZ805bdXd6HQ49Jj5K9/eSXgBMDeECYBAgGNkbhiF+sQPbCWK21t9WxD7mBk7SiZAtrJwLFz5ZkJ2ln4ZMnaUbjMgQzYGT084HU9mOyVnEeXV8RD1aUEFa+jW/kJYabRzeYtfsoOJcZjFPpYJ3t/D0nT6WuipKqK0qrQcqoowAPIS3rEVjaHI3ta872neZMAYkoTAjHnARsqZLgMErnMBt2Vq25WH1YCVSYsTY9d4Gw5lH2h84GvWtwwJQjB64gOs6GsjmBJHnAWoqY2DmGAPZAac90wPLO3XHDxPXnR0t/JNM2Dj7b+J+HT5ym1uo57ckdnZcE0EYMXq2j6rfw5oDE0F7AgTAIQv0Gi1XEdQNPo6Gts8gNgPafCZMeK+SdqwwajU4tPXmyTtDs+E9gFbDcV1b9d6dPsPcW/LHvllTh1e+Rzmo/wDILz0wV/eXU6Hs1wbQgDT8OoyPtuvO3zOTNymnxUjpCmza/U5vz3n+IbJdNSowtVYH7MycseGtNrT3lVfw3Q6heW/R6exfJ6wZE46T3iHqubJTrW0x+7QcS7C8F1QJ06W6Kw/a07bf4TkfICa19Dhv2jaVlh43q8XSZ5o/Vx3Gux/E+GZsqX1ynOzUjvD3r/5lfm0eSn5eroNJxrBm+m/0z+vZvezHYxajVrOLoHu+tXpzuqnwLeZ9nQe+bem0cV2tfurOI8Ztk3x4Okeff/p3Arlju5xaNoBAIBAht1Puga9K3DjuHHNAcsdeRgrDONhAR9E/jW3ygPtbWVIDqSR5wExVZ6QHlIGfKA/v1+UDW8f1Bp4dYldhrtuBRHUZKkjr8JW8T1v4TBze89m1o8cXyxvHSHj+t0F3D7fR3DKn6tgOzSlxZ6Z43r8O9wammau8dJL9enSZGwmAeEIbbs5wHU8c1JCn0WlrOLbiP4DzP4eM2dNprZp/RW8R4jTR1272nt/y9T4XwzTcO0y6fR1iusDfHVvafOXlMdaRtWHE59Rk1F+fJO8nwoE99mFlAmBEAIzAwKD2wJVQBiBkBiBMAgECIBAwtYBCCQCRtATrrcOpZTgHc4gOemr++vzgJLTYGBKHAPnAcWyt+6GgZ4wB7IHL8fv9NrfRg92ocuPaes4nj2p9TPFI7VXOgx8tOby1F+nq1FRquQPWeoMpseW2Oearfra1J5q93K8V4VboDzqS+nJ2fH1ffL3Tauufp7rrTayuX6Z/M1wM2pbpzg/DruLcSp0dGQW3dxvyr4mZsGKct4rDU1uqrpcU5Lft/d7Bw3h9Gg0lWl0yBaqxge32n2y/pSKV2q4DNmvmyTkvPWTwGJ7YkwJgRAmBEAgEAgTAIBAiAQKb6+Yqw8Dk+6APZW6squCSMYgK+gt+4YDZvqOwcZMCrTVMthLKQB0gMWMERmPQDM82nliZTEbzs4exzbbZYTnmYnM+aanL6uSbeZl0WOvLSKsZgZJQwDDlIyrbHI2nqJmOsI7dYc5xbgbVZv0QJr3LVdSPd+UudNrov9F+k+y00uu3+jJ8ut/4dcM9X4V9IWKPS6s8ynyrH1fn1+InWaLDyY+ae8uf47qvVz+lE9K/z7uyUYE3VKmBMAgRAMwIgEAgEA3gEA3gEAgDjKkDriAitNiOGZMBdycwGvWavvfwgLDTWAglRgdd4Ddbq4ypyBtAX4s/o+HahgcHkPSaXEbzj0t7R4ZtPG+WsOOHTA8J85l0HuJAIGSJ6R1rXqxAEzYMc5MlaeZeb25azMu1prWutUUABQAMCfS8dYrSK+HOWtNpmZWz2hMAgECnVnGluIJBCMQQcY2k17wiezyYcT4gR/SOtO//AMqz851kaXD9sfEKP1cnmfkfSXEP1hrf3qz84/DYftj4g9S/kfSXEP1hrf3qz84/DYftj4g9S/kfSXEP1hrf3qz84/DYftj4g9S3mR9JcQ/WGt/erPzj8Nh+2PiD1L+Z+R9JcQ/WGt/erPzj8Nh+2PiD1LeZH0lxD9Ya396s/OPw2H7Y+IT6l/I+ktf+sNb+9WfnH4bD9sfEHqX8j6S4gf8A3DW/vVn5x+Fw/bHxCPUv5b3sXxDVWccFN+q1FyvU21tzOARjwJlfxHBSuHmrER+za0l7Tk2mXoPXEolmpstrOa8947QFvVrfIfOAwdTWwIBOTt0gTpUZFKv1zmApx/8Aoyz3r+IlVxr/AEVmzpP60OV8JwMr1EgEBrhq83ENP+3LDhVebWUj9Wvqp2xWdkOk+iKFMAgEAgUaz+aX/wB234Sa94RbtLxwdPjOzhQz3lMlCRAgwCAQAQAwCBt+yRK9o9FjxZh/pM0eJf6azY0s7ZYeoL4eycwuJ7lPROLTYQMA56wLRqq/vfwgVDTOCCSuB7TAYpsFnMQMAHEBLj/9GW+9fxEquNRM6KzZ0n9aHKzgZXqJAIDPDm5eIaY/25YcLty6uk/qwar+lZ2Q6T6IoGUAgEAgUaz+aX/3bfhJr3hFu0vHR9X4zs4UM95ElAgECIBAkQCADpA2/ZIFu0eiwM4ZifdymaHEp/8AWs2NL/Vh6gNsTmVx7qGvVgawDzE4gVeqP0BXb2mBadUjDlAIztAz06GtSpIOd4FPFk9Jw7UKPuEzS4jSb6W9Y8M2nnbLWXHeR858526L+O4kJECVc1urr1UhhM2G/p3rfxLzeN4mHbU2CytXUgggHM+l4rxkpFo94c5aOWdloM9oTAIBAp1n81u/u2/CTXvCJ7PHF+r8Z2UKBMncEbiIBg+RjcEbgkggAkSOh7C1el48LMbVUsfmQBKzit9sO3mW3o43ybvRhOeWpU0OrmwsNjmBn64n3WgYeqMu5fYbwLKtQLG5QCPjAtsUNWynoRgzzevNWY8kTtO7h7ENdjoRgqxE+Z6jHOPJaniXR47c1YljML2mDdq+JcVXT5q05DW+J6hf+8ttDw6cv15OkOe4rxqun+jD1t/DpOwfFjrOHPprn5tRpmxudyhOV+XT4TtNHMenFI9lXoNTbPSYvO8urE2m+mAQCBiwDKQRkHqDAS+h+GZz9HaT/IX8pk9bJ7Wl49KngfQ/DP1do/8AIX8o9bL90/J6VPA+h+Gfq7R/5C/lHrZfun5PSp4H0Pwz9XaP/IX8o9bL90npU8MX4VwpVZm4dowFGSTQn5R62XfbmknHSPaHmPFNRTquI33aaqurTsxFa1qFHIOmw8+vxnUaXHbHiiLTvKmy2i15mCs2WMQCRI7X/h3pSKtXqmH1mFan2Dc/jKLi2Te1arHQ16Tby7JjyqT5Sob5f1kWdzlI5thvAx9Tb74ECfWQ3d5Ou0Ca9Ma2V+fYdRiAwd1MDluPUei1vpBstoz8R1nFce03p6iMkdrLjQ5OanL4a0kAEkgAdSZQxXedoblrxWOaezQ8U4uW5qdISF6NYPH3ToNFwyK/Xmj9nI8U43N98WnnaPP+Gm90unMHeDcRt4VxCrVU5PLs6D7a+Inul5pbeGfT5rYckXh63oNdRrdJVqdO3NVYMg+XsMta2i0bw6fHeuSvNU3Je0wIMAgEAgECC2IHH9tuNhUbhmlbvuP07DwX7vvP4S14dpeefVt2js0dXn5Y5KuInQK3sIBADsMyJnaNx6t2e0J4dwnT6ZlAsC81n7R3M5HU5fUy2su8NOSkQdvs5QFx9baYWVV6v6PD8x7u5EA9cH3IE+qcve5+m/SBj61zdzkxnu5zAZVeVApOcDrA13GdINRo2ABLp30x5/8AiVvFNH+Kwcsfmjsz4M3pX5vZ5fxLij6v9HWClHkdi3v/AClPo9BXTxvbrb+HP8T4vk1kzSvSn8tdnJlipxAnfGM7GBuOznHruCXkqDbprD+kpz/qHt/GZcWWcc/o29JrJ089fyvT+G8S0vEtKuo0dosQ/MHyI8JZUvF43q6LHlplrzVnobzPTImAQCAEwMHfEgct2l7Upo1bTcPYWanoz9Vq/Myz0egtl2vk6VaefUxWOWvdwjEsxZiWYnJLHJJ9s6Gtdo2VnWetu6J6QDAMQN12R4Z9I8XRrFzRpsWOfAtnuj57+4e2V3EdR6eLljvLZ0uPnvv7Q9NUYGM5nNrdVdTzNz831d8YgVDU+l7nJjm2znpAn1L/AOz/AEwMfW2bu8nXaBn6sq97mbbvQIr1TM4DAAZ8IF1i590EvM+2nBTw/WHWUJjTahsnA+o56j49RK/UYuWeaHP8R0/p29SvaXN/L4TWVwgEA8cwGdDr9ToLxfo7mqs8SDsfePGeq2mnZkxZb4rc1Jdlwzt4qhU4ppW8AbaBnHtKn/Yn3Tbpq4/3QtcXFK7bZI+HSaPtFwnWj9Br6c/dsPI3yODNiualu0rDHqsOSN62PrqaGGVurI8wwnrmjyzc9Z7Srv4ho9OvPfq6K182sAib1jvKJyUjvLR8Q7b8I0ykad31j9OWhdv8RwPlmYbamlf1aeXiOCkdJ3/s5LjHaziHEgakPqtB6pW3ePvaa/4zJzc1fZWZuI5Mn5ekNOjAj/adbw7imPV15Z6Wj2/wjHkrft3Zy4ewRAjMDOpHtsSulC7ucKB9o+U8XvFKzafZMRNp2ju9Q7O8LXhXD0pGDY3etYfaacpqc858k2XOHH6dIhtTspmBmK+ss3dwME4gZHTrUCwJJXcZgYDVv91YFh0yqObLbbwKxqXduTCgHbaBmdOlYLgnu7wMqLhcuG2bygL8Q0dGu01mk1KhqrBgg/8A7w6yLV5o2eMlK5KzW3u8q43wrUcI1ZpvyyHeqzG1i+fv85V5Mc45cxqdPfBflt8tf4mY2AQCAYgA2OYB79x5GEbQx5K/CtB7lESnZISsHIrQHzCiREI2hkSD4CSlHWBKnBkxMxO8dxfXZnY9Z1XDeM8+2PP0ny28eWLdJ7rJ0UTuzA7DPX2RM+T9Hc9juAHShdfrEPp2H6NCN6wfE+0znuIaz1benXtC00un5I5pdaBjfErG4WOqYsVAGCcbwMjplUc+TkbwMBqGsYIQuG2MCz1RPNoFY1LsQpAwdukCz1dFBYE5G+5gVpqHdlTAOesDM0LUpdScjzgSLBaoPj4wEuK8N0/FNKdPqlJXqrDqp8xPN6ReNpYc2GmWnLbs8y41wbVcH1BTUDmqYn0dyjZvf5H2SsyY7Y5c5qNNkwWneN48taOnXMxtcQCQCSCEjEAxIBiASUCAAmBfSxZlQZLHYADcnyl7w3i9sMxiy9a//YbOPJO/LLuuzHZj0LLreIpmwYauk9E8i3tlhrdf6scmPt5XWn03L9VnYqoG8q28Wt1J5itY26QMzpkXLDm23G8Coah7O6QBk46QLfV1rBYM2RuN4FQ1dmOg+UC86dFBYZyN4FHrDkhSBg7bQLTp60BZcgjfeBWl72MqNjDQLHqWlC6ZyPM9YEoUtGeh8oFer0VOrpajU0rbUwwysMgiRMRaNpeb46Xry3jeHCcc7GXactbwstdTufRMe+vuPj+M0cmmmOtVJqOG2r9WLrHhybVsjtW4K2L1Rhgj35mr19+isms1nazGECAQCASASQQDEDY8J4Lr+LPjSUkpne1tlHx8fhMlMVrz0bGDTZM0/THTy9A7P9mNJwgelP6fV9DawwF/ZHh7+s3senrTv1le6bR0wxv3l0KrgTO3C1upIfCDAHXMDP1es945z16wKhqLCQCV3gWnT1opcZJG4gVJqLLHCMBhhAu9Vr9vzgUDUWEgE7E77QLzRWAXAwRv1gUJdZYQrkEMdxjG0C56a60LquCvTeBUlr2uEZshuogW21pShascpHj1gTRqFtPKR3oFpXMDW8V4HoOKj+WadXcdLB3WHuYbzHelb9JhgzabFmja0OU4h2CtUs3D9Wrj+rvXB/xDr8hNa2kn/bKtycKmP6dvloNX2c4xpfr6Gw+ZTvj+BmC2K8d4aF9HqKd6/DW2021nFlVikdcqRiY5iY7wwWpeveFcjZG0gDPTf3DMJ2nwa03DddqSBp9HfZ+zWZ7ilp9mSuDLf8tW60XYri+pI9KtWmTzsbJ/wj/tMldNknv0bWPhua3fo6XhnYfhulPPqzZq7BuPSDCD/lHX45m1TTVr+qxw8OxY+tvqdPXWqKFRQqjYADE2IjZvxER2WQklbqLA7BcDEC4UVsASu53O5gUesWg45gMHGMeEC/1asDpkjfOYC66ixnCs2ATgjAgXvRWil1XdRscmBR6zd1DbH2CAy1FYUkLggbbwFhfYXCFhjp0gMtTWq8yrgr4wFq7bLHCOwKsYF9taVIbEGCo2gVUu1ziuzdT1gWXKtSc9Y5T5wI0trvZyk7AQL2dUHeOBAyUqwyGB+MAIEDB6kcYZFI9ozI2RtE+yr1HS5z6tSf8ApiNo8PPJXwyXSadDlKKlPsQCNoTyV8LgPhJekiBXZaidW38oGSMLEDDoYCll1gdgG2BPhAvWmt15mXJbeAsb3VyoPdHQQGRp6yoyNzuYCy32MwGdmMBl6a1Qsq4IGYC6W2MQrOMNtAZ9Xq+7/GAotzlgC+QT02gNtUgQsEAbGYCqWvYwBY4PUQGbakRCyqAQNjAXosayxUdiQeoMC69AlbWIArdcwKqWNr+jduZcbiBZqAKq+etQp8xAw05NrFbDzgDO8DK8ChF9EOXJ3gTpLGctzMSBAy1FpqK48YBRY9oOSBg+UCLrmqcL3TkZgZ6ew218xAznwgUai11uKqxAAgW01pZWHccxPjAotdq7GRG5VHQQGK6kZFZlySASYCz2ujMqucKcCA0lKcoJUZ84ChvcFu8cZ6QG2prAJCDIGxgKpa5YKznBOMQGXrRFLBBlRkQFPT2f1kD/2Q==" width="20" style="margin-right: 10px;">
-							S'inscrire avec Google
-						</a>
-
-						<a href="{{ path('app_login') }}" class="forgot-password text-center mt-3">
-							Vous avez déjà un compte?
-						</a>
-
-						{{ form_end(registrationForm) }}
+						<div class="d-flex justify-content-between">
+							<button type="button" class="btn-wizard" style="width: 48%;" onclick="prevStep(4)">Précédent</button>
+							<button type="submit" class="btn-wizard" style="width: 48%;">S'inscrire</button>
+						</div>
 					</div>
-				</div>
-			{% endif %}
-		</div>
-	</div>
 
-	<script>
+					{{ form_end(registrationForm) }}
+
+					<a href="#" class="btn btn-warning text-center" id="google-signin-btn-mobile">
+						<img src="data:image/jpeg;base64,…" width="20" style="margin-right: 10px;">
+						S'inscrire avec Google
+					</a>
+
+					<a href="{{ path('app_login') }}" class="forgot-password text-center">
+						Vous avez déjà un compte?
+					</a>
+				</div>
+			</div>
+		{% else %}
+			<!-- Desktop Version -->
+			<div class="col-md-8">
+				<div class="login-container">
+					<h1 class="title text-uppercase">Inscription</h1>
+					{{ form_start(registrationForm, {'attr': {'data-turbo': 'false'}}) }}
+
+					<div class="row">
+						<div class="col-md mb-2">{{ form_row(registrationForm.lname, {'attr': {'class': 'form-control'}}) }}</div>
+						<div class="col-md mb-2">{{ form_row(registrationForm.fname, {'attr': {'class': 'form-control'}}) }}</div>
+					</div>
+					<div class="row">
+						<div class="col-md mb-2">{{ form_row(registrationForm.username, {'attr': {'class': 'form-control'}}) }}</div>
+						<div class="col-md mb-2">{{ form_row(registrationForm.email, {'attr': {'class': 'form-control'}}) }}</div>
+					</div>
+					<div class="row">
+						<div class="col-md mb-2">{{ form_row(registrationForm.photo, {'attr': {'class': 'form-control'}}) }}</div>
+						<div class="col-md mb-2">{{ form_row(registrationForm.country, {'attr': {'class': 'form-control'}}) }}</div>
+					</div>
+					<div class="row">
+						<div class="col-md mb-2">{{ form_row(registrationForm.plainPassword, {'attr': {'class': 'form-control'}}) }}</div>
+						<div class="col-md mb-2">{{ form_row(registrationForm.confirmPassword, {'attr': {'class': 'form-control'}}) }}</div>
+					</div>
+					<div class="row">
+						{{ form_row(registrationForm.referredBy, {'attr': {'class': 'form-control'}}) }}
+					</div>
+					<div class="form-check mb-4">
+						{{ form_widget(registrationForm.agreeTerms, {'attr': {'class': 'form-check-input'}}) }}
+						{{ form_label(registrationForm.agreeTerms, null, {'label_attr': {'class': 'form-check-label'}}) }}
+					</div>
+
+					<button type="submit" class="btn-wizard">S'inscrire</button>
+
+					<a href="#" class="btn btn-warning text-center mt-3" id="google-signin-btn-desktop">
+						<img src="data:image/jpeg;base64,…" width="20" style="margin-right: 10px;">
+						S'inscrire avec Google
+					</a>
+
+					<a href="{{ path('app_login') }}" class="forgot-password text-center mt-3">
+						Vous avez déjà un compte?
+					</a>
+
+					{{ form_end(registrationForm) }}
+				</div>
+			</div>
+		{% endif %}
+	</div>
+</div>
+
+ <script>
 		function nextStep(step) {
 			document.querySelectorAll('[id^="wizard-step-"]').forEach(el => {
 				el.classList.remove('animate__animated', 'animate__fadeIn');
@@ -388,5 +397,18 @@
 				}
 			});
 		});
-	</script>
-{% endblock %}
+	</script>{% endblock %}
+
+	{% block customScript %}
+		<script>
+        document.addEventListener('turbo:load', () => {
+            const ref = new URLSearchParams(window.location.search).get('ref');
+            let baseUrl = "{{ path('connect_google_start') }}";
+            const btnMobile  = document.getElementById('google-signin-btn-mobile');
+            const btnDesktop = document.getElementById('google-signin-btn-desktop');
+            let targetUrl = baseUrl + (ref ? '?ref=' + encodeURIComponent(ref) : '');
+            btnMobile.href  = targetUrl;
+            btnDesktop.href = targetUrl;
+        });
+    </script>
+	{% endblock %}

@@ -32,7 +32,7 @@ class GoogleController extends AbstractController
         $this->githubClient = $githubClient;
         $this->filesystem = $filesystem;
     }
-    
+
     #[Route('/connect/google', name: 'connect_google_start')]
     public function connectGoogle(ClientRegistry $clientRegistry, Request $request): Response
     {
@@ -120,7 +120,6 @@ class GoogleController extends AbstractController
             $this->sendReferralEmail($user, $user->getReferralCode(), $user->getQrCodePath(), $mailer);
 
             return $authenticator->authenticateUser($user, $appAuthenticator, $request);
-
         } catch (Exception $e) {
             $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
             $entityManager->clear();
@@ -132,10 +131,12 @@ class GoogleController extends AbstractController
     {
         $referrer = $entityManager->getRepository(User::class)
             ->findOneBy(['referralCode' => $referredBy]);
+
         if ($referrer) {
             $referrer->addReferral($user);
             $this->updateReferrerRewards($referrer, $entityManager);
-            $entityManager->persist($referrer);
+
+            // Pas besoin de persist ici car cascade: ['persist'] s'en charge
             $entityManager->flush();
         }
     }
@@ -252,7 +253,7 @@ class GoogleController extends AbstractController
 
         if ($count >= 40) {
             $referrer->setReferralRewardRate(0.13)
-                     ->setBalance($referrer->getBalance() + 10);
+                ->setBalance($referrer->getBalance() + 10);
         } elseif ($count >= 20) {
             $referrer->setReferralRewardRate(0.10);
         } elseif ($count >= 10) {

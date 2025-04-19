@@ -141,7 +141,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, self>
      */
-    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'referrer')]
+    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'referrer', cascade: ['persist'])]
     private Collection $referrals;
 
     #[ORM\Column(type: 'boolean')]
@@ -540,7 +540,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->referrals->contains($referral)) {
             $this->referrals->add($referral);
-            $referral->setReferrer($this);
+            $referral->setReferrer($this); // Important pour la bidirectionnalité
         }
         return $this;
     }

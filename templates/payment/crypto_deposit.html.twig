@@ -160,7 +160,7 @@
     } %}
 
 {% set cryptoKey = transaction.method|replace({'crypto_': ''}) %}
-{% set cryptoLogo = cryptoLogos[cryptoKey] ?? 'https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=25' %}
+{% set cryptoLogo = cryptoLogos[cryptoKey] ?? 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' %}
 
 <div class="deposit-container animate__animated animate__fadeIn">
     <div class="text-center mb-4">
@@ -169,7 +169,7 @@
             <img src="{{ cryptoLogo }}" 
                  alt="{{ network }}" 
                  class="network-icon"
-                 onerror="this.onerror=null; this.src='https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=25'">
+                 onerror="this.onerror=null; this.src='https://assets.coingecko.com/coins/images/1/large/bitcoin.png'">
             <span>{{ network }}</span>
         </div>
     </div>

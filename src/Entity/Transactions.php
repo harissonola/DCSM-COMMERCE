@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\TransactionsRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TransactionsRepository::class)]
@@ -37,6 +38,12 @@ class Transactions
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $type = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $expiresAt = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $verifiedAt = null;
 
     public function getId(): ?int
     {
@@ -135,6 +142,30 @@ class Transactions
     public function setType(?string $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getExpiresAt(): ?\DateTimeInterface
+    {
+        return $this->expiresAt;
+    }
+
+    public function setExpiresAt(?\DateTimeInterface $expiresAt): static
+    {
+        $this->expiresAt = $expiresAt;
+
+        return $this;
+    }
+
+    public function getVerifiedAt(): ?\DateTimeInterface
+    {
+        return $this->verifiedAt;
+    }
+
+    public function setVerifiedAt(?\DateTimeInterface $verifiedAt): static
+    {
+        $this->verifiedAt = $verifiedAt;
 
         return $this;
     }

@@ -15,18 +15,15 @@ nelmio_security:
             
     # Configuration CSP
     csp:
-        enabled: true
-        report:
-            enabled: true
-            log_channel: security
-            log_level: notice
-        hash:
-            algorithm: sha256
+        # Ces options sont au bon niveau sous csp
+        hosts: []
+        content_types: []
         enforce:
             level1_fallback: true
-            
-        # Directives CSP
-        directives:
+            browser_adaptive:
+                enabled: false
+            # Toutes les directives doivent être placées ici sous enforce
+            report-uri: ['/csp-report']
             default-src: ["'self'"]
             script-src: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdnjs.cloudflare.com"]
             style-src: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"]
@@ -34,4 +31,4 @@ nelmio_security:
             font-src: ["'self'"]
             frame-src: ["'self'"]
             connect-src: ["'self'"]
-            report-uri: ['/csp-report']
+            block-all-mixed-content: true

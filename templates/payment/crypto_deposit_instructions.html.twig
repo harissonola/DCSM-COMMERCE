@@ -1,0 +1,155 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Instructions de dépôt{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const expiresAt = new Date('{{ expiresAt|date('Y-m-d H:i:s') }}').getTime();
+            
+            function updateTimer() {
+                const now = new Date().getTime();
+                const distance = expiresAt - now;
+                
+                if (distance < 0) {
+                    document.getElementById('timer').innerHTML = "Expiré";
+                    return;
+                }
+                
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                document.getElementById('timer').innerHTML = 
+                    `${hours}h ${minutes}m ${seconds}s`;
+            }
+            
+            updateTimer();
+            setInterval(updateTimer, 1000);
+
+            setInterval(function() {
+                fetch('{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `_token={{ csrf_token('crypto_deposit') }}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        window.location.href = '{{ path('app_profile') }}';
+                    } else if (data.status === 'expired') {
+                        window.location.reload();
+                    }
+                });
+            }, 30000);
+        });
+
+        function copyToClipboard(elementId) {
+            const copyText = document.getElementById(elementId);
+            copyText.select();
+            document.execCommand("copy");
+            
+            const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+            toast.show();
+        }
+    </script>
+{% endblock %}
+
+{% block body %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">
+                            <i class="fas fa-coins me-2"></i> Instructions de dépôt
+                        </h4>
+                        <span class="badge bg-light text-dark">
+                            Expire dans: <span id="timer"></span>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4 p-3 bg-light rounded">
+                                <h5 class="fw-bold text-success">
+                                    <i class="fas fa-money-bill-wave me-2"></i> Montant à envoyer
+                                </h5>
+                                <div class="display-4 fw-bold text-success">
+                                    {{ amount|number_format(2) }} USD
+                                </div>
+                                <small class="text-muted">en {{ network }}</small>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5 class="fw-bold">
+                                    <i class="fas fa-wallet me-2"></i> Adresse de destination
+                                </h5>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" id="depositAddress" 
+                                           value="{{ depositAddress }}" readonly>
+                                    <button class="btn btn-outline-primary" type="button"
+                                            onclick="copyToClipboard('depositAddress')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5 class="fw-bold">
+                                    <i class="fas fa-address-card me-2"></i> Votre adresse source
+                                </h5>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" id="sourceAddress" 
+                                           value="{{ sourceAddress }}" readonly>
+                                    <button class="btn btn-outline-primary" type="button"
+                                            onclick="copyToClipboard('sourceAddress')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Important :</strong> Le dépôt expirera à {{ expiresAt|date('H:i') }}.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 text-center">
+                            <div class="mb-4 p-3 bg-light rounded">
+                                <img src="{{ qrCodeUrl }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 250px;">
+                                <h5 class="fw-bold">Scanner pour envoyer</h5>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_profile') }}" class="btn btn-success btn-lg py-3">
+                            <i class="fas fa-check-circle me-2"></i> J'ai effectué le transfert
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="copyToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-check-circle me-2"></i> Adresse copiée !
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}

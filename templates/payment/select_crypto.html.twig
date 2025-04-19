@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Sélectionnez une cryptomonnaie{% endblock %}
+{% block title %}Sélection de cryptomonnaie{% endblock %}
 
 {% block body %}
 <div class="container py-5">
@@ -11,13 +11,16 @@
                     <h4 class="mb-0">Sélectionnez une cryptomonnaie</h4>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Montant à déposer : <strong>{{ transaction.amount|number_format(2) }} USD</strong></p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Montant à déposer : <strong>{{ transaction.amount|number_format(2) }} USD</strong>
+                    </div>
                     
                     <form method="post" action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('select_crypto') }}">
                         
                         <div class="mb-4">
-                            <label for="crypto_type" class="form-label">Cryptomonnaie</label>
+                            <label for="crypto_type" class="form-label fw-bold">Cryptomonnaie</label>
                             <select class="form-select" id="crypto_type" name="crypto_type" required>
                                 <option value="">-- Sélectionnez --</option>
                                 {% for key, name in supportedCryptos %}
@@ -25,13 +28,20 @@
                                 {% endfor %}
                             </select>
                         </div>
+
+                        <div class="mb-4">
+                            <label for="source_address" class="form-label fw-bold">Votre adresse d'envoi</label>
+                            <input type="text" class="form-control" id="source_address" name="source_address" 
+                                   placeholder="Entrez l'adresse d'où proviendra le transfert" required>
+                            <small class="text-muted">Cette adresse doit correspondre à la crypto sélectionnée</small>
+                        </div>
                         
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                Continuer
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                                <i class="fas fa-arrow-right me-2"></i> Confirmer
                             </button>
                             <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary">
-                                Annuler
+                                <i class="fas fa-times me-2"></i> Annuler
                             </a>
                         </div>
                     </form>

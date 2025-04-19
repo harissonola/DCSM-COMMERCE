@@ -114,7 +114,7 @@ class PaymentController extends AbstractController
             return $this->redirectWithFlash('success', sprintf(
                 'Demande de retrait de %.2f USD enregistrée. Frais: %.2f USD',
                 $amount,
-                $fees
+                $fes
             ));
         } catch (\Exception $e) {
             $this->entityManager->rollback();
@@ -193,12 +193,17 @@ class PaymentController extends AbstractController
         }
 
         $cryptoType = strtolower($request->request->get('crypto_type'));
+        $sourceAddress = trim($request->request->get('source_address'));
+
         if (!array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
             return $this->redirectWithFlash('danger', 'Type de crypto non supporté');
         }
 
+        if (empty($sourceAddress)) {
+            return $this->redirectWithFlash('danger', 'Veuillez fournir votre adresse source');
+        }
+
         try {
-            // Création du paiement via NowPayments
             $depositData = $this->createNowPaymentsDeposit(
                 $cryptoType,
                 $transaction->getAmount(),
@@ -206,31 +211,32 @@ class PaymentController extends AbstractController
                 $transaction->getUser()->getEmail()
             );
 
-            // Enregistrement des détails de la transaction
             $transaction
                 ->setMethod('crypto_' . $cryptoType)
                 ->setExternalId($depositData['payment_id'])
                 ->setMetadata([
                     'np_address' => $depositData['pay_address'],
                     'np_id' => $depositData['payment_id'],
-                    'np_expiry' => $depositData['expiry_estimated_date']
+                    'np_expiry' => $depositData['expiry_estimated_date'],
+                    'source_address' => $sourceAddress
                 ]);
 
             $this->entityManager->flush();
 
-            // Envoi des instructions par email
             $this->sendDepositInstructionsEmail(
                 $transaction->getUser()->getEmail(),
                 $depositData['pay_address'],
                 $transaction->getAmount(),
                 $cryptoType,
-                new \DateTime($depositData['expiry_estimated_date'])
+                new \DateTime($depositData['expiry_estimated_date']),
+                $sourceAddress
             );
 
-            return $this->render('payment/crypto_deposit.html.twig', [
+            return $this->render('payment/crypto_deposit_instructions.html.twig', [
                 'transaction' => $transaction,
                 'amount' => $transaction->getAmount(),
                 'depositAddress' => $depositData['pay_address'],
+                'sourceAddress' => $sourceAddress,
                 'expiresAt' => new \DateTime($depositData['expiry_estimated_date']),
                 'network' => self::SUPPORTED_CRYPTOS[$cryptoType],
                 'qrCodeUrl' => $this->generateQrCodeUrl($depositData['pay_address']),
@@ -243,7 +249,7 @@ class PaymentController extends AbstractController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return $this->redirectWithFlash('danger', 'Erreur lors de la création du dépôt');
+            return $this->redirectWithFlash('danger', 'Erreur lors de la création du dépôt: ' . $e->getMessage());
         }
     }
 
@@ -372,7 +378,6 @@ class PaymentController extends AbstractController
             return $this->json(['status' => 'completed']);
         }
 
-        // Vérification auprès de NowPayments
         try {
             $paymentStatus = $this->checkNowPaymentsStatus($transaction->getExternalId());
             
@@ -398,7 +403,6 @@ class PaymentController extends AbstractController
         $data = json_decode($content, true);
         $providedHmac = $request->headers->get('x-nowpayments-sig');
 
-        // 1. Vérification HMAC
         $calculatedHmac = hash_hmac('sha512', $content, $_ENV['NOWPAYMENTS_IPN_SECRET']);
         if (!hash_equals($calculatedHmac, $providedHmac)) {
             $this->logError('Invalid IPN HMAC', [
@@ -408,7 +412,6 @@ class PaymentController extends AbstractController
             return new Response('Invalid HMAC', 403);
         }
 
-        // 2. Trouver la transaction
         $transaction = $this->entityManager->getRepository(Transactions::class)
             ->findOneBy(['external_id' => $data['payment_id']]);
 
@@ -416,7 +419,6 @@ class PaymentController extends AbstractController
             return new Response('Transaction not found', 404);
         }
 
-        // 3. Traitement sécurisé
         $this->entityManager->beginTransaction();
         try {
             switch ($data['payment_status']) {
@@ -444,6 +446,18 @@ class PaymentController extends AbstractController
             ]);
             return new Response('Processing error', 500);
         }
+    }
+
+    #[Route('/deposit/success', name: 'deposit_success')]
+    public function depositSuccess(): Response
+    {
+        return $this->redirectWithFlash('success', 'Dépôt effectué avec succès');
+    }
+
+    #[Route('/deposit/cancel', name: 'deposit_cancel')]
+    public function depositCancel(): Response
+    {
+        return $this->redirectWithFlash('warning', 'Dépôt annulé');
     }
 
     private function createNowPaymentsDeposit(string $currency, float $amount, int $userId, string $email): array
@@ -490,12 +504,10 @@ class PaymentController extends AbstractController
 
     private function handleSuccessfulPayment(Transactions $transaction, array $ipnData): void
     {
-        // 1. Vérification anti-doublon
         if ($transaction->getStatus() === 'completed') {
             return;
         }
 
-        // 2. Vérification du montant
         $expectedAmount = $transaction->getAmount();
         $receivedAmount = (float)($ipnData['actually_paid'] ?? 0);
         
@@ -507,11 +519,9 @@ class PaymentController extends AbstractController
             ));
         }
 
-        // 3. Crédit du compte
         $user = $transaction->getUser();
         $user->setBalance($user->getBalance() + $expectedAmount);
 
-        // 4. Mise à jour transaction
         $transaction
             ->setStatus('completed')
             ->setVerifiedAt(new \DateTime())
@@ -520,7 +530,6 @@ class PaymentController extends AbstractController
                 ['ipn_data' => $ipnData]
             ));
 
-        // 5. Notification
         $this->sendTransactionEmail(
             $user->getEmail(),
             'Confirmation de dépôt',
@@ -548,8 +557,14 @@ class PaymentController extends AbstractController
             ));
     }
 
-    private function sendDepositInstructionsEmail(string $email, string $address, float $amount, string $currency, \DateTime $expiry): void
-    {
+    private function sendDepositInstructionsEmail(
+        string $email, 
+        string $address, 
+        float $amount, 
+        string $currency,
+        \DateTime $expiry,
+        string $sourceAddress
+    ): void {
         try {
             $this->mailer->send(
                 (new TemplatedEmail())
@@ -561,6 +576,7 @@ class PaymentController extends AbstractController
                         'amount' => $amount,
                         'currency' => $currency,
                         'expiry' => $expiry,
+                        'source_address' => $sourceAddress,
                         'qr_code' => $this->generateQrCodeUrl($address)
                     ])
             );
@@ -640,15 +656,12 @@ class PaymentController extends AbstractController
 
     private function validateCryptoAddress(string $currency, string $address): bool
     {
-        // Implémentez une validation basique selon la crypto
-        // Pour une vraie application, utilisez un service de validation d'adresses
         return !empty($address) && strlen($address) >= 20;
     }
 
     private function processWithdrawal(Transactions $transaction, string $currency, string $address): void
     {
         // Implémentez ici la logique de retrait via votre service préféré
-        // Cette méthode devrait initier le transfert vers l'adresse fournie
     }
 
     private function completeDeposit(Transactions $transaction): void

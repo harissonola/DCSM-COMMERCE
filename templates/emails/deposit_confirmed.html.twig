@@ -1,48 +1,36 @@
 {% extends 'emails/base_email.html.twig' %}
 
-{% block content %}
-  <h1 style="color: #2d3748; font-size: 24px; margin-bottom: 20px;">Dépôt confirmé</h1>
-
-  <p style="margin-bottom: 16px;">
-    Bonjour,<br />
-    Votre dépôt de <strong>{{ amount|number_format(2) }} USD</strong> en {{ currency|upper }} a été confirmé et crédité sur votre compte.
-  </p>
-
-  <div style="background: #f0fff4; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #48bb78;">
-    <h2 style="color: #2d3748; font-size: 18px; margin-top: 0;">Détails de la transaction</h2>
-
-    <table style="width: 100%;">
-      <tr>
-        <td style="padding: 5px 0; width: 120px;">
-          <strong>Montant :</strong>
-        </td>
-        <td style="padding: 5px 0;">{{ amount|number_format(2) }} USD</td>
-      </tr>
-      <tr>
-        <td style="padding: 5px 0;">
-          <strong>Cryptomonnaie :</strong>
-        </td>
-        <td style="padding: 5px 0;">{{ currency|upper }}</td>
-      </tr>
-      {% if tx_hash %}
-        <tr>
-          <td style="padding: 5px 0;">
-            <strong>Transaction :</strong>
-          </td>
-          <td style="padding: 5px 0; word-break: break-all;">{{ tx_hash }}</td>
-        </tr>
-      {% endif %}
-    </table>
-  </div>
-
-  <p style="margin-bottom: 16px;">Vous pouvez maintenant utiliser ces fonds sur notre plateforme.</p>
-
-  <div style="text-align: center; margin: 25px 0;">
-    <a href="{{ app_url }}/profile" style="background: #4299e1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Voir mon solde</a>
-  </div>
-
-  <p style="margin-bottom: 0;">
-    Cordialement,<br />
-    L'équipe {{ app_name }}
-  </p>
-{% endblock %}
+    {% block content %}
+    <h1 style="color: #2d3748; font-size: 24px; margin-bottom: 20px;">
+        <i class="fas fa-check-circle" style="color: #48bb78; margin-right: 10px;"></i> Confirmation de dépôt
+    </h1>
+    
+    <p style="margin-bottom: 16px;">
+        Bonjour,<br>
+        Nous confirmons la réception de votre dépôt de <strong>{{ amount|number_format(2) }} USD</strong> en {{ currency|upper }}.
+    </p>
+    
+    <div style="background: #f0fff4; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #48bb78;">
+        <h2 style="color: #2d3748; font-size: 18px; margin-bottom: 10px;">
+            <i class="fas fa-info-circle" style="color: #48bb78; margin-right: 8px;"></i> Détails de la transaction
+        </h2>
+        
+        <p style="margin-bottom: 10px;">
+            <strong><i class="fas fa-money-bill-wave" style="color: #48bb78; margin-right: 8px;"></i> Montant :</strong> {{ amount|number_format(2) }} USD<br>
+            <strong><i class="fas fa-coins" style="color: #48bb78; margin-right: 8px;"></i> Cryptomonnaie :</strong> {{ currency|upper }}<br>
+            {% if tx_hash %}
+            <strong><i class="fas fa-link" style="color: #48bb78; margin-right: 8px;"></i> Transaction :</strong> {{ tx_hash }}<br>
+            {% endif %}
+            <strong><i class="fas fa-calendar" style="color: #48bb78; margin-right: 8px;"></i> Date :</strong> {{ "now"|date('d/m/Y à H:i') }}
+        </p>
+    </div>
+    
+    <p style="margin-bottom: 16px;">
+        Vous pouvez maintenant utiliser ces fonds sur votre compte.
+    </p>
+    
+    <p style="margin-bottom: 0;">
+        Cordialement,<br>
+        L'équipe {{ app_name }}
+    </p>
+    {% endblock %}

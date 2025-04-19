@@ -2,7 +2,7 @@ nelmio_security:
     # Protection contre le clickjacking
     clickjacking:
         paths:
-            "^/.*": DENY
+            '^/.*': DENY
 
     # Désactive le content type sniffing
     content_type:
@@ -11,19 +11,20 @@ nelmio_security:
     # Politique de referrer
     referrer_policy:
         enabled: true
-        policies: ["no-referrer", "strict-origin-when-cross-origin"]
-
+        policies: ['no-referrer', 'strict-origin-when-cross-origin']
+            
     # Configuration CSP
     csp:
         enabled: true
-        report_logger_service: 'logger'
+        report:
+            enabled: true
+            log_channel: security
+            log_level: notice
         hash:
             algorithm: sha256
         enforce:
             level1_fallback: true
-        report: true # Activer le reporting
-        report_endpoint: ['/csp-report'] # Tableau au lieu d'une chaîne
-        
+            
         # Directives CSP
         directives:
             default-src: ["'self'"]
@@ -33,4 +34,4 @@ nelmio_security:
             font-src: ["'self'"]
             frame-src: ["'self'"]
             connect-src: ["'self'"]
-            report-uri: ['/csp-report'] # Directive report-uri
+            report-uri: ['/csp-report']

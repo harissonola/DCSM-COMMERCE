@@ -14,11 +14,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use DateTimeImmutable;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelLow;
-use Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeMargin;
-use Endroid\QrCode\Writer\PngWriter;
 
 class PaymentController extends AbstractController
 {
@@ -108,7 +103,6 @@ class PaymentController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        // Validation CSRF
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             return $this->json(['error' => 'Token CSRF invalide'], 403);
@@ -119,17 +113,14 @@ class PaymentController extends AbstractController
         $currency = strtoupper(trim($request->request->get('currency')));
         $address = trim($request->request->get('address'));
 
-        // Validation
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
             return $this->redirectWithFlash('danger', $errors[0]);
         }
 
-        // Calcul des frais
         $fees = $this->calculateWithdrawalFees($amount);
         $totalAmount = $amount + $fees;
 
-        // Création de la transaction
         $transaction = (new Transactions())
             ->setUser($user)
             ->setType('withdrawal')
@@ -146,7 +137,6 @@ class PaymentController extends AbstractController
             $this->entityManager->persist($transaction);
             $this->entityManager->flush();
 
-            // Intégration avec le service de retrait
             $this->processWithdrawal($transaction, $currency, $address);
 
             $this->entityManager->commit();
@@ -167,7 +157,6 @@ class PaymentController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        // Validation CSRF
         $token = new CsrfToken('deposit', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             return $this->redirectWithFlash('danger', 'Token CSRF invalide');
@@ -176,7 +165,6 @@ class PaymentController extends AbstractController
         $amount = (float)$request->request->get('amount');
         $method = $request->request->get('method');
 
-        // Validation
         $errors = $this->validateDeposit($amount, $method);
         if (!empty($errors)) {
             return $this->redirectWithFlash('danger', $errors[0]);
@@ -317,7 +305,6 @@ class PaymentController extends AbstractController
             throw $this->createAccessDeniedException('Transaction invalide');
         }
 
-        // Génération d'une adresse de dépôt unique
         $depositAddress = $this->generateDepositAddress('USDT.TRC20');
         $expiresAt = (new \DateTime())->modify('+' . self::DEPOSIT_EXPIRATION_HOURS . ' hours');
 
@@ -327,16 +314,17 @@ class PaymentController extends AbstractController
 
         $this->entityManager->flush();
 
+        // Génération du QR code via service externe
+        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($depositAddress);
+
         return $this->render('payment/crypto_deposit.html.twig', [
             'transaction' => $transaction,
             'amount' => $transaction->getAmount(),
             'depositAddress' => $depositAddress,
             'expiresAt' => $expiresAt,
             'network' => 'USDT (TRC20)',
-            'qrCodeUrl' => $this->generateUrl('app_qr_code', [
-                'data' => $depositAddress,
-                'size' => 300
-            ], UrlGeneratorInterface::ABSOLUTE_URL),
+            'qrCodeUrl' => $qrCodeUrl,
+            'initialExpiration' => $expiresAt->getTimestamp() - time(),
             'csrf_token' => $this->csrfTokenManager->getToken('crypto_deposit')->getValue()
         ]);
     }
@@ -346,7 +334,6 @@ class PaymentController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        // Validation CSRF
         $token = new CsrfToken('crypto_deposit', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             return $this->json(['error' => 'Token CSRF invalide'], 403);
@@ -367,7 +354,6 @@ class PaymentController extends AbstractController
             return $this->json(['status' => 'expired']);
         }
 
-        // Vérification du dépôt
         $isConfirmed = $this->verifyBlockchainDeposit($transaction->getExternalId(), $transaction->getAmount());
 
         if ($isConfirmed) {
@@ -419,7 +405,6 @@ class PaymentController extends AbstractController
             return $this->redirectWithFlash('danger', 'Cryptomonnaie non supportée');
         }
 
-        // Vérification de la transaction blockchain
         $verificationResult = $this->verifyBlockchainTransaction($cryptoType, $txHash, $transaction->getAmount());
 
         $this->entityManager->beginTransaction();
@@ -485,29 +470,6 @@ class PaymentController extends AbstractController
 
         $this->entityManager->flush();
         return new Response('Pending transactions checked: ' . count($pendingTransactions));
-    }
-
-    #[Route('/qr-code/{data}', name: 'app_qr_code')]
-    public function generateQrCode(string $data, Request $request): Response
-    {
-        $size = $request->query->get('size', 200);
-
-        $qrCode = Builder::create()
-            ->writer(new PngWriter())
-            ->writerOptions([])
-            ->data($data)
-            ->encoding(new Encoding('UTF-8'))
-            ->errorCorrectionLevel(new ErrorCorrectionLevelLow())
-            ->size($size)
-            ->margin(10)
-            ->roundBlockSizeMode(new RoundBlockSizeModeMargin())
-            ->build();
-
-        return new Response(
-            $qrCode->getString(),
-            Response::HTTP_OK,
-            ['Content-Type' => $qrCode->getMimeType()]
-        );
     }
 
     private function validateWithdrawal(User $user, float $amount, string $currency, string $address): array
@@ -631,8 +593,7 @@ class PaymentController extends AbstractController
 
     private function validateCryptoAddress(string $currency, string $address): bool
     {
-        // Implémentez la validation selon le type de crypto
-        return true; // Simplifié pour l'exemple
+        return true;
     }
 
     private function generateDepositAddress(string $currency): string
@@ -642,7 +603,6 @@ class PaymentController extends AbstractController
 
     private function verifyBlockchainDeposit(string $address, float $amount): bool
     {
-        // Implémentation réelle avec l'API blockchain
         return false;
     }
 

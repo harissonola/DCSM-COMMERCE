@@ -396,12 +396,12 @@
 						<label class="form-label">Méthode de paiement</label>
 						<div class="d-grid gap-2">
 							{% set paymentMethods = [
-									{ id: 'crypto', label: 'Crypto', icon: 'currency-btc' },
-									{ id: 'paypal', label: 'PayPal', icon: 'paypal' }
-								] %}
+										{ id: 'crypto', label: 'Crypto', icon: 'currency-btc' },
+										{ id: 'paypal', label: 'PayPal', icon: 'paypal' }
+									] %}
 							{% for method in paymentMethods %}
 								<div class="form-check payment-method">
-									<input class="form-check-input" type="radio" name="paymentMethod" id="{{ method.id }}" value="{{ method.id }}" required/>
+									<input class="form-check-input" type="radio" name="method" id="{{ method.id }}" value="{{ method.id }}" required/>
 									<label class="form-check-label d-flex align-items-center" for="{{ method.id }}">
 										{% if method.icon == 'currency-btc' %}
 											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
@@ -471,7 +471,7 @@
 					<small>
 						<i class="fas fa-info-circle"></i>
 						Frais de retrait: 
-													5% (≤20$), 3% (≤100$), 2% (≤500$), 1% (>500$)
+																				5% (≤20$), 3% (≤100$), 2% (≤500$), 1% (>500$)
 					</small>
 				</div>
 				<button type="submit" class="btn btn-primary w-100 py-2">Confirmer</button>
@@ -529,32 +529,26 @@
 {{ parent() }} <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/fr.min.js"></script>
  <script nonce="{{ csp_nonce('script') }}">
-			// Gestion de la copie du lien
-			function copyToClipboard() {
-				navigator.clipboard.writeText(document.getElementById('referralLink').value)
-					.then(() => new bootstrap.Toast(document.getElementById('copyToast')).show())
-					.catch((err) => console.error('Erreur de copie :', err));
-			}
-			
-			// Initialisation de Select2
-			$(document).ready(function() {
-				$('#cryptoType').select2({
-					dropdownParent: $('#withdrawModal'),
-					theme: 'dark',
-					width: '100%',
-					language: 'fr'
-				});
+		// Gestion de la copie du lien
+		function copyToClipboard() {
+			navigator.clipboard.writeText(document.getElementById('referralLink').value)
+				.then(() => new bootstrap.Toast(document.getElementById('copyToast')).show())
+				.catch((err) => console.error('Erreur de copie :', err));
+		}
+		
+		// Initialisation de Select2
+		$(document).ready(function() {
+			$('#cryptoType').select2({
+				dropdownParent: $('#withdrawModal'),
+				theme: 'dark',
+				width: '100%',
+				language: 'fr'
 			});
+		});
 	
-			// Gestion des formulaires
-			document.getElementById('depositForm').addEventListener('submit', function(e) {
-				const method = document.querySelector('input[name="paymentMethod"]:checked').value;
-				const amount = document.querySelector('input[name="amount"]').value;
-				
-				if (method === 'paypal') {
-					e.preventDefault();
-					window.location.href = "{{ path('app_paypal_redirect') }}?amount=" + encodeURIComponent(amount);
-				}
-				// Pour crypto, le formulaire se soumet normalement
-			});
-		</script>{% endblock %}
+		// Gestion des formulaires
+		document.getElementById('depositForm').addEventListener('submit', function(e) {
+			// Laisser le formulaire se soumettre normalement
+			// Le contrôleur Symfony gérera la redirection PayPal ou crypto
+		});
+	</script>{% endblock %}

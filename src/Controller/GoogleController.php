@@ -32,6 +32,7 @@ class GoogleController extends AbstractController
         $this->githubClient = $githubClient;
         $this->filesystem = $filesystem;
     }
+    
 
     #[Route('/connect/google', name: 'connect_google_start')]
     public function connectGoogle(ClientRegistry $clientRegistry, Request $request): Response

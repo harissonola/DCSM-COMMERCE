@@ -305,7 +305,7 @@
 
 					{{ form_end(registrationForm) }}
 
-					<a href="#" class="btn btn-warning text-center" id="google-signin-btn-mobile">
+					<a href="{{ path('connect_google_start') ~ (app.request.query.get('ref') ? '?ref=' ~ app.request.query.get('ref')) }}" class="btn btn-warning text-center" id="google-signin-btn-mobile">
 						<img src="data:image/jpeg;base64,…" width="20" style="margin-right: 10px;">
 						S'inscrire avec Google
 					</a>
@@ -348,7 +348,7 @@
 
 					<button type="submit" class="btn-wizard">S'inscrire</button>
 
-					<a href="#" class="btn btn-warning text-center mt-3" id="google-signin-btn-desktop">
+					<a href="{{ path('connect_google_start') ~ (app.request.query.get('ref') ? '?ref=' ~ app.request.query.get('ref')) }}" class="btn btn-warning text-center mt-3" id="google-signin-btn-desktop">
 						<img src="data:image/jpeg;base64,…" width="20" style="margin-right: 10px;">
 						S'inscrire avec Google
 					</a>
@@ -365,50 +365,57 @@
 </div>
 
  <script>
-		function nextStep(step) {
-			document.querySelectorAll('[id^="wizard-step-"]').forEach(el => {
-				el.classList.remove('animate__animated', 'animate__fadeIn');
-				el.classList.add('d-none');
+			function nextStep(step) {
+				document.querySelectorAll('[id^="wizard-step-"]').forEach(el => {
+					el.classList.remove('animate__animated', 'animate__fadeIn');
+					el.classList.add('d-none');
+				});
+				const nextStep = document.getElementById(`wizard-step-${step}`);
+				nextStep.classList.remove('d-none');
+				nextStep.classList.add('animate__animated', 'animate__fadeIn');
+			}
+	
+			function prevStep(step) {
+				document.querySelectorAll('[id^="wizard-step-"]').forEach(el => {
+					el.classList.remove('animate__animated', 'animate__fadeIn');
+					el.classList.add('d-none');
+				});
+				const prevStep = document.getElementById(`wizard-step-${step}`);
+				prevStep.classList.remove('d-none');
+				prevStep.classList.add('animate__animated', 'animate__fadeIn');
+			}
+	
+			// Animation pour les champs de formulaire
+			document.querySelectorAll('.form-control').forEach(input => {
+				input.addEventListener('focus', function() {
+					this.parentElement.classList.add('focused');
+				});
+				
+				input.addEventListener('blur', function() {
+					if (!this.value) {
+						this.parentElement.classList.remove('focused');
+					}
+				});
 			});
-			const nextStep = document.getElementById(`wizard-step-${step}`);
-			nextStep.classList.remove('d-none');
-			nextStep.classList.add('animate__animated', 'animate__fadeIn');
-		}
-
-		function prevStep(step) {
-			document.querySelectorAll('[id^="wizard-step-"]').forEach(el => {
-				el.classList.remove('animate__animated', 'animate__fadeIn');
-				el.classList.add('d-none');
+	
+			// Force le comportement des liens Google (empêche les event.preventDefault() externes)
+			document.querySelectorAll('[id^="google-signin-btn-"]').forEach(btn => {
+				btn.addEventListener('click', (e) => {
+					window.location.href = btn.href;
+				});
 			});
-			const prevStep = document.getElementById(`wizard-step-${step}`);
-			prevStep.classList.remove('d-none');
-			prevStep.classList.add('animate__animated', 'animate__fadeIn');
-		}
-
-		// Animation pour les champs de formulaire
-		document.querySelectorAll('.form-control').forEach(input => {
-			input.addEventListener('focus', function() {
-				this.parentElement.classList.add('focused');
+		</script>{% endblock %}{% block customScript %}
+ <script>
+			document.addEventListener('DOMContentLoaded', () => {
+				// Double vérification pour les liens Google (redondance pour sécurité)
+				const ref = new URLSearchParams(window.location.search).get('ref');
+				const baseUrl = "{{ path('connect_google_start') }}";
+				const targetUrl = baseUrl + (ref ? '?ref=' + encodeURIComponent(ref) : '');
+				
+				const btnMobile = document.getElementById('google-signin-btn-mobile');
+				const btnDesktop = document.getElementById('google-signin-btn-desktop');
+				
+				if (btnMobile) btnMobile.href = targetUrl;
+				if (btnDesktop) btnDesktop.href = targetUrl;
 			});
-			
-			input.addEventListener('blur', function() {
-				if (!this.value) {
-					this.parentElement.classList.remove('focused');
-				}
-			});
-		});
-	</script>{% endblock %}
-
-	{% block customScript %}
-		<script>
-        document.addEventListener('turbo:load', () => {
-            const ref = new URLSearchParams(window.location.search).get('ref');
-            let baseUrl = "{{ path('connect_google_start') }}";
-            const btnMobile  = document.getElementById('google-signin-btn-mobile');
-            const btnDesktop = document.getElementById('google-signin-btn-desktop');
-            let targetUrl = baseUrl + (ref ? '?ref=' + encodeURIComponent(ref) : '');
-            btnMobile.href  = targetUrl;
-            btnDesktop.href = targetUrl;
-        });
-    </script>
-	{% endblock %}
+		</script>{% endblock %}

@@ -43,8 +43,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
-    <!-- SweetAlert2 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/sweetalert2/sweetalert2.css"/>
+    <!-- Animate.css -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/animate-css/animate.css"/>
 
     <!-- DataTables CSS -->
@@ -102,6 +101,43 @@
         .hidden {
             display: none;
         }
+        
+        /* Styles pour les alertes personnalisées */
+        .custom-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+            min-width: 300px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+        }
+        .custom-alert.show {
+            transform: translateX(0);
+        }
+        .custom-alert.success {
+            background: linear-gradient(135deg, #28a745, #218838);
+            border-left: 4px solid #1e7e34;
+        }
+        .custom-alert.error {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            border-left: 4px solid #bd2130;
+        }
+        .custom-alert.warning {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            border-left: 4px solid #d39e00;
+        }
+        .custom-alert.info {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            border-left: 4px solid #117a8b;
+        }
+        .custom-alert-question {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            border-left: 4px solid #545b62;
+        }
     </style>
 
     {% block stylesheets %}{% endblock %}
@@ -121,6 +157,9 @@
         <div class="spinner-text">Chargement...</div>
     </div>
 
+    <!-- Alertes personnalisées -->
+    <div id="customAlertContainer"></div>
+
     <!-- Navigation -->
     {% if app.current_route not in ['app_login', 'app_register'] %}
         {% include '_partials/_nav.html.twig' %}
@@ -135,7 +174,6 @@
     <!-- JS Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-    {# <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/sweetalert2/sweetalert2.js"></script> #}
     <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/menu.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/config.js"></script>
@@ -158,6 +196,77 @@
                 document.getElementById('custom-spinner').classList.add('hidden');
             });
         });
+        
+        // Fonction pour afficher des alertes personnalisées
+        function showAlert(options) {
+            const container = document.getElementById('customAlertContainer');
+            const alertId = 'alert-' + Date.now();
+            const alertEl = document.createElement('div');
+            
+            alertEl.id = alertId;
+            alertEl.className = `custom-alert ${options.type || 'info'}`;
+            alertEl.innerHTML = `
+                <div class="d-flex align-items-center p-3 text-white">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0">${options.title || 'Notification'}</h6>
+                        <div class="small">${options.text || ''}</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white ms-2" onclick="document.getElementById('${alertId}').remove()"></button>
+                </div>
+            `;
+            
+            container.appendChild(alertEl);
+            setTimeout(() => alertEl.classList.add('show'), 10);
+            
+            if (options.timer) {
+                setTimeout(() => {
+                    alertEl.classList.remove('show');
+                    setTimeout(() => alertEl.remove(), 300);
+                }, options.timer);
+            }
+        }
+        
+        // Fonction pour afficher une confirmation
+        function showConfirm(options) {
+            return new Promise((resolve) => {
+                const modalId = 'confirmModal-' + Date.now();
+                const modalEl = document.createElement('div');
+                
+                modalEl.id = modalId;
+                modalEl.className = 'modal fade';
+                modalEl.innerHTML = `
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-${options.type || 'primary'} text-white">
+                                <h5 class="modal-title">${options.title || 'Confirmation'}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                ${options.text || 'Êtes-vous sûr de vouloir continuer ?'}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${options.cancelText || 'Annuler'}</button>
+                                <button type="button" class="btn btn-${options.type || 'primary'}" id="${modalId}-confirm">${options.confirmText || 'Confirmer'}</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modalEl);
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+                
+                document.getElementById(`${modalId}-confirm`).addEventListener('click', () => {
+                    modal.hide();
+                    resolve(true);
+                });
+                
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    modalEl.remove();
+                    resolve(false);
+                });
+            });
+        }
     </script>
 
     {% block javascripts_end %}{% endblock %}

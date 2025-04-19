@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
@@ -28,5 +29,15 @@ class SecurityController extends AbstractController
     public function logout(): void
     {
         throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+    }
+
+    #[Route('/csp-report', name: 'csp_report', methods: ['POST'])]
+    public function cspReport(Request $request): Response
+    {
+        // tu peux logger le JSON reçu pour analyse
+        $this->get('logger')->warning('CSP violation', [
+            'report' => json_decode($request->getContent(), true)
+        ]);
+        return new Response(null, 204);
     }
 }

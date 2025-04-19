@@ -1,3 +1,4 @@
+# config/packages/nelmio_security.yaml
 nelmio_security:
     # Protection contre le clickjacking
     clickjacking:
@@ -15,20 +16,69 @@ nelmio_security:
             
     # Configuration CSP
     csp:
-        # Ces options sont au bon niveau sous csp
         hosts: []
         content_types: []
         enforce:
-            level1_fallback: true
-            browser_adaptive:
-                enabled: false
-            # Toutes les directives doivent être placées ici sous enforce
+            # Si tu ne veux pas collecter les rapports, supprime cette ligne
             report-uri: ['/csp-report']
-            default-src: ["'self'"]
-            script-src: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdnjs.cloudflare.com"]
-            style-src: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"]
-            img-src: ["'self'", "data:"]
-            font-src: ["'self'"]
-            frame-src: ["'self'"]
-            connect-src: ["'self'"]
+
+            # Par défaut, on autorise seulement ton domaine
+            default-src:
+                - "'self'"
+
+            # Tous tes scripts (inline, eval, CDN JS)
+            script-src:
+                - "'self'"
+                - "'unsafe-inline'"      # pour les petits <script> inline (importmap, AOS init…)
+                - "'unsafe-eval'"        # nécessaire si tu utilises des eval() ou certains libs
+                - "cdnjs.cloudflare.com"  # animate.css, Font‑Awesome
+                - "cdn.jsdelivr.net"      # jQuery, Bootstrap, Sneat CSS/JS, Boxicons, Apex‑Charts, AOS…
+                - "cdn.datatables.net"    # DataTables JS
+                - "code.tidio.co"         # Tidio Chat widget
+
+            # Pour balises <script src="…">
+            script-src-elem:
+                - "'self'"
+                - "cdnjs.cloudflare.com"
+                - "cdn.jsdelivr.net"
+                - "cdn.datatables.net"
+                - "code.tidio.co"
+
+            # Tous tes styles (inline, CDN CSS)
+            style-src:
+                - "'self'"
+                - "'unsafe-inline'"      # pour CSS inline (tailwind overrides, demo.css…)
+                - "cdnjs.cloudflare.com"  # animate.css, Font‑Awesome
+                - "cdn.jsdelivr.net"      # Sneat core & vendor CSS, Bootstrap‑Icons, Boxicons…
+                - "cdn.datatables.net"    # DataTables CSS
+
+            # Pour balises <link rel="stylesheet" …>
+            style-src-elem:
+                - "'self'"
+                - "cdnjs.cloudflare.com"
+                - "cdn.jsdelivr.net"
+                - "cdn.datatables.net"
+
+            # Images : ton domaine, GitHub raw, data: (QR, inline…)
+            img-src:
+                - "'self'"
+                - "data:"
+                - "raw.githubusercontent.com"
+
+            # Polices chargées par tes CSS
+            font-src:
+                - "'self'"
+                - "cdnjs.cloudflare.com"
+                - "cdn.jsdelivr.net"
+
+            # Requêtes AJAX / WebSocket éventuelles
+            connect-src:
+                - "'self'"
+                - "code.tidio.co"         # pour le chat WebSocket de Tidio, si utilisé
+
+            # iFrame si tu embeds (YouTube, etc.)
+            frame-src:
+                - "'self'"
+
+            # Bloque tout contenu mixte HTTP/HTTPS
             block-all-mixed-content: true

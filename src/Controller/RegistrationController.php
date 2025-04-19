@@ -258,22 +258,17 @@ class RegistrationController extends AbstractController
         }
     }
 
-    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
+    private function handleReferralSystem(User $user, string $referredBy, EntityManagerInterface $entityManager): void
     {
-        // Récupération du code de parrainage depuis la query string
-        $referredBy = $request->query->get('ref');
-        if ($referredBy) {
-            // On recherche le parrain (User) grâce au code de referral
-            $referrer = $entityManager->getRepository(User::class)->findOneBy(['referralCode' => $referredBy]);
-            if ($referrer) {
-                // Lien bi-directionnel : on ajoute l'utilisateur dans les referrals du parrain.
-                $referrer->addReferral($user);
-                // On met à jour les récompenses du parrain en fonction du nombre de filleuls
-                $this->updateReferrerRewards($referrer, $entityManager);
+        $referrer = $entityManager->getRepository(User::class)
+            ->findOneBy(['referralCode' => $referredBy]);
 
-                $entityManager->persist($referrer);
-                $entityManager->flush();
-            }
+        if ($referrer) {
+            $referrer->addReferral($user);
+            $this->updateReferrerRewards($referrer, $entityManager);
+
+            // Pas besoin de persist ici car cascade: ['persist'] s'en charge
+            $entityManager->flush();
         }
     }
 

@@ -116,8 +116,8 @@ final class ProfileController extends AbstractController
         $sender
     ): void {
         $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@votresite.com', 'Votre Plateforme'))
-            ->to(new Address($referral->getEmail(), $referral->getFname()." ".$referral->getFname()))
+            ->from('no-reply@votresite.com', 'Votre Plateforme')
+            ->to($referral->getEmail(), $referral->getFname()." ".$referral->getFname())
             ->subject('Rappel - Complétez votre profil')
             ->htmlTemplate('emails/inactive_referral_reminder.html.twig')
             ->context([

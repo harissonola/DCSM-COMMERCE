@@ -21,7 +21,13 @@ nelmio_security:
             algorithm: sha256
         enforce:
             level1_fallback: true
-        report_uri: '/csp-report'
+        # Directives CSP
+        report: # Utilisez 'report' au lieu de 'report_uri'
+            uri: '/csp-report'
+        
+        # Les directives doivent être sous cette clé
+        report_endpoints:
+            default: '/csp-report'
         
         # Directives CSP
         directives:
@@ -32,3 +38,4 @@ nelmio_security:
             font-src: ["'self'"]
             frame-src: ["'self'"]
             connect-src: ["'self'"]
+            report-uri: ['/csp-report'] # Ajout de report-uri comme directive

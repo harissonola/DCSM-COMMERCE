@@ -140,14 +140,8 @@
         </div>
 
         <div class="qr-section">
-            {% if qrCodeUrl %}
-                <img src="{{ qrCodeUrl }}" alt="QR Code pour {{ depositAddress }}" 
-                     onerror="this.onerror=null;this.src='{{ asset('img/default-qr.png') }}'">
-            {% else %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> QR Code non disponible
-                </div>
-            {% endif %}
+            <img src="{{ qrCodeUrl }}" alt="QR Code pour {{ depositAddress }}" 
+                 onerror="this.onerror=null;this.src='{{ asset('img/default-qr.png') }}'">
             <p class="text-muted mt-2">Scanner pour envoyer depuis un wallet mobile</p>
         </div>
 
@@ -197,37 +191,45 @@
     </div>
 </div>
 
-<input type="hidden" id="expiresAt" value="{{ expiresAt|date('c') }}">
+<input type="hidden" id="initialExpiration" value="{{ initialExpiration }}">
 <input type="hidden" id="csrfToken" value="{{ csrf_token('crypto_deposit') }}">
 <input type="hidden" id="checkUrl" value="{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}">
 
 <script>
 document.addEventListener('turbo:load', function() {
-    // Compte à rebours
-    const expiresAt = new Date(document.getElementById('expiresAt').value);
-    const totalTime = expiresAt - new Date(expiresAt);
-    updateCountdown();
-
-    function updateCountdown() {
-        const now = new Date();
-        const diff = expiresAt - now;
-        
-        if (diff <= 0) {
+    // Compte à rebours persisté dans localStorage
+    const initialExpiration = parseInt(document.getElementById('initialExpiration').value);
+    const storageKey = 'depositExpiration_{{ transaction.id }}';
+    
+    // Récupérer ou initialiser le temps restant
+    let remainingTime = localStorage.getItem(storageKey);
+    if (!remainingTime || remainingTime > initialExpiration) {
+        remainingTime = initialExpiration;
+        localStorage.setItem(storageKey, remainingTime);
+    }
+    
+    updateCountdown(remainingTime);
+    
+    function updateCountdown(seconds) {
+        if (seconds <= 0) {
             document.getElementById('countdown').innerHTML = 'Expiré';
             document.getElementById('progressBar').style.width = '100%';
             document.getElementById('statusAlert').style.display = 'none';
+            localStorage.removeItem(storageKey);
             return;
         }
         
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
         
-        document.getElementById('countdown').textContent = `${hours}h ${minutes}m ${seconds}s`;
-        const progressPercent = 100 - (diff / totalTime * 100);
+        document.getElementById('countdown').textContent = `${hours}h ${minutes}m ${secs}s`;
+        const progressPercent = 100 - (seconds / initialExpiration * 100);
         document.getElementById('progressBar').style.width = `${progressPercent}%`;
         
-        setTimeout(updateCountdown, 1000);
+        // Mettre à jour le localStorage et programmer la prochaine mise à jour
+        localStorage.setItem(storageKey, seconds - 1);
+        setTimeout(() => updateCountdown(seconds - 1), 1000);
     }
     
     // Vérification automatique du dépôt
@@ -271,6 +273,7 @@ function checkDepositStatus() {
         if (data.status === 'completed') {
             statusAlert.className = 'alert alert-success';
             statusText.innerHTML = '<i class="fas fa-check-circle me-2"></i> Dépôt confirmé ! Redirection...';
+            localStorage.removeItem('depositExpiration_{{ transaction.id }}');
             
             setTimeout(() => {
                 window.location.href = '{{ path('app_profile') }}';

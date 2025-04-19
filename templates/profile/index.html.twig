@@ -1,702 +1,670 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}
-	{{ app.user.fname }}
-	{{ app.user.lname }}
-	| Profil
-{% endblock %}
+{% block title %}{{ app.user.fname }} {{ app.user.lname }} | Profil{% endblock %}
 
 {% block stylesheets %}
-	{{ parent() }}
-	<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet"/>
-	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-	<style>:root
-	{
-		--primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		--secondary-gradient: linear-gradient(to right, #f78ca0 0%, #f9748f 19%, #fd868c 60%, #fe9a8b 100%);
-		--glass-bg: rgba(255, 255, 255, 0.08);
-		--glass-border: rgba(255, 255, 255, 0.1);
-		--text-light: rgba(255, 255, 255, 0.95);
-		--shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-		--transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-	}
+    {{ parent() }}
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4bbf73;
+            --danger: #d9534f;
+            --warning: #f0ad4e;
+            --info: #5bc0de;
+            --glass: rgba(255, 255, 255, 0.1);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
 
-	body {
-		background: var(--primary-gradient);
-		min-height: 100vh;
-		color: var(--text-light);
-		font-family: 'Poppins', sans-serif;
-		background-attachment: fixed;
-	}
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark);
+            min-height: 100vh;
+        }
 
-	/* Profile Header */
-	.profile-header {
-		background: var(--glass-bg);
-		backdrop-filter: blur(12px);
-		-webkit-backdrop-filter: blur(12px);
-		border-radius: 16px;
-		padding: 2rem;
-		margin: 1.5rem auto;
-		max-width: 1200px;
-		box-shadow: var(--shadow);
-		border: 1px solid var(--glass-border);
-		transition: var(--transition);
-		animation: fadeIn 0.6s ease forwards;
-	}
+        /* Header Section */
+        .profile-header {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+            margin: 1.5rem auto;
+            max-width: 1200px;
+            transition: var(--transition);
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
 
-	.profile-header:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-	}
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
 
-	.profile-avatar {
-		width: 120px;
-		height: 120px;
-		object-fit: cover;
-		border-radius: 50%;
-		border: 3px solid #fff;
-		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-		transition: var(--transition);
-	}
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+        }
 
-	.profile-avatar:hover {
-		transform: scale(1.05);
-		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-	}
+        .profile-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
 
-	/* Action Buttons */
-	.action-grid {
-		display: grid;
-		gap: 1.5rem;
-		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-	}
+        /* Stats Cards */
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border-left: 4px solid var(--primary);
+        }
 
-	.action-btn {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: 1.5rem;
-		background: var(--glass-bg);
-		border-radius: 12px;
-		transition: var(--transition);
-		text-align: center;
-		border: 1px solid var(--glass-border);
-		height: 100%;
-		color: var(--text-light);
-	}
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
 
-	.action-btn:hover {
-		transform: translateY(-5px) scale(1.03);
-		background: rgba(255, 255, 255, 0.15);
-		box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-	}
+        /* Action Grid */
+        .action-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
 
-	.action-btn svg {
-		margin-bottom: 12px;
-		width: 32px;
-		height: 32px;
-		stroke-width: 1.5;
-		transition: var(--transition);
-	}
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            transition: var(--transition);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            border: none;
+            color: var(--dark);
+        }
 
-	.action-btn:hover svg {
-		transform: scale(1.2);
-		stroke-width: 2;
-	}
+        .action-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            background: var(--primary);
+            color: white;
+        }
 
-	/* Stats Cards */
-	.stats-card {
-		background: var(--glass-bg);
-		padding: 1.5rem;
-		border-radius: 12px;
-		backdrop-filter: blur(8px);
-		border: 1px solid var(--glass-border);
-		transition: var(--transition);
-		min-width: 200px;
-	}
+        .action-btn:hover svg {
+            stroke: white;
+            transform: scale(1.2);
+        }
 
-	.stats-card:hover {
-		background: rgba(255, 255, 255, 0.12);
-		transform: translateY(-3px);
-	}
+        .action-btn svg {
+            width: 32px;
+            height: 32px;
+            stroke: var(--primary);
+            stroke-width: 1.5;
+            transition: var(--transition);
+            margin-bottom: 12px;
+        }
 
-	.stats-card svg {
-		width: 28px;
-		height: 28px;
-		stroke-width: 1.8;
-	}
+        /* Progress Bar */
+        .progress {
+            height: 12px;
+            border-radius: 6px;
+            background: #e9ecef;
+        }
 
-	/* Transaction Table */
-	.transaction-card {
-		background: var(--glass-bg);
-		border-radius: 12px;
-		overflow: hidden;
-		backdrop-filter: blur(8px);
-	}
+        .progress-bar {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 6px;
+        }
 
-	.table-dark {
-		background-color: transparent;
-	}
+        /* Product Cards */
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            height: 100%;
+        }
 
-	.table-dark th {
-		background: rgba(0, 0, 0, 0.2);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	}
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
 
-	.table-dark td {
-		border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-	}
+        /* Transactions Table */
+        .transaction-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
 
-	/* Progress Bar */
-	.progress {
-		background: rgba(0, 0, 0, 0.2);
-		border-radius: 10px;
-		height: 1rem;
-	}
+        /* Modals - Version améliorée */
+        .modal-content {
+            border: none;
+            border-radius: 16px;
+            overflow: visible;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
 
-	.progress-bar {
-		border-radius: 10px;
-		background: var(--secondary-gradient);
-		box-shadow: 0 2px 10px rgba(249, 116, 143, 0.4);
-	}
+        .modal-header {
+            border-bottom: none;
+            padding: 1.5rem 1.5rem 0;
+            position: relative;
+        }
 
-	/* Product Cards */
-	.card {
-		border: none;
-		border-radius: 12px;
-		overflow: hidden;
-		background: rgba(0, 0, 0, 0.2);
-		backdrop-filter: blur(8px);
-		transition: var(--transition);
-	}
+        .modal-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 2px;
+        }
 
-	.card:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-	}
+        .modal-body {
+            padding: 1.5rem;
+        }
 
-	/* Modals */
-	.modal-content {
-		background: var(--glass-bg);
-		backdrop-filter: blur(20px);
-		border: 1px solid var(--glass-border);
-		border-radius: 16px;
-		overflow: hidden;
-	}
+        /* Form Elements */
+        .form-control {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e9ecef;
+            transition: var(--transition);
+        }
 
-	.modal-header {
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	}
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+        }
 
-	/* Buttons */
-	.btn {
-		border-radius: 8px;
-		font-weight: 500;
-		transition: var(--transition);
-		padding: 0.5rem 1.25rem;
-	}
+        /* Buttons */
+        .btn {
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: var(--transition);
+            border: none;
+        }
 
-	.btn-primary {
-		background: var(--primary-gradient);
-		border: none;
-	}
+        .btn-primary {
+            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
 
-	.btn-primary:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 8px 15px rgba(102, 126, 234, 0.4);
-	}
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(67, 97, 238, 0.3);
+        }
 
-	/* Badges */
-	.badge {
-		font-weight: 500;
-		letter-spacing: 0.5px;
-		padding: 0.35em 0.65em;
-	}
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-	/* Animations */
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
 
-	@keyframes float {
-		0% {
-			transform: translateY(0px);
-		}
-		50% {
-			transform: translateY(-8px);
-		}
-		100% {
-			transform: translateY(0px);
-		}
-	}
+        .animate-fade {
+            animation: fadeIn 0.6s ease forwards;
+        }
 
-	/* Floating effect for action buttons */
-	.action-btn:nth-child(1) {
-		animation: float 4s ease-in-out infinite;
-	}
-	.action-btn:nth-child(2) {
-		animation: float 4s ease-in-out infinite 0.5s;
-	}
-	.action-btn:nth-child(3) {
-		animation: float 4s ease-in-out infinite 1s;
-	}
-	.action-btn:nth-child(4) {
-		animation: float 4s ease-in-out infinite 1.5s;
-	}
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
 
-	/* Responsive */
-	@media(max-width: 768px) {
-		.profile-header {
-			margin: 1rem;
-			padding: 1.25rem;
-		}
+        /* Responsive */
+        @media (max-width: 768px) {
+            .profile-header {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+            
+            .profile-avatar {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .action-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
 
-		.profile-avatar {
-			width: 90px;
-			height: 90px;
-		}
+{% block body %}
+    <!-- Profile Section -->
+    <div class="profile-header animate-fade">
+        <div class="d-flex flex-column flex-md-row align-items-center gap-4">
+            <div class="position-relative">
+                <img src="{{ app.user.photo }}" class="profile-avatar" alt="Profile photo">
+            </div>
+            <div class="flex-grow-1 text-center text-md-start">
+                <h1 class="h3 mb-1 fw-bold">{{ app.user.fname }} {{ app.user.lname }}</h1>
+                <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
+                    <span class="badge bg-primary rounded-pill">@{{ app.user.username }}</span>
+                    <span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ path("app_logout") }}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        Déconnexion
+                    </a>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <a href="{{ path("admin_dashboard") }}" class="btn btn-primary btn-sm ms-2">
+                            <i class="fa-solid fa-table-columns me-1"></i>
+                            Administration
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-4 justify-content-center justify-content-md-start">
+                <div class="stats-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="var(--primary)" stroke-width="2" viewbox="0 0 24 24">
+                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
+                        </svg>
+                        <div>
+                            <div class="text-muted small">Récompenses</div>
+                            <div class="h4 mb-0 fw-bold">${{ app.user.reward|default(0)|number_format(2) }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="d-flex align-items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="var(--primary)" stroke-width="2" viewbox="0 0 24 24">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        <div>
+                            <div class="text-muted small">Solde disponible</div>
+                            <div class="h4 mb-0 fw-bold">${{ app.user.balance|number_format(2) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-		.action-btn {
-			padding: 1rem;
-		}
+    <!-- Action Section -->
+    <div class="profile-header animate-fade" style="animation-delay: 0.1s">
+        <div class="action-grid">
+            <button class="action-btn animate-pulse" data-bs-toggle="modal" data-bs-target="#depositModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="8 12 12 16 16 12"></polyline>
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                </svg>
+                Déposer
+            </button>
+            <button class="action-btn" data-bs-toggle="modal" data-bs-target="#withdrawModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="16 12 12 8 8 12"></polyline>
+                    <line x1="12" y1="16" x2="12" y2="8"></line>
+                </svg>
+                Retirer
+            </button>
+            <a href="{{ path('app_user_settings') }}" class="action-btn text-decoration-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Modifier profil
+            </a>
+            <button class="action-btn" data-bs-toggle="modal" data-bs-target="#shareModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                Parrainage
+            </button>
+        </div>
+    </div>
 
-		.action-grid {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-</style>{% endblock %}{% block body %}
-<!-- Profile Section -->
-<div class="profile-header">
-	<div class="d-flex flex-column flex-md-row align-items-center gap-4">
-		<div class="position-relative">
-			{% if app.user.googleId and app.user.photo starts with 'http' %}
-				<img src="{{ app.user.photo }}" class="profile-avatar" alt="Profile photo"/>
-			{% else %}
-				<img src="{{ app.user.photo }}" class="profile-avatar" alt="Profile photo"/>
-			{% endif %}
-		</div>
-		<div class="flex-grow-1 text-center text-md-start">
-			<h1 class="h3 mb-1">{{ app.user.fname }}
-				{{ app.user.lname }}</h1>
-			<div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
-				<span class="badge bg-primary rounded-pill">@{{ app.user.username }}</span>
-				<span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
-			</div>
-			<div class="mt-3">
-				<a href="{{ path("app_logout") }}" class="btn btn-outline-light btn-sm">
-					<i class="fas fa-sign-out-alt me-1"></i>
-					Déconnexion
-				</a>
-				{% if is_granted('ROLE_ADMIN') %}
-					<a href="{{ path("admin_dashboard") }}" class="btn btn-primary btn-sm ms-2">
-						<i class="fa-solid fa-table-columns me-1"></i>
-						Administration
-					</a>
-				{% endif %}
-			</div>
-		</div>
-		<div class="d-flex flex-wrap gap-4 justify-content-center justify-content-md-start">
-			<div class="stats-card">
-				<div class="d-flex align-items-center gap-3">
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-						<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
-					</svg>
-					<div>
-						<div class="text-muted small">Récompenses</div>
-						<div class="h4 mb-0">${{ app.user.reward|default(0)|number_format(2) }}</div>
-					</div>
-				</div>
-			</div>
-			<div class="stats-card">
-				<div class="d-flex align-items-center gap-3">
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-						<line x1="12" y1="1" x2="12" y2="23"></line>
-						<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-					</svg>
-					<div>
-						<div class="text-muted small">Solde disponible</div>
-						<div class="h4 mb-0">${{ app.user.balance|number_format(2) }}</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
+    <!-- Referral Section -->
+    <div class="profile-header animate-fade" style="animation-delay: 0.2s">
+        {% set referrals = referralCount|default(0) %}
+        {% if referrals < 5 %}
+            {% set required = 5 %}
+            {% set reward = 6 %}
+            {% set level = 1 %}
+        {% elseif referrals < 10 %}
+            {% set required = 10 %}
+            {% set reward = 7 %}
+            {% set level = 2 %}
+        {% elseif referrals < 20 %}
+            {% set required = 20 %}
+            {% set reward = 10 %}
+            {% set level = 3 %}
+        {% else %}
+            {% set required = 40 %}
+            {% set reward = 13 %}
+            {% set level = 4 %}
+        {% endif %}
+        {% set progress = referrals / required * 100 %}
+        {% if progress > 100 %}
+            {% set progress = 100 %}
+        {% endif %}
+        <div class="mb-4">
+            <h4 class="fw-bold">Niveau {{ level }} - {{ referrals }} sur {{ required }} personnes parrainées</h4>
+            <div class="progress mb-3">
+                <div class="progress-bar" role="progressbar" style="width: {{ progress|round(0, 'ceil') }}%;" aria-valuenow="{{ progress|round(0, 'ceil') }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="alert alert-info border-0">
+                <i class="fas fa-gift me-2"></i>
+                Récompense à l'atteinte de ce niveau : <strong>{{ reward }}%</strong>
+                {% if level == 4 and referrals >= 40 %}
+                    <span class="badge bg-success ms-2">+ 10$ bonus</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
-<!-- Action Section -->
-<div class="profile-header">
-	<div class="action-grid">
-		<button class="action-btn" data-bs-toggle="modal" data-bs-target="#depositModal">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-				<circle cx="12" cy="12" r="10"></circle>
-				<polyline points="8 12 12 16 16 12"></polyline>
-				<line x1="12" y1="8" x2="12" y2="16"></line>
-			</svg>
-			Déposer
-		</button>
-		<button class="action-btn" data-bs-toggle="modal" data-bs-target="#withdrawModal">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-				<circle cx="12" cy="12" r="10"></circle>
-				<polyline points="16 12 12 8 8 12"></polyline>
-				<line x1="12" y1="16" x2="12" y2="8"></line>
-			</svg>
-			Retirer
-		</button>
-		<a href="{{ path('app_user_settings') }}" class="action-btn text-decoration-none">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-				<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-			</svg>
-			Modifier profil
-		</a>
-		<button class="action-btn" data-bs-toggle="modal" data-bs-target="#shareModal">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-				<circle cx="18" cy="5" r="3"></circle>
-				<circle cx="6" cy="12" r="3"></circle>
-				<circle cx="18" cy="19" r="3"></circle>
-				<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-				<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-			</svg>
-			Parrainage
-		</button>
-	</div>
-</div>
+    <!-- Products Section -->
+    <div class="profile-header animate-fade" style="animation-delay: 0.3s">
+        <h5 class="mb-3 fw-bold">Vos Produits</h5>
+        <div class="row g-4">
+            {% if app.user.product|length > 0 %}
+                {% for product in app.user.product %}
+                    <div class="col-md-4">
+                        <div class="product-card">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold">{{ product.name }}</h5>
+                                <p class="card-text text-muted">{{ product.description|slice(0, 100) }}{% if product.description|length > 100 %}...{% endif %}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success">${{ (product.price / 601.51)|number_format(2) }}</span>
+                                    <div class="d-flex">
+                                        <a href="{{ path('app_products_dashboard', {'slug': product.slug}) }}" class="btn btn-sm btn-primary me-2">
+                                            <i class="fas fa-eye"></i>
+                                            Voir
+                                        </a>
+                                        <form method="post" action="{{ path('app_user_remove_product', {'id': product.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce produit ? Vous serez remboursé de ${{ (product.price / 601.51)|number_format(2) }}');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete-product-' ~ product.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash-alt"></i>
+                                                Supprimer
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center py-4">
+                    <div class="text-muted mb-3">Vous n'avez pas encore de produits</div>
+                    <a href="{{ path('app_products_index') }}" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Découvrir les produits
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
-<!-- Referral Section -->
-<div class="profile-header">
-	{% set referrals = referralCount|default(0) %}
-	{% if referrals < 5 %}
-		{% set required = 5 %}
-		{% set reward = 6 %}
-		{% set level = 1 %}
-	{% elseif referrals < 10 %}
-		{% set required = 10 %}
-		{% set reward = 7 %}
-		{% set level = 2 %}
-	{% elseif referrals < 20 %}
-		{% set required = 20 %}
-		{% set reward = 10 %}
-		{% set level = 3 %}
-	{% else %}
-		{% set required = 40 %}
-		{% set reward = 13 %}
-		{% set level = 4 %}
-	{% endif %}
-	{% set progress = referrals / required * 100 %}
-	{% if progress > 100 %}
-		{% set progress = 100 %}
-	{% endif %}
-	<div class="mb-4">
-		<h4>Niveau
-			{{ level }}
-			-
-			{{ referrals }}
-			sur
-			{{ required }}
-			personnes parrainées</h4>
-		<div class="progress" style="height: 1rem;">
-			<div class="progress-bar progress-bar-striped" role="progressbar" style="width: {{ progress|round(0, 'ceil') }}%;" aria-valuenow="{{ progress|round(0, 'ceil') }}" aria-valuemin="0" aria-valuemax="100">
-				{{ progress|round(0, 'ceil') }}%
-			</div>
-		</div>
-		<p class="mt-2">
-			Récompense à l'atteinte de ce niveau :
-			{{ reward }}%
-			{% if level == 4 and referrals >= 40 %}
-				+ 10$ crédité sur votre compte.
-			{% endif %}
-		</p>
-	</div>
-</div>
+    <!-- Transactions Section -->
+    <div class="profile-header animate-fade" style="animation-delay: 0.4s">
+        <h5 class="mb-3 fw-bold">Historique des transactions</h5>
+        <div class="transaction-table">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Méthode</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
+                                <td>
+                                    {% if transaction.type == 'withdrawal' %}
+                                        <span class="badge bg-danger">Retrait</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Dépôt</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ transaction.method }}</td>
+                                <td class="fw-bold">
+                                    {% if transaction.type == 'withdrawal' %}
+                                        <span class="text-danger">-{{ transaction.amount|number_format(2) }}</span>
+                                    {% else %}
+                                        <span class="text-success">+{{ transaction.amount|number_format(2) }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill bg-{{ transaction.status == 'pending' ? 'warning' : transaction.status == 'failed' ? 'danger' : 'success' }}">
+                                        {{ transaction.status == 'pending' ? 'En attente' : transaction.status == 'failed' ? 'Échoué' : 'Réussi' }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="text-muted">Aucune transaction récente</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-<!-- Products Section -->
-<div class="profile-header">
-	<h5 class="mb-3">Vos Produits</h5>
-	<div class="row">
-		{% if app.user.product|length > 0 %}
-			{% for product in app.user.product %}
-				<div class="col-md-4 mb-3">
-					<div class="card h-100">
-						<div class="card-body">
-							<h5 class="card-title">{{ product.name }}</h5>
-							<p class="card-text">{{ product.description|slice(0, 100) }}
-								{% if product.description|length > 100 %}...
-								{% endif %}
-							</p>
-							<div class="d-flex justify-content-between align-items-center">
-								<span class="badge bg-success">${{ (product.price / 601.51)|number_format(2) }}</span>
-								<div class="d-flex">
-									<a href="{{ path('app_products_dashboard', {'slug': product.slug}) }}" class="btn btn-primary btn-sm me-2">
-										<i class="fas fa-eye"></i>
-										Voir
-									</a>
-									<form method="post" action="{{ path('app_user_remove_product', {'id': product.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer ce produit ? Vous serez remboursé de ${{ (product.price / 601.51)|number_format(2) }}');">
-										<input type="hidden" name="_token" value="{{ csrf_token('delete-product-' ~ product.id) }}">
-										<button type="submit" class="btn btn-danger btn-sm">
-											<i class="fas fa-trash-alt"></i>
-											Supprimer
-										</button>
-									</form>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			{% endfor %}
-		{% else %}
-			<div class="col-12 text-center py-4">
-				<div class="text-muted">Vous n'avez pas encore de produits</div>
-				<a href="{{ path('app_products_index') }}" class="btn btn-primary mt-3">
-					<i class="fas fa-shopping-cart"></i>
-					Découvrir les produits
-				</a>
-			</div>
-		{% endif %}
-	</div>
-</div>
-
-<!-- Transactions Section -->
-<div class="profile-header">
-	<h5 class="mb-3">Historique des transactions</h5>
-	<div class="transaction-card">
-		<div class="table-responsive">
-			<table class="table table-dark table-hover align-middle mb-0">
-				<thead>
-					<tr>
-						<th>Date</th>
-						<th>Type</th>
-						<th>Méthode</th>
-						<th>Montant</th>
-						<th>Statut</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for transaction in transactions %}
-						<tr>
-							<td>{{ transaction.createdAt|date('d/m/Y H:i') }}</td>
-							<td>
-								{% if transaction.type == 'withdrawal' %}
-									<span class="badge bg-danger">Retrait</span>
-								{% else %}
-									<span class="badge bg-success">Dépôt</span>
-								{% endif %}
-							</td>
-							<td>{{ transaction.method }}</td>
-							<td>
-								{% if transaction.type == 'withdrawal' %}
-									<span class="text-danger">-{{ transaction.amount|number_format(2) }}</span>
-								{% else %}
-									<span class="text-success">+{{ transaction.amount|number_format(2) }}</span>
-								{% endif %}
-							</td>
-							<td>
-								<span class="badge rounded-pill bg-{{ transaction.status == 'pending' ? 'warning' : transaction.status == 'failed' ? 'danger' : 'success' }}">
-									{{ transaction.status == 'pending' ? 'En attente' : transaction.status == 'failed' ? 'Échoué' : 'Réussi' }}
-								</span>
-							</td>
-						</tr>
-					{% else %}
-						<tr>
-							<td colspan="5" class="text-center py-4">
-								<div class="text-muted">Aucune transaction récente</div>
-							</td>
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
-	</div>
-</div>
-
-<!-- Deposit Modal -->
-<div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-centered">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="depositModalLabel">💳 Déposer des fonds</h5>
-				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<div class="modal-body">
-				<form id="depositForm" action="{{ path('app_deposit') }}" method="post">
-					<input type="hidden" name="_token" value="{{ csrf_token('deposit') }}">
-					<div class="mb-3">
-						<label class="form-label">Montant (USD)</label>
-						<div class="input-group">
-							<span class="input-group-text">$</span>
-							<input type="number" name="amount" class="form-control bg-transparent text-light" required step="0.01" min="{{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}"/>
-						</div>
-						<small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }}
-							- Max: ${{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}</small>
-					</div>
-					<div class="mb-4">
-						<label class="form-label">Méthode de paiement</label>
-						<div class="d-grid gap-2">
-							{% set paymentMethods = [
+    <!-- Deposit Modal - Version optimisée -->
+    <div class="modal fade" id="depositModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2"></i>Déposer des fonds</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="depositForm" action="{{ path('app_deposit') }}" method="post">
+                        <input type="hidden" name="_token" value="{{ csrf_token('deposit') }}">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Montant (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="amount" class="form-control" required step="0.01" min="{{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}">
+                            </div>
+                            <small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }} - Max: ${{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Méthode de paiement</label>
+                            <div class="d-grid gap-2">
+                                {% set paymentMethods = [
                                     { id: 'crypto', label: 'Crypto', icon: 'currency-btc' },
                                     { id: 'paypal', label: 'PayPal', icon: 'paypal' }
                                 ] %}
-							{% for method in paymentMethods %}
-								<div class="form-check payment-method">
-									<input class="form-check-input" type="radio" name="method" id="{{ method.id }}" value="{{ method.id }}" required/>
-									<label class="form-check-label d-flex align-items-center" for="{{ method.id }}">
-										{% if method.icon == 'currency-btc' %}
-											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-												<path d="M6 6h8a3 3 0 0 1 0 6 3 3 0 0 1 0 6H6"/>
-												<path d="M8 6L8 18"/>
-												<path d="M8 12L14 12"/>
-												<path d="M9 3v3"/>
-												<path d="M13 3v3"/>
-												<path d="M9 18v3"/>
-												<path d="M13 18v3"/>
-											</svg>
-										{% else %}
-											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="me-2">
-												<path d="M14 9h6"/>
-												<path d="M15 21c1.1 0 2-1 2-1s.4-3.7 2-6"/>
-												<path d="M19.5 12.9c1.7.4 3.3 1.4 4 3.1 1.4 3-1.1 6.1-4.6 6-2.3-.1-3.9-2-3.9-2"/>
-												<path d="M9 10H4v7h6c2.5 0 2.5.5 4 1"/>
-												<path d="M15 9c-.8.8-3 1.9-5 1.9H8.1L6 15.1H9"/>
-											</svg>
-										{% endif %}
-										{{ method.label }}
-									</label>
-								</div>
-							{% endfor %}
-						</div>
-					</div>
-					<button type="submit" class="btn btn-primary w-100 py-2">Continuer</button>
-				</form>
-			</div>
-		</div>
-	</div>
-</div>
+                                {% for method in paymentMethods %}
+                                    <div class="form-check payment-method-card p-3 rounded border">
+                                        <input class="form-check-input" type="radio" name="method" id="{{ method.id }}" value="{{ method.id }}" required>
+                                        <label class="form-check-label d-flex align-items-center fw-bold" for="{{ method.id }}">
+                                            {% if method.icon == 'currency-btc' %}
+                                                <i class="fab fa-bitcoin me-3 fs-4 text-warning"></i>
+                                            {% else %}
+                                                <i class="fab fa-paypal me-3 fs-4 text-primary"></i>
+                                            {% endif %}
+                                            {{ method.label }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                            <i class="fas fa-arrow-right me-2"></i>Continuer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Withdraw Modal -->
-<div class="modal fade" id="withdrawModal" tabindex="-1">
-	<div class="modal-dialog modal-dialog-centered">
-		<form action="{{ path('app_withdraw') }}" method="post" class="modal-content">
-			<input type="hidden" name="_token" value="{{ csrf_token('withdraw') }}">
-			<div class="modal-header">
-				<h5 class="modal-title">📤 Retirer des fonds</h5>
-				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-			</div>
-			<div class="modal-body">
-				<div class="mb-3">
-					<label class="form-label">Montant (USD)</label>
-					<div class="input-group">
-						<span class="input-group-text">$</span>
-						<input type="number" name="amount" class="form-control bg-transparent text-light" step="0.01" required min="{{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}"/>
-					</div>
-					<small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }}
-						- Max: ${{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}</small>
-				</div>
-				<div class="mb-3">
-					<label>Type de crypto</label>
-					<select id="cryptoType" name="currency" class="form-select bg-transparent text-light" required>
-						<option value="">Sélectionnez une crypto</option>
-						{% for key, label in constant('App\\Controller\\PaymentController::SUPPORTED_CRYPTOS') %}
-							<option value="{{ key }}">{{ label }}</option>
-						{% endfor %}
-					</select>
-				</div>
-				<div class="mb-3">
-					<label>Adresse de réception</label>
-					<input type="text" name="address" class="form-control bg-transparent text-light" placeholder="Ex: 0x... (ETH) ou 1... (BTC)" required/>
-				</div>
-				<div class="alert alert-info">
-					<small>
-						<i class="fas fa-info-circle"></i>
-						Frais de retrait: 5% (≤20$), 3% (≤100$), 2% (≤500$), 1% (>500$)
-					</small>
-				</div>
-				<button type="submit" class="btn btn-primary w-100 py-2">Confirmer</button>
-			</div>
-		</form>
-	</div>
-</div>
+    <!-- Withdraw Modal - Version optimisée -->
+    <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-wallet me-2"></i>Retirer des fonds</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ path('app_withdraw') }}" method="post">
+                        <input type="hidden" name="_token" value="{{ csrf_token('withdraw') }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Montant (USD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="amount" class="form-control" step="0.01" required min="{{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}">
+                            </div>
+                            <small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }} - Max: ${{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Type de crypto</label>
+                            <select id="cryptoType" name="currency" class="form-select" required>
+                                <option value="">Sélectionnez une crypto</option>
+                                {% for key, label in constant('App\\Controller\\PaymentController::SUPPORTED_CRYPTOS') %}
+                                    <option value="{{ key }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Adresse de réception</label>
+                            <input type="text" name="address" class="form-control" placeholder="Ex: 0x... (ETH) ou 1... (BTC)" required>
+                        </div>
+                        <div class="alert alert-warning border-0 mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Frais de retrait: 5% (≤20$), 3% (≤100$), 2% (≤500$), 1% (>500$)
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                            <i class="fas fa-check-circle me-2"></i>Confirmer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Share Modal -->
-<div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-centered">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="shareModalLabel">📢 Partager mon lien</h5>
-				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<div class="modal-body">
-				<div class="input-group mb-3">
-					<input type="text" class="form-control bg-transparent text-light" value="{{ referralLink }}" id="referralLink" readonly/>
-					<button class="btn btn-outline-light" onclick="copyToClipboard()">
-						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-						</svg>
-					</button>
-				</div>
-				<div class="d-grid gap-2">
-					<a href="https://wa.me/?text={{ ('Rejoignez-moi: ' ~ referralLink)|url_encode }}" class="btn btn-success" target="_blank">
-						<i class="fab fa-whatsapp me-2"></i>
-						WhatsApp
-					</a>
-					<a href="https://www.facebook.com/sharer/sharer.php?u={{ referralLink|url_encode }}" class="btn btn-primary" target="_blank">
-						<i class="fab fa-facebook me-2"></i>
-						Facebook
-					</a>
-					<a href="https://twitter.com/intent/tweet?text={{ ('Découvrez cette plateforme: ' ~ referralLink)|url_encode }}" class="btn btn-info" target="_blank">
-						<i class="fab fa-twitter me-2"></i>
-						Twitter
-					</a>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
+    <!-- Share Modal - Version optimisée -->
+    <div class="modal fade" id="shareModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-share-alt me-2"></i>Partager mon lien</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-4">
+                        <input type="text" class="form-control" value="{{ referralLink }}" id="referralLink" readonly>
+                        <button class="btn btn-primary" onclick="copyToClipboard()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="https://wa.me/?text={{ ('Rejoignez-moi: ' ~ referralLink)|url_encode }}" class="btn btn-success" target="_blank">
+                            <i class="fab fa-whatsapp me-2"></i>
+                            WhatsApp
+                        </a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ referralLink|url_encode }}" class="btn btn-primary" target="_blank">
+                            <i class="fab fa-facebook-f me-2"></i>
+                            Facebook
+                        </a>
+                        <a href="https://twitter.com/intent/tweet?text={{ ('Découvrez cette plateforme: ' ~ referralLink)|url_encode }}" class="btn btn-info" target="_blank">
+                            <i class="fab fa-twitter me-2"></i>
+                            Twitter
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Toast Notification -->
-<div class="toast-container position-fixed top-0 end-0 p-3">
-	<div id="copyToast" class="toast bg-dark" role="alert" aria-live="assertive" aria-atomic="true">
-		<div class="d-flex">
-			<div class="toast-body">✅ Lien copié dans le presse-papier</div>
-			<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-		</div>
-	</div>
-</div>{% endblock %}{% block javascripts %}
-{{ parent() }} <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/fr.min.js"></script>
- <script>
+    <!-- Toast Notification -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="copyToast" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Lien copié dans le presse-papier
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/fr.min.js"></script>
+    <script>
         // Copy to clipboard function
         function copyToClipboard() {
             const referralLinkInput = document.getElementById('referralLink');
             if (referralLinkInput) {
                 navigator.clipboard.writeText(referralLinkInput.value)
-                    .then(() => new bootstrap.Toast(document.getElementById('copyToast')).show())
+                    .then(() => {
+                        const toast = new bootstrap.Toast(document.getElementById('copyToast'));
+                        toast.show();
+                    })
                     .catch((err) => console.error('Erreur de copie :', err));
             }
         }
 
         // Initialize Select2
-        document.addEventListener('DOMContentLoaded', function () {
-            const cryptoTypeSelect = document.getElementById('cryptoType');
-            if (cryptoTypeSelect) {
-                $(cryptoTypeSelect).select2({
-                    dropdownParent: $('#withdrawModal'),
-                    theme: 'dark',
-                    width: '100%',
-                    language: 'fr'
-                });
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize crypto select with Select2
+            $('#cryptoType').select2({
+                dropdownParent: $('#withdrawModal'),
+                width: '100%',
+                language: 'fr'
+            });
 
-            // Add scroll animations
+            // Add animation to elements when they come into view
             const animateOnScroll = () => {
-                const elements = document.querySelectorAll('.profile-header, .card');
+                const elements = document.querySelectorAll('.profile-header');
                 elements.forEach(el => {
                     const elTop = el.getBoundingClientRect().top;
                     const windowHeight = window.innerHeight;
@@ -708,8 +676,20 @@
                 });
             };
 
-            // Initialize animations
+            // Initialize scroll animation
             window.addEventListener('scroll', animateOnScroll);
             animateOnScroll();
+
+            // Add pulse animation to deposit button every 5 seconds
+            setInterval(() => {
+                const depositBtn = document.querySelector('.action-btn[data-bs-target="#depositModal"]');
+                if (depositBtn) {
+                    depositBtn.classList.add('animate-pulse');
+                    setTimeout(() => {
+                        depositBtn.classList.remove('animate-pulse');
+                    }, 2000);
+                }
+            }, 10000);
         });
-    </script>{% endblock %}
+    </script>
+{% endblock %}

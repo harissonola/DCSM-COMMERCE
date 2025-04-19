@@ -114,7 +114,7 @@ class PaymentController extends AbstractController
             return $this->redirectWithFlash('success', sprintf(
                 'Demande de retrait de %.2f USD enregistrée. Frais: %.2f USD',
                 $amount,
-                $fes
+                $fees
             ));
         } catch (\Exception $e) {
             $this->entityManager->rollback();

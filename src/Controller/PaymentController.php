@@ -168,7 +168,7 @@ class PaymentController extends AbstractController
         $errors = $this->validateDeposit($amount, $method);
         if (!empty($errors)) {
             return $this->redirectWithFlash('danger', $errors[0]);
-        }paypal
+        }
 
         $user = $this->getUser();
         $transaction = (new Transactions())

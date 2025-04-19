@@ -523,5 +523,14 @@
 						language: 'fr'
 					});
 				}
+	
+				// Gestion des formulaires
+				const depositForm = document.getElementById('depositForm');
+				if (depositForm) {
+					depositForm.addEventListener('submit', function (e) {
+						// Laisser le formulaire se soumettre normalement
+						// Le contrôleur Symfony gérera la redirection PayPal ou crypto
+					});
+				}
 			});
 		</script>{% endblock %}

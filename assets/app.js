@@ -1,99 +1,74 @@
 import './bootstrap.js';
 import './styles/app.css';
 
-// Configuration globale de Turbo
-Turbo.setProgressBarDelay(0); // Désactive complètement la barre de progression native
+// Configuration Turbo pour des performances maximales
+Turbo.setProgressBarDelay(0);
+Turbo.session.drive = true; // Activation du cache
 
-console.log('Application Turbo chargée avec succès !');
-
-// Gestion du spinner personnalisé
-const spinner = document.getElementById('custom-spinner');
+console.log('Application Turbo optimisée chargée !');
 
 // Cache le spinner initialement
-if (spinner) {
-    spinner.classList.add('hidden');
-}
+const spinner = document.getElementById('custom-spinner')?.classList.add('hidden');
 
-// Liste des scripts essentiels à ne pas supprimer
-const ESSENTIAL_SCRIPTS = [
+// Stratégie optimisée de gestion des scripts
+const PERSISTENT_SCRIPTS = [
     'bootstrap.js',
     'styles/app.css',
-    'turbo.js' // ou le nom de votre fichier Turbo principal
+    'turbo.js'
 ];
 
-// Gestion des événements Turbo
+// Événements Turbo optimisés
 document.addEventListener('turbo:before-visit', () => {
-    // Nettoie les scripts avant même de quitter la page actuelle
-    cleanNonEssentialScripts();
-    
-    if (spinner) spinner.classList.remove('hidden');
+    spinner?.classList.remove('hidden');
+    cleanTransientAssets(); // Nettoyage anticipé
 });
 
-document.addEventListener('turbo:before-render', (event) => {
-    if (spinner) spinner.classList.add('hidden');
-    
-    // Nettoie les scripts dupliqués avant le rendu
-    cleanDuplicateScripts();
-    
-    // Alternative: supprimer tous les scripts non essentiels
-    // cleanNonEssentialScripts();
+document.addEventListener('turbo:before-render', () => {
+    spinner?.classList.add('hidden');
+    prepareDOMForRender(); // Préparation optimisée
 });
 
-document.addEventListener('turbo:render', () => {
-    // Réinitialise les librairies après le rendu
-    if (typeof AOS !== 'undefined') {
-        AOS.init();
-    }
-});
+document.addEventListener('turbo:render', initPageFeatures);
+document.addEventListener('turbo:load', logPageLoad);
 
-document.addEventListener('turbo:load', () => {
-    console.log('Turbo:load - Page chargée');
-});
-
-// Fonction pour nettoyer les scripts non essentiels
-function cleanNonEssentialScripts() {
-    const scripts = document.querySelectorAll('script[src]');
-    
-    scripts.forEach(script => {
-        const src = script.getAttribute('src');
-        const isEssential = ESSENTIAL_SCRIPTS.some(essential => src.includes(essential));
-        
-        if (!isEssential) {
+// Fonctions optimisées
+function cleanTransientAssets() {
+    // Nettoyage ciblé plus performant
+    document.querySelectorAll('script[src]:not([data-turbo-permanent])').forEach(script => {
+        if (!PERSISTENT_SCRIPTS.some(p => script.src.includes(p))) {
             script.remove();
-            console.log(`Script supprimé: ${src}`);
         }
+    });
+    
+    // Suppression des styles temporaires
+    document.querySelectorAll('link[rel=stylesheet][data-turbo-temporary]')?.forEach(link => link.remove());
+}
+
+function prepareDOMForRender() {
+    // Pré-optimisation du DOM
+    document.querySelectorAll('[data-turbo-cache=false]')?.forEach(el => el.remove());
+}
+
+function initPageFeatures() {
+    // Initialisation différée des composants
+    requestIdleCallback(() => {
+        if (window.AOS) AOS.init();
+        if (window.initComponents) initComponents();
     });
 }
 
-// Fonction pour nettoyer les scripts dupliqués
-function cleanDuplicateScripts() {
-    const scripts = document.querySelectorAll('script[src]');
-    const loadedScripts = new Set();
-
-    scripts.forEach(script => {
-        const src = script.src;
-
-        if (loadedScripts.has(src)) {
-            script.remove();
-            console.log(`Script dupliqué supprimé: ${src}`);
-        } else {
-            loadedScripts.add(src);
-        }
-    });
+function logPageLoad() {
+    console.debug(`Page chargée en ${performance.now().toFixed(1)}ms`);
 }
 
-// Version améliorée pour debug
-window.debugScripts = function() {
-    console.group('Scripts actuellement chargés');
-    const scripts = Array.from(document.querySelectorAll('script[src]'));
-    
-    if (scripts.length === 0) {
-        console.log('Aucun script chargé');
-    } else {
-        scripts.forEach((s, i) => {
-            console.log(`${i + 1}. ${s.src} ${s.hasAttribute('data-turbo-eval') ? '(eval)' : ''}`);
-        });
-    }
-    
-    console.groupEnd();
+// Debug amélioré
+window.analyzePerformance = () => {
+    console.table(
+        Array.from(document.querySelectorAll('script[src]'))
+            .map(s => ({
+                src: s.src.split('/').pop(),
+                size: `${(s.text.length/1024).toFixed(2)}kB`,
+                permanent: s.hasAttribute('data-turbo-permanent')
+            }))
+    );
 };

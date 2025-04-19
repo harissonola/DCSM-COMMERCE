@@ -14,6 +14,11 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use DateTimeImmutable;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelLow;
+use Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeMargin;
+use Endroid\QrCode\Writer\PngWriter;
 
 class PaymentController extends AbstractController
 {
@@ -480,6 +485,29 @@ class PaymentController extends AbstractController
 
         $this->entityManager->flush();
         return new Response('Pending transactions checked: ' . count($pendingTransactions));
+    }
+
+    #[Route('/qr-code/{data}', name: 'app_qr_code')]
+    public function generateQrCode(string $data, Request $request): Response
+    {
+        $size = $request->query->get('size', 200);
+
+        $qrCode = Builder::create()
+            ->writer(new PngWriter())
+            ->writerOptions([])
+            ->data($data)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(new ErrorCorrectionLevelLow())
+            ->size($size)
+            ->margin(10)
+            ->roundBlockSizeMode(new RoundBlockSizeModeMargin())
+            ->build();
+
+        return new Response(
+            $qrCode->getString(),
+            Response::HTTP_OK,
+            ['Content-Type' => $qrCode->getMimeType()]
+        );
     }
 
     private function validateWithdrawal(User $user, float $amount, string $currency, string $address): array

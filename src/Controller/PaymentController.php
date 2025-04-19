@@ -183,10 +183,71 @@ class PaymentController extends AbstractController
         $this->entityManager->flush();
 
         if ($method === 'crypto') {
-            return $this->redirectToRoute('app_crypto_deposit', ['id' => $transaction->getId()]);
+            return $this->redirectToRoute('app_select_wallet', ['id' => $transaction->getId()]);
         }
 
         return $this->redirectToRoute('app_paypal_redirect', ['id' => $transaction->getId()]);
+    }
+
+    #[Route('/deposit/crypto/select-wallet/{id}', name: 'app_select_wallet')]
+    public function selectWallet(int $id): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
+        if (!$transaction || $transaction->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('Transaction invalide');
+        }
+
+        return $this->render('payment/select_wallet.html.twig', [
+            'transaction' => $transaction,
+            'supportedCryptos' => self::SUPPORTED_CRYPTOS,
+            'csrf_token' => $this->csrfTokenManager->getToken('select_wallet')->getValue()
+        ]);
+    }
+
+    #[Route('/deposit/crypto/process/{id}', name: 'app_process_crypto_deposit', methods: ['POST'])]
+    public function processCryptoDeposit(int $id, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $token = new CsrfToken('select_wallet', $request->request->get('_token'));
+        if (!$this->csrfTokenManager->isTokenValid($token)) {
+            return $this->redirectWithFlash('danger', 'Token CSRF invalide');
+        }
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
+        if (!$transaction || $transaction->getUser() !== $this->getUser()) {
+            return $this->redirectWithFlash('danger', 'Transaction invalide');
+        }
+
+        $cryptoType = $request->request->get('crypto_type');
+        if (!array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
+            return $this->redirectWithFlash('danger', 'Type de crypto non supporté');
+        }
+
+        $depositAddress = $this->generateDepositAddress($cryptoType);
+        $expiresAt = (new \DateTime())->modify('+' . self::DEPOSIT_EXPIRATION_HOURS . ' hours');
+
+        $transaction
+            ->setMethod('crypto_' . $cryptoType)
+            ->setExternalId($depositAddress)
+            ->setExpiresAt($expiresAt);
+
+        $this->entityManager->flush();
+
+        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($depositAddress);
+
+        return $this->render('payment/crypto_deposit.html.twig', [
+            'transaction' => $transaction,
+            'amount' => $transaction->getAmount(),
+            'depositAddress' => $depositAddress,
+            'expiresAt' => $expiresAt,
+            'network' => self::SUPPORTED_CRYPTOS[$cryptoType],
+            'qrCodeUrl' => $qrCodeUrl,
+            'initialExpiration' => $expiresAt->getTimestamp() - time(),
+            'csrf_token' => $this->csrfTokenManager->getToken('crypto_deposit')->getValue()
+        ]);
     }
 
     #[Route('/deposit/paypal/{id}', name: 'app_paypal_redirect')]
@@ -295,40 +356,6 @@ class PaymentController extends AbstractController
         return $this->redirectWithFlash('warning', 'Paiement PayPal annulé');
     }
 
-    #[Route('/deposit/crypto/{id}', name: 'app_crypto_deposit')]
-    public function cryptoDeposit(int $id): Response
-    {
-        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
-        $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
-        if (!$transaction || $transaction->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException('Transaction invalide');
-        }
-
-        $depositAddress = $this->generateDepositAddress('USDT.TRC20');
-        $expiresAt = (new \DateTime())->modify('+' . self::DEPOSIT_EXPIRATION_HOURS . ' hours');
-
-        $transaction
-            ->setExternalId($depositAddress)
-            ->setExpiresAt($expiresAt);
-
-        $this->entityManager->flush();
-
-        // Génération du QR code via service externe
-        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($depositAddress);
-
-        return $this->render('payment/crypto_deposit.html.twig', [
-            'transaction' => $transaction,
-            'amount' => $transaction->getAmount(),
-            'depositAddress' => $depositAddress,
-            'expiresAt' => $expiresAt,
-            'network' => 'USDT (TRC20)',
-            'qrCodeUrl' => $qrCodeUrl,
-            'initialExpiration' => $expiresAt->getTimestamp() - time(),
-            'csrf_token' => $this->csrfTokenManager->getToken('crypto_deposit')->getValue()
-        ]);
-    }
-
     #[Route('/deposit/crypto/check/{id}', name: 'app_check_crypto_deposit', methods: ['POST'])]
     public function checkCryptoDeposit(int $id, Request $request): JsonResponse
     {
@@ -414,14 +441,14 @@ class PaymentController extends AbstractController
                 $user->setBalance($user->getBalance() + $transaction->getAmount());
 
                 $transaction
-                    ->setMethod("crypto_" . self::SUPPORTED_CRYPTOS[$cryptoType])
+                    ->setMethod("crypto_" . $cryptoType)
                     ->setExternalId($txHash)
                     ->setStatus('completed');
 
                 $message = 'Dépôt confirmé et crédité avec succès!';
             } else {
                 $transaction
-                    ->setMethod("crypto_" . self::SUPPORTED_CRYPTOS[$cryptoType])
+                    ->setMethod("crypto_" . $cryptoType)
                     ->setExternalId($txHash)
                     ->setStatus('pending');
 
@@ -450,7 +477,7 @@ class PaymentController extends AbstractController
 
         foreach ($pendingTransactions as $transaction) {
             $method = $transaction->getMethod();
-            $cryptoType = strtoupper(explode('_', str_replace('crypto_', '', $method))[0]);
+            $cryptoType = str_replace('crypto_', '', $method);
 
             if (array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
                 $verification = $this->verifyBlockchainTransaction(
@@ -598,7 +625,35 @@ class PaymentController extends AbstractController
 
     private function generateDepositAddress(string $currency): string
     {
-        return 'T' . bin2hex(random_bytes(16));
+        $prefixes = [
+            'BTC' => '1',
+            'ETH' => '0x',
+            'USDT.ERC20' => '0x',
+            'USDT.TRC20' => 'T',
+            'LTC' => 'L',
+            'DOGE' => 'D',
+            'BCH' => 'q',
+            'XRP' => 'r',
+            'TRX' => 'T'
+        ];
+
+        $prefix = $prefixes[$currency] ?? 'T';
+        $randomPart = bin2hex(random_bytes(16));
+        
+        switch ($currency) {
+            case 'BTC':
+            case 'LTC':
+            case 'DOGE':
+            case 'BCH':
+                return $prefix . substr($randomPart, 0, 33);
+            case 'ETH':
+            case 'USDT.ERC20':
+                return $prefix . substr($randomPart, 0, 40);
+            case 'XRP':
+                return $prefix . substr($randomPart, 0, 33);
+            default:
+                return $prefix . substr($randomPart, 0, 34);
+        }
     }
 
     private function verifyBlockchainDeposit(string $address, float $amount): bool

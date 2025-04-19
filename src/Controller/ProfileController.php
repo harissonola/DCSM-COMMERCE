@@ -116,14 +116,14 @@ final class ProfileController extends AbstractController
         $sender
     ): void {
         $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@votresite.com', 'Votre Plateforme'))
+            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
             ->to((string) $referral->getEmail())
             ->subject('Rappel - Complétez votre profil')
             ->htmlTemplate('emails/inactive_referral_reminder.html.twig')
             ->context([
                 'referral' => $referral,
                 'sender' => $sender,
-                'app_name' => 'Votre Plateforme',
+                'app_name' => 'Bictrary',
                 'products_url' => $this->generateUrl('app_products_index', [], UrlGeneratorInterface::ABSOLUTE_URL),
             ]);
 

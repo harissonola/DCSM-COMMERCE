@@ -97,7 +97,7 @@ final class ProfileController extends AbstractController
         $inactive = [];
 
         foreach ($referrals as $referral) {
-            if ($referral->getProducts()->count() > 0) {
+            if ($referral->getProduct()->count() > 0) {
                 $active[] = $referral;
             } else {
                 $inactive[] = $referral;

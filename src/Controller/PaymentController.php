@@ -207,13 +207,16 @@ class PaymentController extends AbstractController
             $depositData = $this->createNowPaymentsDeposit(
                 $cryptoType,
                 $transaction->getAmount(),
-                $transaction->getUser()->getId(),
+                $transaction->getId(), // Utilisation de l'ID de transaction comme order_id
                 $transaction->getUser()->getEmail()
             );
+
+            $expiryDate = new \DateTime($depositData['expiry_estimated_date']);
 
             $transaction
                 ->setMethod('crypto_' . $cryptoType)
                 ->setExternalId($depositData['payment_id'])
+                ->setExpiresAt($expiryDate)
                 ->setMetadata([
                     'np_address' => $depositData['pay_address'],
                     'np_id' => $depositData['payment_id'],
@@ -223,27 +226,21 @@ class PaymentController extends AbstractController
 
             $this->entityManager->flush();
 
+            // Envoi de l'email
             $this->sendDepositInstructionsEmail(
                 $transaction->getUser()->getEmail(),
                 $depositData['pay_address'],
                 $transaction->getAmount(),
                 $cryptoType,
-                new \DateTime($depositData['expiry_estimated_date']),
+                $expiryDate,
                 $sourceAddress
             );
 
-            return $this->render('payment/crypto_deposit_instructions.html.twig', [
-                'transaction' => $transaction,
-                'amount' => $transaction->getAmount(),
-                'depositAddress' => $depositData['pay_address'],
-                'sourceAddress' => $sourceAddress,
-                'expiresAt' => new \DateTime($depositData['expiry_estimated_date']),
-                'network' => self::SUPPORTED_CRYPTOS[$cryptoType],
-                'qrCodeUrl' => $this->generateQrCodeUrl($depositData['pay_address']),
-                'initialExpiration' => strtotime($depositData['expiry_estimated_date']) - time(),
-                'csrf_token' => $this->csrfTokenManager->getToken('crypto_deposit')->getValue()
+            // Redirection vers la page d'instructions avec tous les paramètres nécessaires
+            return $this->redirectToRoute('app_crypto_deposit_instructions', [
+                'id' => $transaction->getId(),
+                'payment_id' => $depositData['payment_id']
             ]);
-
         } catch (\Exception $e) {
             $this->logError('NowPayments deposit failed', [
                 'error' => $e->getMessage(),
@@ -251,6 +248,37 @@ class PaymentController extends AbstractController
             ]);
             return $this->redirectWithFlash('danger', 'Erreur lors de la création du dépôt: ' . $e->getMessage());
         }
+    }
+
+    #[Route('/deposit/crypto/instructions/{id}/{payment_id}', name: 'app_crypto_deposit_instructions')]
+    public function cryptoDepositInstructions(int $id, string $payment_id): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
+        if (!$transaction || $transaction->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('Transaction invalide');
+        }
+
+        // Vérification supplémentaire du payment_id
+        if ($transaction->getExternalId() !== $payment_id) {
+            throw $this->createAccessDeniedException('ID de paiement invalide');
+        }
+
+        $metadata = $transaction->getMetadata();
+        $cryptoType = str_replace('crypto_', '', $transaction->getMethod());
+
+        return $this->render('payment/crypto_deposit_instructions.html.twig', [
+            'transaction' => $transaction,
+            'amount' => $transaction->getAmount(),
+            'depositAddress' => $metadata['np_address'],
+            'sourceAddress' => $metadata['source_address'],
+            'expiresAt' => $transaction->getExpiresAt(),
+            'network' => self::SUPPORTED_CRYPTOS[$cryptoType],
+            'qrCodeUrl' => $this->generateQrCodeUrl($metadata['np_address']),
+            'initialExpiration' => $transaction->getExpiresAt()->getTimestamp() - time(),
+            'csrf_token' => $this->csrfTokenManager->getToken('crypto_deposit')->getValue()
+        ]);
     }
 
     #[Route('/deposit/paypal/{id}', name: 'app_paypal_redirect')]
@@ -380,7 +408,7 @@ class PaymentController extends AbstractController
 
         try {
             $paymentStatus = $this->checkNowPaymentsStatus($transaction->getExternalId());
-            
+
             if ($paymentStatus === 'finished') {
                 $this->completeDeposit($transaction);
                 return $this->json(['status' => 'completed']);
@@ -425,11 +453,11 @@ class PaymentController extends AbstractController
                 case 'finished':
                     $this->handleSuccessfulPayment($transaction, $data);
                     break;
-                    
+
                 case 'expired':
                     $this->handleExpiredPayment($transaction);
                     break;
-                    
+
                 case 'failed':
                     $this->handleFailedPayment($transaction, $data);
                     break;
@@ -437,7 +465,6 @@ class PaymentController extends AbstractController
 
             $this->entityManager->commit();
             return new Response('IPN processed');
-
         } catch (\Exception $e) {
             $this->entityManager->rollback();
             $this->logError('IPN processing failed', [
@@ -460,7 +487,7 @@ class PaymentController extends AbstractController
         return $this->redirectWithFlash('warning', 'Dépôt annulé');
     }
 
-    private function createNowPaymentsDeposit(string $currency, float $amount, int $userId, string $email): array
+    private function createNowPaymentsDeposit(string $currency, float $amount, int $transactionId, string $email): array
     {
         $response = $this->httpClient->post('https://api.nowpayments.io/v1/payment', [
             'headers' => [
@@ -472,7 +499,7 @@ class PaymentController extends AbstractController
                 'price_currency' => 'usd',
                 'pay_currency' => $currency,
                 'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'order_id' => 'DEPO_'.$userId.'_'.time(),
+                'order_id' => 'DEPO_' . $transactionId . '_' . time(),
                 'customer_email' => $email,
                 'success_url' => $this->generateUrl('deposit_success', [], UrlGeneratorInterface::ABSOLUTE_URL),
                 'cancel_url' => $this->generateUrl('deposit_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL)
@@ -483,7 +510,7 @@ class PaymentController extends AbstractController
         $data = json_decode($response->getBody(), true);
 
         if (!isset($data['payment_id'])) {
-            throw new \RuntimeException('NowPayments API error: '.($data['message'] ?? 'Unknown error'));
+            throw new \RuntimeException('NowPayments API error: ' . ($data['message'] ?? 'Unknown error'));
         }
 
         return $data;
@@ -510,7 +537,7 @@ class PaymentController extends AbstractController
 
         $expectedAmount = $transaction->getAmount();
         $receivedAmount = (float)($ipnData['actually_paid'] ?? 0);
-        
+
         if ($receivedAmount < $expectedAmount) {
             throw new \RuntimeException(sprintf(
                 'Amount mismatch: expected %.2f, got %.2f',
@@ -558,51 +585,69 @@ class PaymentController extends AbstractController
     }
 
     private function sendDepositInstructionsEmail(
-        string $email, 
-        string $address, 
-        float $amount, 
+        string $email,
+        string $address,
+        float $amount,
         string $currency,
         \DateTime $expiry,
         string $sourceAddress
     ): void {
         try {
-            $this->mailer->send(
-                (new TemplatedEmail())
-                    ->to($email)
-                    ->subject('[Important] Instructions pour votre dépôt en crypto')
-                    ->htmlTemplate('emails/crypto_deposit_instructions.html.twig')
-                    ->context([
-                        'address' => $address,
-                        'amount' => $amount,
-                        'currency' => $currency,
-                        'expiry' => $expiry,
-                        'source_address' => $sourceAddress,
-                        'qr_code' => $this->generateQrCodeUrl($address)
-                    ])
-            );
+            $email = (new TemplatedEmail())
+                ->to($email)
+                ->subject('[Important] Instructions pour votre dépôt en crypto')
+                ->htmlTemplate('emails/crypto_deposit_instructions.html.twig')
+                ->context([
+                    'address' => $address,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'expiry' => $expiry,
+                    'source_address' => $sourceAddress,
+                    'qr_code' => $this->generateQrCodeUrl($address),
+                    'app_name' => $this->getParameter('app.site_name')
+                ]);
+
+            $this->mailer->send($email);
+            $this->logInfo('Deposit instructions email sent', [
+                'to' => $email->getTo()[0]->getAddress(),
+                'amount' => $amount,
+                'currency' => $currency
+            ]);
         } catch (\Exception $e) {
-            $this->logError('Deposit email failed', ['error' => $e->getMessage()]);
+            $this->logError('Deposit email failed', [
+                'error' => $e->getMessage(),
+                'email' => $email,
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 
     private function sendTransactionEmail(string $email, string $subject, string $template, array $context): void
     {
         try {
-            $this->mailer->send(
-                (new TemplatedEmail())
-                    ->to($email)
-                    ->subject($subject)
-                    ->htmlTemplate($template)
-                    ->context($context)
-            );
+            $email = (new TemplatedEmail())
+                ->to($email)
+                ->subject($subject)
+                ->htmlTemplate($template)
+                ->context($context);
+
+            $this->mailer->send($email);
+            $this->logInfo('Transaction email sent', [
+                'type' => $subject,
+                'to' => $email->getTo()[0]->getAddress()
+            ]);
         } catch (\Exception $e) {
-            $this->logError('Transaction email failed', ['error' => $e->getMessage()]);
+            $this->logError('Transaction email failed', [
+                'error' => $e->getMessage(),
+                'email' => $email,
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 
     private function generateQrCodeUrl(string $address): string
     {
-        return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='.urlencode($address);
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($address);
     }
 
     private function validateWithdrawal(User $user, float $amount, string $currency, string $address): array
@@ -662,6 +707,17 @@ class PaymentController extends AbstractController
     private function processWithdrawal(Transactions $transaction, string $currency, string $address): void
     {
         // Implémentez ici la logique de retrait via votre service préféré
+        // Cette méthode devrait initier le transfert vers l'adresse fournie
+        // Exemple avec un service fictif :
+        // $this->cryptoService->send($currency, $address, $transaction->getAmount());
+
+        // Pour l'instant on log juste l'action
+        $this->logInfo('Withdrawal processed', [
+            'transaction_id' => $transaction->getId(),
+            'amount' => $transaction->getAmount(),
+            'currency' => $currency,
+            'address' => $address
+        ]);
     }
 
     private function completeDeposit(Transactions $transaction): void
@@ -677,9 +733,16 @@ class PaymentController extends AbstractController
 
             $this->entityManager->flush();
             $this->entityManager->commit();
+
+            $this->logInfo('Deposit completed', [
+                'transaction_id' => $transaction->getId(),
+                'user_id' => $user->getId(),
+                'amount' => $transaction->getAmount()
+            ]);
         } catch (\Exception $e) {
             $this->entityManager->rollback();
             $this->logError('Deposit completion failed', ['error' => $e->getMessage()]);
+            throw $e;
         }
     }
 
@@ -708,7 +771,7 @@ class PaymentController extends AbstractController
     private function logError(string $message, array $context = []): void
     {
         file_put_contents(
-            $this->getParameter('kernel.logs_dir') . '/payment.log',
+            $this->getParameter('kernel.logs_dir') . '/payment_errors.log',
             date('[Y-m-d H:i:s]') . ' ERROR: ' . $message . ' ' . json_encode($context) . "\n",
             FILE_APPEND
         );
@@ -717,7 +780,7 @@ class PaymentController extends AbstractController
     private function logInfo(string $message, array $context = []): void
     {
         file_put_contents(
-            $this->getParameter('kernel.logs_dir') . '/payment.log',
+            $this->getParameter('kernel.logs_dir') . '/payment_info.log',
             date('[Y-m-d H:i:s]') . ' INFO: ' . $message . ' ' . json_encode($context) . "\n",
             FILE_APPEND
         );

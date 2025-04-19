@@ -16,7 +16,7 @@
                         Montant à déposer : <strong>{{ transaction.amount|number_format(2) }} USD</strong>
                     </div>
                     
-                    <form method="post" action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}">
+                    <form method="post" action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" id="cryptoForm">
                         <input type="hidden" name="_token" value="{{ csrf_token('select_crypto') }}">
                         
                         <div class="mb-4">
@@ -37,7 +37,7 @@
                         </div>
                         
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                            <button type="submit" class="btn btn-primary btn-lg py-3" id="submitBtn">
                                 <i class="fas fa-arrow-right me-2"></i> Confirmer
                             </button>
                             <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary">
@@ -50,4 +50,20 @@
         </div>
     </div>
 </div>
+
+{% block customScript %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('cryptoForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        // Désactiver le bouton pour éviter les doubles soumissions
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Traitement...';
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

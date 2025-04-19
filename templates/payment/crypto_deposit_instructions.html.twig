@@ -6,6 +6,14 @@
     {{ parent() }}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Vérifier si les données sont présentes
+            if (!document.getElementById('depositAddress') || !document.getElementById('depositAddress').value) {
+                alert('Erreur: Les informations de dépôt sont incomplètes');
+                window.location.href = '{{ path('app_profile') }}';
+                return;
+            }
+
+            // Timer d'expiration
             const expiresAt = new Date('{{ expiresAt|date('Y-m-d H:i:s') }}').getTime();
             
             function updateTimer() {
@@ -28,6 +36,7 @@
             updateTimer();
             setInterval(updateTimer, 1000);
 
+            // Vérification automatique du statut
             setInterval(function() {
                 fetch('{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}', {
                     method: 'POST',
@@ -39,12 +48,13 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'completed') {
-                        window.location.href = '{{ path('app_profile') }}';
+                        window.location.href = '{{ path('app_profile') }}?deposit=success';
                     } else if (data.status === 'expired') {
                         window.location.reload();
                     }
-                });
-            }, 30000);
+                })
+                .catch(error => console.error('Error:', error));
+            }, 30000); // Toutes les 30 secondes
         });
 
         function copyToClipboard(elementId) {
@@ -66,7 +76,7 @@
                 <div class="card-header bg-success text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">
-                            <i class="fas fa-coins me-2"></i> Instructions de dépôt
+                            <i class="fas fa-coins me-2"></i> Instructions pour votre dépôt
                         </h4>
                         <span class="badge bg-light text-dark">
                             Expire dans: <span id="timer"></span>
@@ -75,6 +85,12 @@
                 </div>
                 
                 <div class="card-body">
+                    {% if not depositAddress or not sourceAddress %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Les informations de dépôt sont incomplètes. Veuillez contacter le support.
+                        </div>
+                    {% else %}
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-4 p-3 bg-light rounded">
@@ -99,6 +115,7 @@
                                         <i class="fas fa-copy"></i>
                                     </button>
                                 </div>
+                                <small class="text-muted">Envoyez les fonds EXACTEMENT à cette adresse</small>
                             </div>
 
                             <div class="mb-4">
@@ -113,11 +130,18 @@
                                         <i class="fas fa-copy"></i>
                                     </button>
                                 </div>
+                                <small class="text-muted">Nous surveillerons les transactions depuis cette adresse</small>
                             </div>
                             
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Important :</strong> Le dépôt expirera à {{ expiresAt|date('H:i') }}.
+                                <strong>Important :</strong> 
+                                <ul class="mb-0 mt-2">
+                                    <li>Le dépôt expirera à {{ expiresAt|date('H:i') }}</li>
+                                    <li>Envoyez le montant exact de {{ amount|number_format(2) }} USD en {{ network }}</li>
+                                    <li>Les frais de réseau sont à votre charge</li>
+                                    <li>Le traitement peut prendre quelques minutes</li>
+                                </ul>
                             </div>
                         </div>
                         
@@ -125,6 +149,12 @@
                             <div class="mb-4 p-3 bg-light rounded">
                                 <img src="{{ qrCodeUrl }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 250px;">
                                 <h5 class="fw-bold">Scanner pour envoyer</h5>
+                                <small class="text-muted">Utilisez votre wallet pour scanner ce QR code</small>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-envelope me-2"></i>
+                                Un email avec ces instructions vous a été envoyé à <strong>{{ app.user.email }}</strong>
                             </div>
                         </div>
                     </div>
@@ -135,18 +165,23 @@
                         <a href="{{ path('app_profile') }}" class="btn btn-success btn-lg py-3">
                             <i class="fas fa-check-circle me-2"></i> J'ai effectué le transfert
                         </a>
+                        <button class="btn btn-outline-primary" onclick="window.location.reload()">
+                            <i class="fas fa-sync-alt me-2"></i> Actualiser le statut
+                        </button>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Toast Notification -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
     <div id="copyToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
-                <i class="fas fa-check-circle me-2"></i> Adresse copiée !
+                <i class="fas fa-check-circle me-2"></i> Adresse copiée dans le presse-papier !
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>

@@ -58,16 +58,11 @@ class RegistrationFormType extends AbstractType
                 "label" => false,
             ])
             ->add('agreeTerms', CheckboxType::class, [
-                'mapped' => false,
+                'label' => 'J\'accepte les termes et conditions',
+                'mapped' => true,
                 'constraints' => [
-                    new IsTrue([
-                        'message' => 'You should agree to our terms.',
-                    ]),
-                ],
-                'label_attr' => [
-                    'class' => "text-uppercase text-light",
-                ],
-                "label" => "J'accepte les Termes et Conditions"
+                    new IsTrue(['message' => 'Vous devez accepter nos conditions.'])
+                ]
             ])
             ->add('plainPassword', PasswordType::class, [
                 'mapped' => false,

@@ -102,6 +102,7 @@ class GoogleController extends AbstractController
                 ->setVerified(true)
                 ->setReferralCode($referralCode);
 
+            $user->setAgreeTerms(true); // Accepte automatiquement les CGU
             // Gestion du parrainage
             $referredBy = $request->getSession()->get('google_referral_code');
             if ($referredBy) {

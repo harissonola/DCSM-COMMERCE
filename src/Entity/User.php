@@ -144,6 +144,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'referrer')]
     private Collection $referrals;
 
+    #[ORM\Column(type: 'boolean')]
+    private bool $agreeTerms = false;
+
     public function __construct()
     {
         $this->transactions = new ArrayCollection();
@@ -589,5 +592,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             }
         }
         return $total;
+    }
+
+    // Ajoutez les getters/setters
+    public function isAgreeTerms(): bool
+    {
+        return $this->agreeTerms;
+    }
+
+    public function setAgreeTerms(bool $agreeTerms): self
+    {
+        $this->agreeTerms = $agreeTerms;
+        return $this;
     }
 }

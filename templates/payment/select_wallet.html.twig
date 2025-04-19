@@ -1,74 +1,265 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Sélection du portefeuille{% endblock %}
+{% block title %}Sélection du portefeuille
+{% endblock %}
 
 {% block stylesheets %}
-    {{ parent() }}
-    <style>
-        .wallet-container {
-            max-width: 600px;
-            margin: 2rem auto;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .wallet-option {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 0.75rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .wallet-option:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-        
-        .wallet-option input[type="radio"] {
-            margin-right: 1rem;
-        }
-        
-        .wallet-icon {
-            width: 40px;
-            height: 40px;
-            margin-right: 1rem;
-            object-fit: contain;
-        }
-    </style>
-{% endblock %}
+	{{ parent() }}
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+	<style>:root
+	{
+		--primary-color: #6200ff;
+		--secondary-color: #9b4dff;
+	}
 
-{% block body %}
-<div class="wallet-container">
-    <h2 class="text-center mb-4">Sélectionnez votre portefeuille</h2>
-    
-    <form action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" method="post">
-        <input type="hidden" name="_token" value="{{ csrf_token('select_wallet') }}">
-        
-        <div class="mb-4">
-            {% for key, label in supportedCryptos %}
-                <label class="wallet-option">
-                    <input type="radio" name="crypto_type" value="{{ key }}" required>
-                    <img src="{{ asset('img/crypto/' ~ key|lower ~ '.png') }}" alt="{{ label }}" class="wallet-icon" onerror="this.src='{{ asset('img/crypto/default.png') }}'">
-                    <div>
-                        <h5 class="mb-0">{{ label }}</h5>
-                        <small class="text-muted">Frais: 0%</small>
-                    </div>
-                </label>
-            {% endfor %}
-        </div>
-        
-        <div class="d-grid">
-            <button type="submit" class="btn btn-primary btn-lg">Continuer</button>
-        </div>
-    </form>
-</div>
-{% endblock %}
+	.wallet-container {
+		max-width: 600px;
+		margin: 2rem auto;
+		background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+		backdrop-filter: blur(20px);
+		border-radius: 1.5rem;
+		padding: 2.5rem;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+		border: none;
+		overflow: hidden;
+		position: relative;
+	}
+
+	.wallet-container::before {
+		content: '';
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		height: 200%;
+		background: radial-gradient(circle, rgba(98, 0, 255, 0.1) 0%, transparent 70%);
+		animation: rotate 20s linear infinite;
+		z-index: -1;
+	}
+
+	@keyframes rotate {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+
+	.wallet-option {
+		display: flex;
+		align-items: center;
+		padding: 1.25rem;
+		margin-bottom: 1rem;
+		background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+		border-radius: 0.75rem;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+		cursor: pointer;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.wallet-option::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(90deg, rgba(98, 0, 255, 0.1) 0%, transparent 100%);
+		opacity: 0;
+		transition: opacity 0.3s ease;
+	}
+
+	.wallet-option:hover {
+		background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+		transform: translateY(-3px);
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+	}
+
+	.wallet-option:hover::after {
+		opacity: 1;
+	}
+
+	.wallet-option input[type="radio"] {
+		appearance: none;
+		width: 20px;
+		height: 20px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-radius: 50%;
+		margin-right: 1.25rem;
+		transition: all 0.2s ease;
+		position: relative;
+	}
+
+	.wallet-option input[type="radio"]:checked {
+		border-color: var(--primary-color);
+		background-color: rgba(98, 0, 255, 0.2);
+	}
+
+	.wallet-option input[type="radio"]:checked::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--primary-color);
+	}
+
+	.wallet-icon {
+		width: 48px;
+		height: 48px;
+		margin-right: 1.25rem;
+		object-fit: contain;
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+		transition: transform 0.3s ease;
+		border-radius: 50%;
+	}
+
+	.wallet-option:hover .wallet-icon {
+		transform: scale(1.1);
+	}
+
+	.wallet-info {
+		flex-grow: 1;
+	}
+
+	.wallet-name {
+		font-weight: 600;
+		margin-bottom: 0.25rem;
+		color: white;
+	}
+
+	.wallet-fee {
+		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	.btn-continue {
+		background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+		border: none;
+		padding: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		border-radius: 0.5rem;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 15px rgba(98, 0, 255, 0.3);
+		color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn-continue:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 20px rgba(98, 0, 255, 0.4);
+		color: white;
+	}
+
+	.section-title {
+		position: relative;
+		margin-bottom: 2rem;
+		text-align: center;
+		color: white;
+		font-weight: 700;
+	}
+
+	.section-title::after {
+		content: '';
+		display: block;
+		width: 60px;
+		height: 3px;
+		background: linear-gradient(90deg, var(--primary-color) 0%, transparent 100%);
+		margin: 0.75rem auto 0;
+		border-radius: 3px;
+	}
+
+	/* Fallback for missing icons */
+	.icon-fallback {
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 1.25rem;
+		color: white;
+		font-weight: bold;
+		font-size: 1rem;
+		text-transform: uppercase;
+	}
+</style>{% endblock %}{% block body %}
+<div class="wallet-container animate__animated animate__fadeIn">
+	<h2 class="section-title">Sélectionnez votre portefeuille</h2>
+
+	<form action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" method="post">
+		<input type="hidden" name="_token" value="{{ csrf_token('select_wallet') }}">
+
+		<div class="mb-4">
+			{% set cryptoImages = {
+                'BTC': 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+                'ETH': 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+                'USDT': 'https://assets.coingecko.com/coins/images/325/large/Tether.png',
+                'BNB': 'https://assets.coingecko.com/coins/images/825/large/bnb-icon2_2x.png',
+                'XRP': 'https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png',
+                'SOL': 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+                'DOGE': 'https://assets.coingecko.com/coins/images/5/large/dogecoin.png',
+                'ADA': 'https://assets.coingecko.com/coins/images/975/large/cardano.png'
+            } %}
+
+			{% for key, label in supportedCryptos %}
+				<label class="wallet-option animate__animated animate__fadeInUp" style="animation-delay: {{ loop.index * 0.1 }}s">
+					<input type="radio" name="crypto_type" value="{{ key }}" required>
+
+					{% if cryptoImages[key] is defined %}
+						<img src="{{ cryptoImages[key] }}" alt="{{ label }}" class="wallet-icon" onerror="this.parentNode.querySelector('.icon-fallback').style.display='flex'; this.style.display='none'">
+						<div class="icon-fallback" style="display: none">{{ key }}</div>
+					{% else %}
+						<div class="icon-fallback">{{ key }}</div>
+					{% endif %}
+
+					<div class="wallet-info">
+						<div class="wallet-name">{{ label }}</div>
+						<div class="wallet-fee">Frais: 0% • Transaction instantanée</div>
+					</div>
+				</label>
+			{% endfor %}
+		</div>
+
+		<div class="d-grid mt-4">
+			<button type="submit" class="btn btn-continue btn-lg">
+				<span>Continuer</span>
+				<i class="fas fa-arrow-right ms-2"></i>
+			</button>
+		</div>
+	</form>
+</div>{% endblock %}{% block javascripts %}
+{{ parent() }}
+ <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const options = document.querySelectorAll('.wallet-option');
+            
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    options.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                });
+            });
+
+            // Load Font Awesome if not already loaded
+            if (!document.querySelector('.fa-arrow-right')) {
+                const fa = document.createElement('link');
+                fa.rel = 'stylesheet';
+                fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
+                document.head.appendChild(fa);
+            }
+        });
+    </script>{% endblock %}

@@ -1,26 +1,22 @@
 # config/packages/nelmio_security.yaml
 nelmio_security:
-    # signs/verifies all cookies
-    signed_cookie:
-        names: ['*'] # Attention : connexion peut échouer si tous les cookies sont signés.
-
-    # protection contre le clickjacking
+    # Protection contre le clickjacking
     clickjacking:
         paths:
             '^/.*': DENY
 
-    # désactivation du content‑type sniffing
+    # Désactivation du content-type sniffing
     content_type:
         nosniff: true
 
-    # politique de referrer
+    # Politique de Referrer
     referrer_policy:
         enabled: true
         policies:
-            - 'strict-origin-when-cross-origin'
             - 'no-referrer'
+            - 'strict-origin-when-cross-origin'
 
-    # empêche les redirections hors de ton domaine
+    # Empêche les redirections hors de ton domaine
     external_redirects:
         abort: true
         log: true
@@ -30,49 +26,49 @@ nelmio_security:
         hosts: []
         content_types: []
         enforce:
-            # URL de collecte des rapports CSP (optionnel, supprime si tu ne veux pas de rapport)
+            # Optionnel : collecte des rapports CSP
             report-uri: '%router.request_context.base_url%/nelmio/csp/report'
 
-            # Défaut : uniquement ton domaine
+            # Par défaut, uniquement ton domaine
             default-src:
                 - 'self'
 
-            # Scripts autorisés
+            # Scripts autorisés (inline + CDN)
             script-src:
                 - 'self'
-                - 'unsafe-inline'          # pour les petits scripts inline (importmap, AOS init…)
-                - cdn.jsdelivr.net         # jQuery, Bootstrap, Sneat CSS/JS, Apex‑Charts, AOS, SweetAlert2…
-                - cdnjs.cloudflare.com     # animate.css, Font‑Awesome
-                - cdn.datatables.net       # DataTables JS
-                - code.tidio.co            # widget de chat Tidio
+                - 'unsafe-inline'
+                - 'cdn.jsdelivr.net'
+                - 'cdnjs.cloudflare.com'
+                - 'cdn.datatables.net'
+                - 'code.tidio.co'
 
-            # Styles autorisés
+            # Styles autorisés (inline + CDN)
             style-src:
                 - 'self'
-                - 'unsafe-inline'          # pour overrides inline (Tailwind overrides, demo.css…)
-                - cdn.jsdelivr.net         # Sneat core & vendor CSS, Bootstrap‑Icons, Boxicons…
-                - cdnjs.cloudflare.com     # animate.css, Font‑Awesome
-                - cdn.datatables.net       # DataTables CSS
+                - 'unsafe-inline'
+                - 'cdn.jsdelivr.net'
+                - 'cdnjs.cloudflare.com'
+                - 'cdn.datatables.net'
 
-            # Images autorisées
+            # Images autorisées (origine, data: et GitHub raw pour les OG images/favicons)
             img-src:
                 - 'self'
-                - data:
-                - raw.githubusercontent.com
+                - 'data:'
+                - 'raw.githubusercontent.com'
 
-            # Polices autorisées
+            # Polices autorisées (via CDN CSS)
             font-src:
                 - 'self'
-                - cdn.jsdelivr.net
-                - cdnjs.cloudflare.com
+                - 'cdn.jsdelivr.net'
+                - 'cdnjs.cloudflare.com'
 
-            # Requêtes AJAX / WebSocket
+            # Requêtes AJAX / WebSockets
             connect-src:
                 - 'self'
-                - api.tatum.io             # si tu appelles l’API Tatum côté client
-                - wss://code.tidio.co      # WebSocket Tidio
+                - 'api.tatum.io'
+                - 'wss://code.tidio.co'
 
-            # iFrames (YouTube, etc.)
+            # iFrames (aucune tierce ici, mais conservé pour la forme)
             frame-src:
                 - 'self'
 
@@ -80,7 +76,7 @@ nelmio_security:
             object-src:
                 - 'none'
 
-            # Restreindre les formulaires à ton domaine
+            # Restreindre l’action des formulaires à ton domaine
             form-action:
                 - 'self'
 
@@ -88,21 +84,17 @@ nelmio_security:
             base-uri:
                 - 'self'
 
-            # Interdire l’enchâssement dans d’autres sites
+            # Empêcher l’enchâssement de ton site ailleurs
             frame-ancestors:
                 - 'none'
+
+            # Types de plugins acceptés (JS & CSS uniquement)
+            plugin-types:
+                - 'application/javascript'
+                - 'text/css'
 
             # Bloquer le contenu mixte HTTP/HTTPS
             block-all-mixed-content: true
 
             # Forcer la mise à niveau des requêtes HTTP vers HTTPS
             upgrade-insecure-requests: true
-
-            # Manifest web app
-            manifest-src:
-                - 'self'
-
-            # Types de plugins acceptés (ici seulement JS & CSS)
-            plugin-types:
-                - 'application/javascript'
-                - 'text/css'

@@ -14,30 +14,23 @@ nelmio_security:
         policies: ["no-referrer", "strict-origin-when-cross-origin"]
 
     # Configuration CSP
-    # Configuration CSP
     csp:
         enabled: true
-        report_logger_service: "logger"
+        report_logger_service: 'logger'
         hash:
             algorithm: sha256
         enforce:
             level1_fallback: true
-        report: true # Activer le reporting sans sous-clé uri
-        report_endpoint: "/csp-report" # Utiliser report_endpoint au lieu de report_uri
-
+        report: true # Activer le reporting
+        report_endpoint: ['/csp-report'] # Tableau au lieu d'une chaîne
+        
         # Directives CSP
         directives:
             default-src: ["'self'"]
-            script-src:
-                [
-                    "'self'",
-                    "'unsafe-inline'",
-                    "'unsafe-eval'",
-                    "cdnjs.cloudflare.com",
-                ]
+            script-src: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdnjs.cloudflare.com"]
             style-src: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"]
             img-src: ["'self'", "data:"]
             font-src: ["'self'"]
             frame-src: ["'self'"]
             connect-src: ["'self'"]
-            report-uri: ["/csp-report"] # Ajouter report-uri comme directive
+            report-uri: ['/csp-report'] # Directive report-uri

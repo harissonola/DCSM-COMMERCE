@@ -1,84 +1,108 @@
 # config/packages/nelmio_security.yaml
 nelmio_security:
-    # Protection contre le clickjacking
+    # signs/verifies all cookies
+    signed_cookie:
+        names: ['*'] # Attention : connexion peut échouer si tous les cookies sont signés.
+
+    # protection contre le clickjacking
     clickjacking:
         paths:
             '^/.*': DENY
 
-    # Désactive le content type sniffing
+    # désactivation du content‑type sniffing
     content_type:
         nosniff: true
 
-    # Politique de referrer
+    # politique de referrer
     referrer_policy:
         enabled: true
-        policies: ['no-referrer', 'strict-origin-when-cross-origin']
-            
-    # Configuration CSP
+        policies:
+            - 'strict-origin-when-cross-origin'
+            - 'no-referrer'
+
+    # empêche les redirections hors de ton domaine
+    external_redirects:
+        abort: true
+        log: true
+
+    # Content Security Policy
     csp:
         hosts: []
         content_types: []
         enforce:
-            # Si tu ne veux pas collecter les rapports, supprime cette ligne
-            report-uri: ['/csp-report']
+            # URL de collecte des rapports CSP (optionnel, supprime si tu ne veux pas de rapport)
+            report-uri: '%router.request_context.base_url%/nelmio/csp/report'
 
-            # Par défaut, on autorise seulement ton domaine
+            # Défaut : uniquement ton domaine
             default-src:
-                - "'self'"
+                - 'self'
 
-            # Tous tes scripts (inline, eval, CDN JS)
+            # Scripts autorisés
             script-src:
-                - "'self'"
-                - "'unsafe-inline'"      # pour les petits <script> inline (importmap, AOS init…)
-                - "'unsafe-eval'"        # nécessaire si tu utilises des eval() ou certains libs
-                - "cdnjs.cloudflare.com"  # animate.css, Font‑Awesome
-                - "cdn.jsdelivr.net"      # jQuery, Bootstrap, Sneat CSS/JS, Boxicons, Apex‑Charts, AOS…
-                - "cdn.datatables.net"    # DataTables JS
-                - "code.tidio.co"         # Tidio Chat widget
+                - 'self'
+                - 'unsafe-inline'          # pour les petits scripts inline (importmap, AOS init…)
+                - cdn.jsdelivr.net         # jQuery, Bootstrap, Sneat CSS/JS, Apex‑Charts, AOS, SweetAlert2…
+                - cdnjs.cloudflare.com     # animate.css, Font‑Awesome
+                - cdn.datatables.net       # DataTables JS
+                - code.tidio.co            # widget de chat Tidio
 
-            # Pour balises <script src="…">
-            script-src-elem:
-                - "'self'"
-                - "cdnjs.cloudflare.com"
-                - "cdn.jsdelivr.net"
-                - "cdn.datatables.net"
-                - "code.tidio.co"
-
-            # Tous tes styles (inline, CDN CSS)
+            # Styles autorisés
             style-src:
-                - "'self'"
-                - "'unsafe-inline'"      # pour CSS inline (tailwind overrides, demo.css…)
-                - "cdnjs.cloudflare.com"  # animate.css, Font‑Awesome
-                - "cdn.jsdelivr.net"      # Sneat core & vendor CSS, Bootstrap‑Icons, Boxicons…
-                - "cdn.datatables.net"    # DataTables CSS
+                - 'self'
+                - 'unsafe-inline'          # pour overrides inline (Tailwind overrides, demo.css…)
+                - cdn.jsdelivr.net         # Sneat core & vendor CSS, Bootstrap‑Icons, Boxicons…
+                - cdnjs.cloudflare.com     # animate.css, Font‑Awesome
+                - cdn.datatables.net       # DataTables CSS
 
-            # Pour balises <link rel="stylesheet" …>
-            style-src-elem:
-                - "'self'"
-                - "cdnjs.cloudflare.com"
-                - "cdn.jsdelivr.net"
-                - "cdn.datatables.net"
-
-            # Images : ton domaine, GitHub raw, data: (QR, inline…)
+            # Images autorisées
             img-src:
-                - "'self'"
-                - "data:"
-                - "raw.githubusercontent.com"
+                - 'self'
+                - data:
+                - raw.githubusercontent.com
 
-            # Polices chargées par tes CSS
+            # Polices autorisées
             font-src:
-                - "'self'"
-                - "cdnjs.cloudflare.com"
-                - "cdn.jsdelivr.net"
+                - 'self'
+                - cdn.jsdelivr.net
+                - cdnjs.cloudflare.com
 
-            # Requêtes AJAX / WebSocket éventuelles
+            # Requêtes AJAX / WebSocket
             connect-src:
-                - "'self'"
-                - "code.tidio.co"         # pour le chat WebSocket de Tidio, si utilisé
+                - 'self'
+                - api.tatum.io             # si tu appelles l’API Tatum côté client
+                - wss://code.tidio.co      # WebSocket Tidio
 
-            # iFrame si tu embeds (YouTube, etc.)
+            # iFrames (YouTube, etc.)
             frame-src:
-                - "'self'"
+                - 'self'
 
-            # Bloque tout contenu mixte HTTP/HTTPS
+            # Interdire tout plugin natif
+            object-src:
+                - 'none'
+
+            # Restreindre les formulaires à ton domaine
+            form-action:
+                - 'self'
+
+            # Restreindre la base URI à ton domaine
+            base-uri:
+                - 'self'
+
+            # Interdire l’enchâssement dans d’autres sites
+            frame-ancestors:
+                - 'none'
+
+            # Bloquer le contenu mixte HTTP/HTTPS
             block-all-mixed-content: true
+
+            # Forcer la mise à niveau des requêtes HTTP vers HTTPS
+            upgrade-insecure-requests: true
+
+            # Manifest web app
+            manifest-src:
+                - 'self'
+
+            # Types de plugins acceptés (ici seulement JS & CSS)
+            plugin-types:
+                - 'application/javascript'
+                - 'text/css'

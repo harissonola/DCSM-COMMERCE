@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
     <!-- Page CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/sweetalert2/sweetalert2.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
 
@@ -64,6 +64,13 @@
             to { transform: rotate(360deg); }
         }
     </style>
+
+    <!-- Importmap pour Symfony -->
+    {% block javascripts %}
+        {% block importmap %}
+            {{ importmap('app') }}
+        {% endblock %}
+    {% endblock %}
 </head>
 
 <body>
@@ -111,7 +118,7 @@
     <!-- Vendor JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
 
     <!-- Main JS -->
     <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/js/main.js"></script>
@@ -130,66 +137,45 @@
             });
         }
 
-        // Flash messages with Sneat style
+        // Flash messages with SweetAlert 1
         function showFlashMessages() {
             {% for type, messages in app.flashes %}
                 {% for message in messages %}
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
+                    swal({
+                        title: "{{ message|raw }}",
+                        text: "",
+                        type: "{{ type }}",
                         timer: 5000,
-                        timerProgressBar: true,
-                        customClass: {
-                            popup: 'border-{{ type }}'
-                        },
-                        showClass: {
-                            popup: 'animate__animated animate__fadeInRight'
-                        },
-                        hideClass: {
-                            popup: 'animate__animated animate__fadeOutRight'
-                        }
-                    });
-                    Toast.fire({
-                        icon: '{{ type }}',
-                        title: '{{ message|raw }}'
+                        showConfirmButton: false,
+                        position: "top-end"
                     });
                 {% endfor %}
             {% endfor %}
         }
 
-        // Delete confirmation with Sneat style
+        // Delete confirmation with SweetAlert 1
         function confirmDelete(event) {
             event.preventDefault();
             const form = event.target.closest('form');
             
-            Swal.fire({
-                title: 'Êtes-vous sûr ?',
+            swal({
+                title: "Êtes-vous sûr ?",
                 text: "Cette action est irréversible !",
-                icon: 'warning',
+                type: "warning",
                 showCancelButton: true,
-                confirmButtonText: 'Oui, supprimer',
-                cancelButtonText: 'Annuler',
-                customClass: {
-                    confirmButton: 'btn btn-primary me-3',
-                    cancelButton: 'btn btn-label-secondary'
-                },
-                buttonsStyling: false,
-                showClass: {
-                    popup: 'animate__animated animate__zoomIn'
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__zoomOut'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
+                confirmButtonColor: "#696cff",
+                confirmButtonText: "Oui, supprimer",
+                cancelButtonText: "Annuler",
+                closeOnConfirm: false
+            }, function(isConfirm) {
+                if (isConfirm) {
                     form.submit();
                 }
             });
         }
 
         // Initialize on DOM ready
-        document.addEventListener('DOMContentLoaded', function() {
+        $(document).ready(function() {
             initDataTables();
             showFlashMessages();
             

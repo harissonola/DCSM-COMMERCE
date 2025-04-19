@@ -21,5 +21,4 @@ return [
     KnpU\OAuth2ClientBundle\KnpUOAuth2ClientBundle::class => ['all' => true],
     Symfony\Bundle\MakerBundle\MakerBundle::class => ['dev' => true],
     Vich\UploaderBundle\VichUploaderBundle::class => ['all' => true],
-    Nelmio\SecurityBundle\NelmioSecurityBundle::class => ['all' => true],
 ];

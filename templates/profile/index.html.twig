@@ -8,39 +8,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4361ee;
-            --secondary: #3f37c9;
-            --accent: #4cc9f0;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --success: #4bbf73;
-            --danger: #d9534f;
-            --warning: #f0ad4e;
-            --info: #5bc0de;
-            --glass: rgba(255, 255, 255, 0.1);
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-            --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
-            --shadow-lg: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.05);
-            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --primary: #6c5ce7;
+            --primary-dark: #5649c0;
+            --secondary: #a29bfe;
+            --accent: #00cec9;
+            --dark: #0f0f1a;
+            --darker: #0a0a12;
+            --darkest: #05050a;
+            --light: #f1f1f6;
+            --lighter: #f8f9fa;
+            --glass: rgba(15, 15, 26, 0.7);
+            --glass-light: rgba(31, 31, 51, 0.5);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-lg: 0 10px 20px rgba(0,0,0,0.3), 0 6px 6px rgba(0,0,0,0.2);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-radius: 12px;
         }
 
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, var(--darkest), var(--darker));
             font-family: 'Poppins', sans-serif;
-            color: var(--dark);
+            color: var(--light);
             min-height: 100vh;
         }
 
-        /* Header Section */
+        /* Profile Header */
         .profile-header {
-            background: white;
-            border-radius: 16px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--glass-light);
             box-shadow: var(--shadow-lg);
             padding: 2rem;
             margin: 1.5rem auto;
             max-width: 1200px;
             transition: var(--transition);
-            border: none;
             position: relative;
             overflow: hidden;
         }
@@ -51,7 +55,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 8px;
+            height: 4px;
             background: linear-gradient(90deg, var(--primary), var(--accent));
         }
 
@@ -60,29 +64,30 @@
             height: 120px;
             object-fit: cover;
             border-radius: 50%;
-            border: 4px solid white;
-            box-shadow: var(--shadow-md);
+            border: 3px solid var(--primary);
+            box-shadow: 0 0 0 3px var(--darkest);
             transition: var(--transition);
         }
 
         .profile-avatar:hover {
             transform: scale(1.05);
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 0 0 3px var(--darkest), 0 0 20px var(--primary);
         }
 
         /* Stats Cards */
         .stats-card {
-            background: white;
-            border-radius: 12px;
+            background: var(--glass-light);
+            border-radius: var(--border-radius);
             padding: 1.5rem;
             box-shadow: var(--shadow-sm);
             transition: var(--transition);
-            border-left: 4px solid var(--primary);
+            border-left: 3px solid var(--primary);
         }
 
         .stats-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
+            background: rgba(108, 92, 231, 0.15);
         }
 
         /* Action Grid */
@@ -98,20 +103,21 @@
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
-            background: white;
-            border-radius: 12px;
+            background: var(--glass-light);
+            border-radius: var(--border-radius);
             transition: var(--transition);
             text-align: center;
             box-shadow: var(--shadow-sm);
-            border: none;
-            color: var(--dark);
+            border: 1px solid var(--glass-light);
+            color: var(--light);
         }
 
         .action-btn:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
-            background: var(--primary);
+            background: var(--primary-dark);
             color: white;
+            border-color: var(--primary);
         }
 
         .action-btn:hover svg {
@@ -122,7 +128,7 @@
         .action-btn svg {
             width: 32px;
             height: 32px;
-            stroke: var(--primary);
+            stroke: var(--secondary);
             stroke-width: 1.5;
             transition: var(--transition);
             margin-bottom: 12px;
@@ -130,80 +136,92 @@
 
         /* Progress Bar */
         .progress {
-            height: 12px;
-            border-radius: 6px;
-            background: #e9ecef;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
         }
 
         .progress-bar {
             background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 6px;
+            border-radius: 4px;
         }
 
         /* Product Cards */
         .product-card {
-            background: white;
-            border-radius: 12px;
+            background: var(--glass-light);
+            border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--shadow-sm);
             transition: var(--transition);
             height: 100%;
+            border: 1px solid var(--glass-light);
         }
 
         .product-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
         }
 
         /* Transactions Table */
         .transaction-table {
-            background: white;
-            border-radius: 12px;
+            background: var(--glass-light);
+            border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--shadow-sm);
+            border: 1px solid var(--glass-light);
         }
 
-        /* Modals - Version améliorée */
+        .table {
+            color: var(--light);
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: rgba(15, 15, 26, 0.8);
+            border-bottom: 1px solid var(--darker);
+        }
+
+        .table tbody tr {
+            background: var(--glass);
+        }
+
+        .table tbody tr:hover {
+            background: rgba(108, 92, 231, 0.1);
+        }
+
+        /* Modals */
         .modal-content {
-            border: none;
-            border-radius: 16px;
-            overflow: visible;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            background: var(--darker);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--glass-light);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         .modal-header {
-            border-bottom: none;
-            padding: 1.5rem 1.5rem 0;
-            position: relative;
-        }
-
-        .modal-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50px;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 2px;
+            border-bottom: 1px solid var(--darkest);
+            background: rgba(15, 15, 26, 0.8);
         }
 
         .modal-body {
-            padding: 1.5rem;
+            background: var(--dark);
         }
 
         /* Form Elements */
-        .form-control {
+        .form-control, .form-select {
+            background: var(--darkest);
+            border: 1px solid var(--darker);
+            color: var(--light);
             border-radius: 8px;
             padding: 0.75rem 1rem;
-            border: 1px solid #e9ecef;
             transition: var(--transition);
         }
 
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
+            background: var(--darkest);
+            color: var(--light);
             border-color: var(--primary);
-            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+            box-shadow: 0 0 0 0.25rem rgba(108, 92, 231, 0.25);
         }
 
         /* Buttons */
@@ -216,13 +234,30 @@
         }
 
         .btn-primary {
-            background: var(--primary);
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(67, 97, 238, 0.3);
+            box-shadow: 0 8px 15px rgba(108, 92, 231, 0.3);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        }
+
+        .btn-outline-light {
+            border: 1px solid var(--glass-light);
+            color: var(--light);
+        }
+
+        .btn-outline-light:hover {
+            background: var(--glass-light);
+            color: white;
+        }
+
+        /* Badges */
+        .badge {
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            padding: 0.35em 0.65em;
         }
 
         /* Animations */
@@ -237,12 +272,49 @@
             100% { transform: scale(1); }
         }
 
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+
         .animate-fade {
             animation: fadeIn 0.6s ease forwards;
         }
 
         .animate-pulse {
             animation: pulse 2s infinite;
+        }
+
+        /* Floating buttons */
+        .action-btn:nth-child(1) { animation: float 4s ease-in-out infinite; }
+        .action-btn:nth-child(2) { animation: float 4s ease-in-out infinite 0.5s; }
+        .action-btn:nth-child(3) { animation: float 4s ease-in-out infinite 1s; }
+        .action-btn:nth-child(4) { animation: float 4s ease-in-out infinite 1.5s; }
+
+        /* Select2 Dark Theme */
+        .select2-container--default .select2-selection--single {
+            background: var(--darkest);
+            border: 1px solid var(--darker);
+            height: auto;
+            padding: 0.5rem;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--light);
+        }
+
+        .select2-dropdown {
+            background: var(--darker);
+            border: 1px solid var(--darkest);
+        }
+
+        .select2-results__option {
+            color: var(--light);
+        }
+
+        .select2-results__option--highlighted {
+            background: var(--primary-dark) !important;
         }
 
         /* Responsive */
@@ -278,7 +350,7 @@
                     <span class="badge bg-success rounded-pill">{{ app.user.country|country_name('fr') }}</span>
                 </div>
                 <div class="mt-3">
-                    <a href="{{ path("app_logout") }}" class="btn btn-outline-danger btn-sm">
+                    <a href="{{ path("app_logout") }}" class="btn btn-outline-light btn-sm">
                         <i class="fas fa-sign-out-alt me-1"></i>
                         Déconnexion
                     </a>
@@ -293,7 +365,7 @@
             <div class="d-flex flex-wrap gap-4 justify-content-center justify-content-md-start">
                 <div class="stats-card">
                     <div class="d-flex align-items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="var(--primary)" stroke-width="2" viewbox="0 0 24 24">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="var(--secondary)" stroke-width="2" viewbox="0 0 24 24">
                             <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"/>
                         </svg>
                         <div>
@@ -304,7 +376,7 @@
                 </div>
                 <div class="stats-card">
                     <div class="d-flex align-items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="var(--primary)" stroke-width="2" viewbox="0 0 24 24">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="var(--secondary)" stroke-width="2" viewbox="0 0 24 24">
                             <line x1="12" y1="1" x2="12" y2="23"></line>
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                         </svg>
@@ -386,8 +458,8 @@
             <div class="progress mb-3">
                 <div class="progress-bar" role="progressbar" style="width: {{ progress|round(0, 'ceil') }}%;" aria-valuenow="{{ progress|round(0, 'ceil') }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-            <div class="alert alert-info border-0">
-                <i class="fas fa-gift me-2"></i>
+            <div class="alert alert-dark border-0 bg-glass">
+                <i class="fas fa-gift me-2 text-accent"></i>
                 Récompense à l'atteinte de ce niveau : <strong>{{ reward }}%</strong>
                 {% if level == 4 and referrals >= 40 %}
                     <span class="badge bg-success ms-2">+ 10$ bonus</span>
@@ -445,7 +517,7 @@
         <div class="transaction-table">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>Date</th>
                             <th>Type</th>
@@ -492,13 +564,13 @@
         </div>
     </div>
 
-    <!-- Deposit Modal - Version optimisée -->
+    <!-- Deposit Modal -->
     <div class="modal fade" id="depositModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2"></i>Déposer des fonds</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2 text-warning"></i>Déposer des fonds</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="depositForm" action="{{ path('app_deposit') }}" method="post">
@@ -506,7 +578,7 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold">Montant (USD)</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text bg-dark border-dark text-light">$</span>
                                 <input type="number" name="amount" class="form-control" required step="0.01" min="{{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}">
                             </div>
                             <small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }} - Max: ${{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}</small>
@@ -519,7 +591,7 @@
                                     { id: 'paypal', label: 'PayPal', icon: 'paypal' }
                                 ] %}
                                 {% for method in paymentMethods %}
-                                    <div class="form-check payment-method-card p-3 rounded border">
+                                    <div class="form-check payment-method-card p-3 rounded bg-dark border-0">
                                         <input class="form-check-input" type="radio" name="method" id="{{ method.id }}" value="{{ method.id }}" required>
                                         <label class="form-check-label d-flex align-items-center fw-bold" for="{{ method.id }}">
                                             {% if method.icon == 'currency-btc' %}
@@ -542,13 +614,13 @@
         </div>
     </div>
 
-    <!-- Withdraw Modal - Version optimisée -->
+    <!-- Withdraw Modal -->
     <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-wallet me-2"></i>Retirer des fonds</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-wallet me-2 text-success"></i>Retirer des fonds</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form action="{{ path('app_withdraw') }}" method="post">
@@ -556,7 +628,7 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Montant (USD)</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text bg-dark border-dark text-light">$</span>
                                 <input type="number" name="amount" class="form-control" step="0.01" required min="{{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}">
                             </div>
                             <small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }} - Max: ${{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}</small>
@@ -574,8 +646,8 @@
                             <label class="form-label fw-bold">Adresse de réception</label>
                             <input type="text" name="address" class="form-control" placeholder="Ex: 0x... (ETH) ou 1... (BTC)" required>
                         </div>
-                        <div class="alert alert-warning border-0 mb-4">
-                            <i class="fas fa-info-circle me-2"></i>
+                        <div class="alert alert-dark border-0 bg-glass mb-4">
+                            <i class="fas fa-info-circle me-2 text-accent"></i>
                             Frais de retrait: 5% (≤20$), 3% (≤100$), 2% (≤500$), 1% (>500$)
                         </div>
                         <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
@@ -587,17 +659,17 @@
         </div>
     </div>
 
-    <!-- Share Modal - Version optimisée -->
+    <!-- Share Modal -->
     <div class="modal fade" id="shareModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-share-alt me-2"></i>Partager mon lien</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title fw-bold"><i class="fas fa-share-alt me-2 text-info"></i>Partager mon lien</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="input-group mb-4">
-                        <input type="text" class="form-control" value="{{ referralLink }}" id="referralLink" readonly>
+                        <input type="text" class="form-control bg-dark border-dark text-light" value="{{ referralLink }}" id="referralLink" readonly>
                         <button class="btn btn-primary" onclick="copyToClipboard()">
                             <i class="fas fa-copy"></i>
                         </button>
@@ -623,9 +695,9 @@
 
     <!-- Toast Notification -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-        <div id="copyToast" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="copyToast" class="toast bg-primary" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                <div class="toast-body">
+                <div class="toast-body d-flex align-items-center">
                     <i class="fas fa-check-circle me-2"></i>
                     Lien copié dans le presse-papier
                 </div>
@@ -659,7 +731,8 @@
             $('#cryptoType').select2({
                 dropdownParent: $('#withdrawModal'),
                 width: '100%',
-                language: 'fr'
+                language: 'fr',
+                theme: 'dark'
             });
 
             // Add animation to elements when they come into view
@@ -680,7 +753,7 @@
             window.addEventListener('scroll', animateOnScroll);
             animateOnScroll();
 
-            // Add pulse animation to deposit button every 5 seconds
+            // Add pulse animation to deposit button every 10 seconds
             setInterval(() => {
                 const depositBtn = document.querySelector('.action-btn[data-bs-target="#depositModal"]');
                 if (depositBtn) {

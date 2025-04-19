@@ -468,6 +468,27 @@
         </div>
     </div>
 
+    <!-- Dans profile/index.html.twig, après la section Referral Section -->
+{% if inactiveReferrals|length > 0 %}
+    <div class="profile-header animate-fade" style="animation-delay: 0.25s">
+        <div class="alert alert-warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Vous avez {{ inactiveReferrals|length }} filleul(s) inactif(s) (n'ont pas encore effectué d'achat)
+                </div>
+                <form action="{{ path('app_send_message_to_inactive') }}" method="post" onsubmit="return confirm('Envoyer un message de rappel à {{ inactiveReferrals|length }} filleul(s) inactif(s) ?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('send_inactive_message') }}">
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        Envoyer un rappel
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Products Section -->
     <div class="profile-header animate-fade" style="animation-delay: 0.3s">
         <h5 class="mb-3 fw-bold">Vos Produits</h5>

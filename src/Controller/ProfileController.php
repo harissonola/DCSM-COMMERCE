@@ -4,47 +4,58 @@ namespace App\Controller;
 
 use App\Repository\TransactionsRepository;
 use App\Repository\UserRepository;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Mime\Address;
 
 final class ProfileController extends AbstractController
 {
+    // Dans ProfileController.php
     #[Route('/profile', name: 'app_profile')]
     public function index(TransactionsRepository $transactionsRepository, UserRepository $userRepository): Response
     {
-        // Redirection si l'utilisateur n'est pas connecté
         if (!$this->getUser()) {
             return $this->redirectToRoute('app_login');
         }
 
         $user = $this->getUser();
 
-        // Récupérer les transactions de l'utilisateur connecté
         $transactions = $transactionsRepository->findBy(
             ['user' => $user],
             ['createdAt' => 'DESC']
         );
 
-        // Génération du lien d'affiliation
         $referralLink = $this->generateUrl(
             'app_register',
             ['ref' => $user->getReferralCode()],
             UrlGeneratorInterface::ABSOLUTE_URL
         );
 
-        // Récupération des filleuls
-        $allReferrals = $user->getReferrals();
-        $activeReferrals = $user->getActiveReferrals($transactionsRepository);
-        $referralCount = count($activeReferrals);
-        $totalReferralsCount = $user->getTotalReferralsCount();
-        $totalReferralRewards = $user->getTotalReferralRewards();
+        // Récupération de tous les filleuls
+        $allReferrals = $userRepository->findBy(['referrer' => $user]);
 
-        // Récupérer le parrain de l'utilisateur
+        // Séparation des filleuls actifs et inactifs
+        $activeReferrals = [];
+        $inactiveReferrals = [];
+
+        foreach ($allReferrals as $referral) {
+            $transactions = $transactionsRepository->findBy(['user' => $referral]);
+            if (count($transactions) > 0) {
+                $activeReferrals[] = $referral;
+            } else {
+                $inactiveReferrals[] = $referral;
+            }
+        }
+
+        $referralCount = count($activeReferrals);
+        $totalReferralsCount = count($allReferrals);
+        $totalReferralRewards = $user->getTotalReferralRewards();
         $referredBy = $user->getReferrer();
 
-        // Statistiques supplémentaires
         $referralStats = [
             'total' => $totalReferralsCount,
             'active' => $referralCount,
@@ -56,6 +67,7 @@ final class ProfileController extends AbstractController
             'transactions' => $transactions,
             'referralLink' => $referralLink,
             'referred' => $activeReferrals,
+            'inactiveReferrals' => $inactiveReferrals, // Nouveau
             'referralCount' => $referralCount,
             'referredBy' => $referredBy,
             'user' => $user,
@@ -64,19 +76,38 @@ final class ProfileController extends AbstractController
         ]);
     }
 
-    #[Route('/profile/referrals', name: 'app_profile_referrals')]
-    public function referralsList(UserRepository $userRepository): Response
+
+    #[Route('/profile/send-message-to-inactive', name: 'app_send_message_to_inactive', methods: ['POST'])]
+    public function sendMessageToInactive(UserRepository $userRepository, MailerInterface $mailer): Response
     {
         $user = $this->getUser();
         if (!$user) {
             return $this->redirectToRoute('app_login');
         }
 
-        $referrals = $user->getReferrals();
+        // Récupérer les filleuls inactifs
+        $allReferrals = $userRepository->findBy(['referrer' => $user]);
+        $inactiveReferrals = array_filter($allReferrals, function ($referral) {
+            return count($referral->getTransactions()) === 0;
+        });
 
-        return $this->render('profile/referrals.html.twig', [
-            'referrals' => $referrals,
-            'user' => $user,
-        ]);
+        // Envoyer un message à chaque filleul inactif
+        foreach ($inactiveReferrals as $referral) {
+            $email = (new TemplatedEmail())
+                ->from(new Address('no-reply@votresite.com', 'Votre Plateforme'))
+                ->to($referral->getEmail())
+                ->subject('Rappel - Complétez votre inscription')
+                ->htmlTemplate('emails/inactive_referral_reminder.html.twig')
+                ->context([
+                    'referral' => $referral,
+                    'sender' => $user,
+                ]);
+
+            $mailer->send($email);
+        }
+
+        $this->addFlash('success', 'Message envoyé à ' . count($inactiveReferrals) . ' filleul(s) inactif(s)');
+
+        return $this->redirectToRoute('app_profile');
     }
 }

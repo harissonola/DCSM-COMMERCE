@@ -17,13 +17,13 @@ use Symfony\Component\Security\Csrf\CsrfToken;
 
 class PaymentController extends AbstractController
 {
+    public const MIN_WITHDRAWAL_AMOUNT = 2.0;
     public const MIN_DEPOSIT_AMOUNT = 1.0;
     public const MAX_DEPOSIT_AMOUNT = 10000.0;
-    public const MIN_WITHDRAWAL_AMOUNT = 2.0;
     public const MAX_WITHDRAWAL_AMOUNT = 5000.0;
+    public const DEPOSIT_EXPIRATION_HOURS = 2;
 
-
-    private const SUPPORTED_CRYPTOS = [
+    public const SUPPORTED_CRYPTOS = [
         'BNB' => 'Binance Coin (BNB)',
         'BUSD.BEP20' => 'BUSD Token (BSC Chain) - BEP20',
         'BTC' => 'Bitcoin (BTC)',
@@ -48,7 +48,7 @@ class PaymentController extends AbstractController
         'ZEC' => 'Zcash (ZEC)'
     ];
 
-    private const BLOCKCHAIN_CONFIRMATIONS_REQUIRED = [
+    public const BLOCKCHAIN_CONFIRMATIONS_REQUIRED = [
         'BTC' => 1,
         'ETH' => 1,
         'USDT.ERC20' => 1,
@@ -61,7 +61,7 @@ class PaymentController extends AbstractController
         'TRX' => 1
     ];
 
-    private const BLOCKCHAIN_EXPLORERS = [
+    public const BLOCKCHAIN_EXPLORERS = [
         'BTC' => 'https://blockstream.info/api/tx/',
         'ETH' => 'https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=',
         'USDT.ERC20' => 'https://api.etherscan.io/api?module=account&action=tokentx&contractaddress=0xdac17f958d2ee523a2206206994597c13d831ec7&txhash=',

@@ -17,11 +17,11 @@ use Symfony\Component\Security\Csrf\CsrfToken;
 
 class PaymentController extends AbstractController
 {
-    private const MIN_WITHDRAWAL_AMOUNT = 2.0;
-    private const MIN_DEPOSIT_AMOUNT = 1.0;
-    private const MAX_DEPOSIT_AMOUNT = 10000.0;
-    private const MAX_WITHDRAWAL_AMOUNT = 5000.0;
-    private const DEPOSIT_EXPIRATION_HOURS = 2;
+    public const MIN_DEPOSIT_AMOUNT = 1.0;
+    public const MAX_DEPOSIT_AMOUNT = 10000.0;
+    public const MIN_WITHDRAWAL_AMOUNT = 2.0;
+    public const MAX_WITHDRAWAL_AMOUNT = 5000.0;
+
 
     private const SUPPORTED_CRYPTOS = [
         'BNB' => 'Binance Coin (BNB)',

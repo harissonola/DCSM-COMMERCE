@@ -2,17 +2,27 @@
   <script>
     document.addEventListener('turbo:load', function () {
       Swal.fire({
-        title: 'Compte inactif',
-        text: "Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !",
+        title: '<span class="text-danger">Compte inactif</span>',
+        html: `<div class="text-body">
+                <p>Votre compte n'est pas activé.</p>
+                <p>Veuillez vérifier votre boîte mail !</p>
+              </div>`,
         icon: 'error',
         showCancelButton: true,
-        confirmButtonText: 'Renvoyer le lien',
-        cancelButtonText: 'Fermer',
+        confirmButtonText: '<i class="fas fa-paper-plane me-2"></i>Renvoyer le lien',
+        cancelButtonText: '<i class="fas fa-times me-2"></i>Fermer',
         customClass: {
-          confirmButton: 'btn btn-primary',
-          cancelButton: 'btn btn-secondary'
+          confirmButton: 'btn btn-primary me-2',
+          cancelButton: 'btn btn-label-secondary',
+          popup: 'animate__animated animate__zoomIn'
         },
-        buttonsStyling: false
+        buttonsStyling: false,
+        showClass: {
+          popup: 'animate__animated animate__zoomIn'
+        },
+        hideClass: {
+          popup: 'animate__animated animate__zoomOut'
+        }
       }).then((result) => {
         if (result.isConfirmed) {
           window.location.href = '{{ path('app_verify_email_send') }}';
@@ -27,16 +37,21 @@
     {% for label, messages in app.flashes %}
       {% for message in messages %}
         Swal.fire({
-          title: '{{ label|capitalize }}',
-          text: '{{ message|e('js') }}',
-          icon: '{% if label in ['danger','error'] %}error{% else %}{{ label }}{% endif %}',
+          title: '<span class="text-{{ label in ['danger','error'] ? 'danger' : label }}">{{ label|capitalize }}</span>',
+          html: '<div class="text-body">{{ message|e('js') }}</div>',
+          icon: '{{ label in ['danger','error'] ? 'error' : label }}',
           toast: true,
           position: 'top-end',
           showConfirmButton: false,
           timer: 5000,
-          timerProgressBar: true,
           customClass: {
-            popup: 'colored-toast'
+            popup: 'colored-toast border-{{ label in ['danger','error'] ? 'danger' : label }} animate__animated animate__fadeInRight'
+          },
+          showClass: {
+            popup: 'animate__animated animate__fadeInRight'
+          },
+          hideClass: {
+            popup: 'animate__animated animate__fadeOutRight'
           }
         });
       {% endfor %}
@@ -46,8 +61,14 @@
 
 <style>
   .swal2-popup.colored-toast {
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    border-radius: 1rem;
-    font-size: 1rem;
+    font-family: 'Public Sans', sans-serif;
+    box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+    border-left: 4px solid;
+    font-size: 0.9375rem;
+  }
+  .swal2-popup .swal2-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
   }
 </style>

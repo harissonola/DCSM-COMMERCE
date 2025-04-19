@@ -51,9 +51,10 @@
 		<link
 		rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/apex-charts/apex-charts.css">
 
-		<!-- 5. SweetAlert2 CSS -->
-		<link
-		rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"/>
+		<!-- SweetAlert2 CSS from Sneat CDN -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/sweetalert2/sweetalert2.css" />
+		<!-- Animate.css for animations -->
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/animate-css/animate.css" />
 
 		<!-- 6. DataTables CSS -->
 		<link
@@ -101,29 +102,9 @@
 				transform: rotate(360deg);
 			}
 		}
-		/* SweetAlert2 dark style overrides */
-		.swal2-popup {
-			background-color: var(--bs-dark) !important;
-			color: var(--bs-body-color) !important;
-			border: 1px solid rgba(255, 255, 255, 0.1) !important;
-		}
-		.swal2-title,
-		.swal2-content {
-			color: var(--bs-body-color) !important;
-		}
-		.swal2-icon.swal2-success .swal2-success-ring {
-			border-color: rgba(105, 108, 255, 0.3) !important;
-		}
-		.swal2-icon.swal2-success [class^=swal2-success-line] {
-			background-color: #696cff !important;
-		}
-		.swal2-icon.swal2-error {
-			border-color: #ff3e1d !important;
-		}
-		.swal2-icon.swal2-error [class^=swal2-x-mark-line] {
-			background-color: #ff3e1d !important;
-		}
 	</style>
+
+	
 
 	{% block javascripts %}
 		{% block importmap %}
@@ -156,8 +137,8 @@
 		<!-- 2. DataTables JS -->
 		 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 
-		<!-- 3. SweetAlert2 JS -->
-		 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+		<!-- SweetAlert2 JS from Sneat CDN -->
+		<script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/libs/sweetalert2/sweetalert2.js"></script>
 
 		<!-- 4. Sneat Core JS -->
 		 <script src="https://cdn.jsdelivr.net/gh/themeselection/sneat-html-admin-template-free@main/assets/vendor/js/helpers.js"></script>

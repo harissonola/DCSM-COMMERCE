@@ -159,7 +159,7 @@
 <input type="hidden" id="csrfToken" value="{{ csrf_token('crypto_deposit') }}">
 <input type="hidden" id="checkUrl" value="{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}">
 
-<script nonce="{{ csp_nonce }}">
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     // Compte à rebours
     const expiresAt = new Date(document.getElementById('expiresAt').value);

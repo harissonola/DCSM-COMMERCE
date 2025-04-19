@@ -198,7 +198,7 @@
 <div class="wallet-container animate__animated animate__fadeIn">
 	<h2 class="section-title">Sélectionnez votre portefeuille</h2>
 
-	<form action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" method="post">
+	<form action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" method="post" turbo-data="false">
 		<input type="hidden" name="_token" value="{{ csrf_token('select_wallet') }}">
 
 		<div class="mb-4">

@@ -41,10 +41,10 @@ class PaymentController extends AbstractController
         'doge' => 'Dogecoin (DOGE)',
     
         // Stablecoins USDT avec réseaux (vérifiés)
-        'usdt_erc20' => 'Tether (USDT-ERC20)',
-        'usdt_trc20' => 'Tether (USDT-TRC20)',
-        'usdt_bep20' => 'Tether (USDT-BEP20)',
-        'usdt_polygon' => 'Tether (USDT-Polygon)',
+        'usdt.erc20' => 'Tether (USDT-ERC20)',
+        'usdt.trc20' => 'Tether (USDT-TRC20)',
+        'usdt.bep20' => 'Tether (USDT-BEP20)',
+        'usdt.polygon' => 'Tether (USDT-Polygon)',
         
         // Autres cryptos importantes
         'shib' => 'Shiba Inu (SHIB)',

@@ -122,10 +122,8 @@ class PaymentController extends AbstractController
         $currency = strtolower(trim($request->request->get('currency')));
         $address = trim($request->request->get('address'));
 
-        dd($currency, $address, $amount, $user->getBalance());
-
         // Validation initiale
-        if ($amount > $user->getBalance()) {
+        if ($user->getBalance() < $amount) {
             $this->addFlash('danger', 'Solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }

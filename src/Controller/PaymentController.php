@@ -140,13 +140,13 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Authentification avec email requis
+            // 1. Authentification avec email directement dans le code
             $authResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
                 ],
                 'json' => [
-                    'email' => $_ENV['NOWPAYMENTS_API_EMAIL'] ?? 'dcsmcommerce@gmail.com'
+                    'email' => 'dcsmcommerce@gmail.com' // Email directement intégré
                 ],
                 'timeout' => 10
             ]);
@@ -220,26 +220,23 @@ class PaymentController extends AbstractController
             $errorResponse = json_decode($e->getResponse()->getBody(), true);
 
             $errorMessage = 'Erreur lors du traitement du retrait';
-            if ($statusCode === 400 && isset($errorResponse['code']) && $errorResponse['code'] === 'INVALID_REQUEST_PARAMS') {
-                $errorMessage = 'Configuration API incomplète - email manquant';
-                // Enregistrement alternatif de l'erreur
-                file_put_contents(
-                    __DIR__ . '/../../var/log/payment_errors.log',
-                    date('[Y-m-d H:i:s]') . ' ERREUR: Configuration NowPayments manquante - Ajouter NOWPAYMENTS_API_EMAIL dans .env' . PHP_EOL,
-                    FILE_APPEND
-                );
-            } elseif ($statusCode === 403) {
+            if ($statusCode === 403) {
                 $errorMessage = 'Problème d\'authentification avec le service de paiement';
             }
 
             $this->addFlash('danger', $errorMessage . '. Notre équipe a été notifiée.');
-        } catch (\Exception $e) {
             file_put_contents(
                 __DIR__ . '/../../var/log/payment_errors.log',
                 date('[Y-m-d H:i:s]') . ' ERREUR: ' . $e->getMessage() . PHP_EOL,
                 FILE_APPEND
             );
+        } catch (\Exception $e) {
             $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
+            file_put_contents(
+                __DIR__ . '/../../var/log/payment_errors.log',
+                date('[Y-m-d H:i:s]') . ' ERREUR: ' . $e->getMessage() . PHP_EOL,
+                FILE_APPEND
+            );
         }
 
         return $this->redirectToRoute('app_profile');

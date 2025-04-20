@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Retrait complété</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            background-color: #2e7d32;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success-box {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-left: 4px solid #2e7d32;
+            margin: 20px 0;
+        }
+        .tx-link {
+            color: #2e7d32;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .amount {
+            font-size: 24px;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Retrait complété avec succès</h1>
+    </div>
+    
+    <div class="content">
+        <p>Bonjour,</p>
+        
+        <p>Nous vous confirmons que votre retrait a été traité avec succès.</p>
+        
+        <div class="success-box">
+            <p><strong>Montant:</strong> <span class="amount">{{ amount }} {{ currency|upper }}</span></p>
+            <p><strong>Adresse de destination:</strong> {{ address }}</p>
+            {% if tx_hash %}
+                <p><strong>Transaction:</strong> 
+                    <a href="https://blockchair.com/search?q={{ tx_hash }}" class="tx-link" target="_blank">
+                        Voir sur l'explorateur
+                    </a>
+                </p>
+            {% endif %}
+            <p><strong>Date:</strong> {{ date|date('d/m/Y H:i') }}</p>
+        </div>
+        
+        <p>Les fonds devraient apparaître dans votre portefeuille sous peu, selon la rapidité du réseau blockchain.</p>
+        
+        <p>Merci d'utiliser nos services.</p>
+        
+        <p>Cordialement,<br>L'équipe {{ app_name }}</p>
+        
+        <div class="footer">
+            <p>© {{ "now"|date('Y') }} {{ app_name }}. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>

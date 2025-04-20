@@ -139,7 +139,7 @@ class PaymentController extends AbstractController
             ->setMethod('crypto_' . $currency)
             ->setStatus('pending')
             ->setCreatedAt(new DateTimeImmutable())
-            ->setExternalId($address);
+            ->setExternalId('WITHDRAW_' . $user->getId() . '_' . time());
 
         $this->entityManager->beginTransaction();
         try {
@@ -147,19 +147,51 @@ class PaymentController extends AbstractController
             $this->entityManager->persist($transaction);
             $this->entityManager->flush();
 
-            $this->processWithdrawal($transaction, $currency, $address);
+            $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
+                'headers' => [
+                    'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
+                    'Content-Type' => 'application/json'
+                ],
+                'json' => [
+                    'withdrawal_amount' => $amount,
+                    'withdrawal_currency' => $currency,
+                    'address' => $address,
+                    'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                    'unique_external_id' => $transaction->getExternalId()
+                ],
+                'timeout' => 15
+            ]);
 
+            $data = json_decode($payoutResponse->getBody(), true);
+
+            if (!isset($data['payout_id'])) {
+                throw new \RuntimeException('NowPayments API error: ' . ($data['message'] ?? 'Unknown error'));
+            }
+
+            $transaction
+                ->setExternalId($data['payout_id'])
+                ->setMetadata([
+                    'np_response' => $data,
+                    'wallet_address' => $address,
+                    'currency' => $currency
+                ]);
+
+            $this->entityManager->flush();
             $this->entityManager->commit();
+
+            $this->sendWithdrawalConfirmationEmail($user, $transaction);
+
             $this->addFlash('success', sprintf(
-                'Demande de retrait de %.2f USD enregistrée. Frais: %.2f USD',
+                'Demande de retrait de %.2f %s enregistrée. Frais: %.2f USD. Le traitement peut prendre jusqu\'à 24h.',
                 $amount,
+                strtoupper($currency),
                 $fees
             ));
             return $this->redirectToRoute('app_profile');
         } catch (\Exception $e) {
             $this->entityManager->rollback();
             $this->logError('Withdrawal failed', ['error' => $e->getMessage()]);
-            $this->addFlash('danger', 'Erreur lors du traitement du retrait');
+            $this->addFlash('danger', 'Erreur lors du traitement du retrait: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -375,11 +407,9 @@ class PaymentController extends AbstractController
             if ($paymentStatus === 'finished') {
                 $this->entityManager->beginTransaction();
                 try {
-                    // Créditer le compte utilisateur
                     $user = $transaction->getUser();
                     $user->setBalance($user->getBalance() + $transaction->getAmount());
 
-                    // Mettre à jour la transaction
                     $transaction->setStatus('completed')
                         ->setVerifiedAt(new \DateTime());
 
@@ -450,62 +480,194 @@ class PaymentController extends AbstractController
             $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
             file_put_contents($ipnLogPath, "Payload décodé: " . print_r($data, true) . "\n", FILE_APPEND);
 
-            $requiredFields = ['payment_id', 'payment_status', 'actually_paid', 'pay_currency', 'order_id'];
-            foreach ($requiredFields as $field) {
-                if (!isset($data[$field])) {
-                    throw new \RuntimeException("Champ manquant: $field");
-                }
+            // Détection du type de notification
+            if (isset($data['payout_id'])) {
+                return $this->handleWithdrawalIPN($data);
+            } elseif (isset($data['payment_id'])) {
+                return $this->handleDepositIPN($data);
             }
 
-            if (!preg_match('/^DEPO_(\d+)_\d+$/', $data['order_id'], $matches)) {
-                throw new \RuntimeException("Format order_id invalide");
-            }
-            $transactionId = $matches[1];
+            throw new \RuntimeException("Type de notification IPN non reconnu");
 
-            $transaction = $this->entityManager->getRepository(Transactions::class)->find($transactionId);
-            if (!$transaction) {
-                throw new \RuntimeException("Transaction introuvable pour ID: $transactionId");
-            }
-
-            if ($transaction->getType() !== 'deposit') {
-                throw new \RuntimeException("Type de transaction invalide");
-            }
-
-            $expectedCurrency = str_replace('crypto_', '', $transaction->getMethod());
-            if (strtolower($data['pay_currency']) !== strtolower($expectedCurrency)) {
-                throw new \RuntimeException(sprintf(
-                    "Devise mismatch: attendu %s, reçu %s",
-                    $expectedCurrency,
-                    $data['pay_currency']
-                ));
-            }
-
-            switch ($data['payment_status']) {
-                case 'finished':
-                    $this->handleSuccessfulPayment($transaction, $data);
-                    break;
-
-                case 'partially_paid':
-                    $this->handlePartialPayment($transaction, $data);
-                    break;
-
-                case 'failed':
-                    $this->handleFailedPayment($transaction, $data);
-                    break;
-
-                case 'expired':
-                    $this->handleExpiredPayment($transaction);
-                    break;
-
-                default:
-                    throw new \RuntimeException("Statut de paiement non géré: {$data['payment_status']}");
-            }
-
-            return new JsonResponse(['status' => 'success'], 200);
         } catch (\Exception $e) {
             file_put_contents($ipnLogPath, "ERREUR: " . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
             return new JsonResponse(['error' => $e->getMessage()], 400);
         }
+    }
+
+    private function handleWithdrawalIPN(array $ipnData): JsonResponse
+    {
+        $requiredFields = ['payout_id', 'withdrawal_status', 'withdrawal_id', 'amount', 'currency'];
+        foreach ($requiredFields as $field) {
+            if (!isset($ipnData[$field])) {
+                throw new \RuntimeException("Champ manquant dans l'IPN de retrait: $field");
+            }
+        }
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)
+            ->findOneBy(['external_id' => $ipnData['payout_id'], ['type' => 'withdrawal']);
+
+        if (!$transaction) {
+            throw new \RuntimeException("Transaction de retrait introuvable pour payout_id: " . $ipnData['payout_id']);
+        }
+
+        $this->entityManager->beginTransaction();
+        try {
+            $user = $transaction->getUser();
+            $metadata = $transaction->getMetadata() ?? [];
+
+            switch ($ipnData['withdrawal_status']) {
+                case 'finished':
+                    $transaction->setStatus('completed')
+                        ->setVerifiedAt(new \DateTime())
+                        ->setMetadata(array_merge($metadata, [
+                            'ipn_data' => $ipnData,
+                            'tx_hash' => $ipnData['txid'] ?? null
+                        ]));
+
+                    $this->sendWithdrawalCompletedEmail($user, $transaction, $ipnData);
+                    break;
+
+                case 'failed':
+                    // Rembourser l'utilisateur en cas d'échec
+                    $user->setBalance($user->getBalance() + $transaction->getAmount() + $transaction->getFees());
+
+                    $transaction->setStatus('failed')
+                        ->setMetadata(array_merge($metadata, [
+                            'ipn_data' => $ipnData,
+                            'failure_reason' => $ipnData['error_message'] ?? 'unknown'
+                        ]));
+
+                    $this->sendWithdrawalFailedEmail($user, $transaction, $ipnData);
+                    break;
+
+                case 'pending':
+                    $transaction->setStatus('processing')
+                        ->setMetadata(array_merge($metadata, ['ipn_data' => $ipnData]));
+                    break;
+
+                default:
+                    throw new \RuntimeException("Statut de retrait non géré: " . $ipnData['withdrawal_status']);
+            }
+
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+
+            return new JsonResponse(['status' => 'success'], 200);
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
+    }
+
+    private function handleDepositIPN(array $ipnData): JsonResponse
+    {
+        $requiredFields = ['payment_id', 'payment_status', 'actually_paid', 'pay_currency', 'order_id'];
+        foreach ($requiredFields as $field) {
+            if (!isset($ipnData[$field])) {
+                throw new \RuntimeException("Champ manquant: $field");
+            }
+        }
+
+        if (!preg_match('/^DEPO_(\d+)_\d+$/', $ipnData['order_id'], $matches)) {
+            throw new \RuntimeException("Format order_id invalide");
+        }
+        $transactionId = $matches[1];
+
+        $transaction = $this->entityManager->getRepository(Transactions::class)->find($transactionId);
+        if (!$transaction) {
+            throw new \RuntimeException("Transaction introuvable pour ID: $transactionId");
+        }
+
+        if ($transaction->getType() !== 'deposit') {
+            throw new \RuntimeException("Type de transaction invalide");
+        }
+
+        $expectedCurrency = str_replace('crypto_', '', $transaction->getMethod());
+        if (strtolower($ipnData['pay_currency']) !== strtolower($expectedCurrency)) {
+            throw new \RuntimeException(sprintf(
+                "Devise mismatch: attendu %s, reçu %s",
+                $expectedCurrency,
+                $ipnData['pay_currency']
+            ));
+        }
+
+        switch ($ipnData['payment_status']) {
+            case 'finished':
+                $this->handleSuccessfulPayment($transaction, $ipnData);
+                break;
+
+            case 'partially_paid':
+                $this->handlePartialPayment($transaction, $ipnData);
+                break;
+
+            case 'failed':
+                $this->handleFailedPayment($transaction, $ipnData);
+                break;
+
+            case 'expired':
+                $this->handleExpiredPayment($transaction);
+                break;
+
+            default:
+                throw new \RuntimeException("Statut de paiement non géré: {$ipnData['payment_status']}");
+        }
+
+        return new JsonResponse(['status' => 'success'], 200);
+    }
+
+    private function sendWithdrawalConfirmationEmail(User $user, Transactions $transaction): void
+    {
+        $email = (new TemplatedEmail())
+            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+            ->to($user->getEmail())
+            ->subject('Confirmation de demande de retrait')
+            ->htmlTemplate('emails/withdrawal_requested.html.twig')
+            ->context([
+                'amount' => $transaction->getAmount(),
+                'currency' => str_replace('crypto_', '', $transaction->getMethod()),
+                'fees' => $transaction->getFees(),
+                'address' => $transaction->getMetadata()['wallet_address'],
+                'date' => new \DateTime()
+            ]);
+
+        $this->mailer->send($email);
+    }
+
+    private function sendWithdrawalCompletedEmail(User $user, Transactions $transaction, array $ipnData): void
+    {
+        $email = (new TemplatedEmail())
+            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+            ->to($user->getEmail())
+            ->subject('Retrait complété')
+            ->htmlTemplate('emails/withdrawal_completed.html.twig')
+            ->context([
+                'amount' => $transaction->getAmount(),
+                'currency' => str_replace('crypto_', '', $transaction->getMethod()),
+                'tx_hash' => $ipnData['txid'] ?? null,
+                'address' => $transaction->getMetadata()['wallet_address'],
+                'date' => new \DateTime()
+            ]);
+
+        $this->mailer->send($email);
+    }
+
+    private function sendWithdrawalFailedEmail(User $user, Transactions $transaction, array $ipnData): void
+    {
+        $email = (new TemplatedEmail())
+            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+            ->to($user->getEmail())
+            ->subject('Échec du retrait')
+            ->htmlTemplate('emails/withdrawal_failed.html.twig')
+            ->context([
+                'amount' => $transaction->getAmount(),
+                'currency' => str_replace('crypto_', '', $transaction->getMethod()),
+                'reason' => $ipnData['error_message'] ?? 'Raison inconnue',
+                'address' => $transaction->getMetadata()['wallet_address'],
+                'date' => new \DateTime()
+            ]);
+
+        $this->mailer->send($email);
     }
 
     private function handlePartialPayment(Transactions $transaction, array $ipnData): void
@@ -585,12 +747,10 @@ class PaymentController extends AbstractController
 
     private function handleSuccessfulPayment(Transactions $transaction, array $ipnData): void
     {
-        // Ne pas traiter les transactions déjà complétées
         if ($transaction->getStatus() === 'completed') {
             return;
         }
 
-        // Validation des montants
         $expectedAmount = $transaction->getAmount();
         $receivedAmount = (float)($ipnData['actually_paid'] ?? 0);
         $minAcceptedAmount = $expectedAmount * (1 - self::PAYMENT_TOLERANCE);
@@ -611,12 +771,10 @@ class PaymentController extends AbstractController
 
         $this->entityManager->beginTransaction();
         try {
-            // 1. Mettre à jour le solde utilisateur
             $user = $transaction->getUser();
             $newBalance = $user->getBalance() + $expectedAmount;
             $user->setBalance($newBalance);
 
-            // 2. Mettre à jour la transaction
             $transaction
                 ->setStatus('completed')
                 ->setVerifiedAt(new \DateTime())
@@ -631,10 +789,8 @@ class PaymentController extends AbstractController
                     ]
                 ));
 
-            // 3. Envoyer la confirmation
             $this->sendConfirmationEmail($user, $transaction, $ipnData);
 
-            // 4. Sauvegarder les changements
             $this->entityManager->flush();
             $this->entityManager->commit();
 

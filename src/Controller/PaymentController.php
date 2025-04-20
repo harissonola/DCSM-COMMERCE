@@ -122,8 +122,9 @@ class PaymentController extends AbstractController
         $currency = strtolower(trim($request->request->get('currency')));
         $address = trim($request->request->get('address'));
 
+        // Validation initiale
         if ($amount > $user->getBalance()) {
-            $this->addFlash('danger', 'Solde Insufisant');
+            $this->addFlash('danger', 'Solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -136,6 +137,7 @@ class PaymentController extends AbstractController
         $fees = $this->calculateWithdrawalFees($amount);
         $totalAmount = $amount + $fees;
 
+        // Création de la transaction
         $transaction = (new Transactions())
             ->setUser($user)
             ->setType('withdrawal')
@@ -148,14 +150,17 @@ class PaymentController extends AbstractController
 
         $this->entityManager->beginTransaction();
         try {
+            // Mise à jour du solde utilisateur
             $user->setBalance($user->getBalance() - $totalAmount);
             $this->entityManager->persist($transaction);
             $this->entityManager->flush();
 
+            // Appel API NowPayments avec gestion améliorée
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
-                    'Content-Type' => 'application/json'
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $_ENV['NOWPAYMENTS_API_KEY']
                 ],
                 'json' => [
                     'withdrawal_amount' => $amount,
@@ -167,38 +172,70 @@ class PaymentController extends AbstractController
                 'timeout' => 15
             ]);
 
-            $data = json_decode($payoutResponse->getBody(), true);
+            $responseData = json_decode($payoutResponse->getBody(), true);
 
-            if (!isset($data['payout_id'])) {
-                throw new \RuntimeException('NowPayments API error: ' . ($data['message'] ?? 'Unknown error'));
+            if (!isset($responseData['payout_id'])) {
+                throw new \RuntimeException('Réponse API invalide: ' . json_encode($responseData));
             }
 
+            // Mise à jour de la transaction avec plus de métadonnées
             $transaction
-                ->setExternalId($data['payout_id'])
+                ->setExternalId($responseData['payout_id'])
+                ->setStatus('processing')
                 ->setMetadata([
-                    'np_response' => $data,
+                    'np_response' => $responseData,
                     'wallet_address' => $address,
-                    'currency' => $currency
+                    'currency' => $currency,
+                    'fees_breakdown' => [
+                        'amount' => $amount,
+                        'fees' => $fees,
+                        'total_deducted' => $totalAmount
+                    ],
+                    'api_timestamp' => $responseData['created_at'] ?? null
                 ]);
 
             $this->entityManager->flush();
             $this->entityManager->commit();
 
+            // Notification
             $this->sendWithdrawalConfirmationEmail($user, $transaction);
 
             $this->addFlash('success', sprintf(
-                'Demande de retrait de %.2f %s enregistrée. Frais: %.2f USD. Le traitement peut prendre jusqu\'à 24h.',
+                'Demande de retrait de %.2f %s enregistrée. Frais: %.2f %s. Le traitement peut prendre jusqu\'à 24h.',
                 $amount,
                 strtoupper($currency),
-                $fees
+                $fees,
+                strtoupper($currency)
             ));
-            return $this->redirectToRoute('app_profile');
+
+            // Log de succès
+            $this->logInfo('Withdrawal initiated', [
+                'user_id' => $user->getId(),
+                'transaction_id' => $transaction->getId(),
+                'amount' => $amount,
+                'currency' => $currency,
+                'payout_id' => $responseData['payout_id']
+            ]);
         } catch (\Exception $e) {
             $this->entityManager->rollback();
-            $this->logError('Withdrawal failed', ['error' => $e->getMessage()]);
-            $this->addFlash('danger', 'Erreur lors du traitement du retrait: ' . $e->getMessage());
+
+            // Log détaillé de l'erreur
+            $this->logError('Withdrawal failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => [
+                    'user_id' => $user->getId(),
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'address' => substr($address, 0, 10) . '...' // Masquage partiel pour la sécurité
+                ]
+            ]);
+
+            $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
             return $this->redirectToRoute('app_profile');
         }
+
+        return $this->redirectToRoute('app_profile');
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]
@@ -493,7 +530,6 @@ class PaymentController extends AbstractController
             }
 
             throw new \RuntimeException("Type de notification IPN non reconnu");
-
         } catch (\Exception $e) {
             file_put_contents($ipnLogPath, "ERREUR: " . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
             return new JsonResponse(['error' => $e->getMessage()], 400);

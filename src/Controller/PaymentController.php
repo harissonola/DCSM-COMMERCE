@@ -28,38 +28,50 @@ class PaymentController extends AbstractController
     public const DEPOSIT_EXPIRATION_HOURS = 2;
 
     public const SUPPORTED_CRYPTOS = [
-        // Top 10 cryptos (par capitalisation)
-        'btc' => 'Bitcoin (BTC)',
-        'eth' => 'Ethereum (ETH)',
-        'usdt' => 'Tether (USDT)', // Spécifiez le réseau après
-        'bnb' => 'Binance Coin (BNB)',
-        'sol' => 'Solana (SOL)',
-        'usdc' => 'USD Coin (USDC)',
-        'xrp' => 'XRP (XRP)',
         'ada' => 'Cardano (ADA)',
+        'atom' => 'Cosmos (ATOM)',
         'avax' => 'Avalanche (AVAX)',
-        'doge' => 'Dogecoin (DOGE)',
-    
-        // Stablecoins USDT avec réseaux (vérifiés)
-        'usdt.erc20' => 'Tether (USDT-ERC20)',
-        'usdt.trc20' => 'Tether (USDT-TRC20)',
-        'usdt.bep20' => 'Tether (USDT-BEP20)',
-        'usdt.polygon' => 'Tether (USDT-Polygon)',
-        
-        // Autres cryptos importantes
-        'shib' => 'Shiba Inu (SHIB)',
-        'dot' => 'Polkadot (DOT)',
-        'ltc' => 'Litecoin (LTC)',
+        'axs' => 'Axie Infinity (AXS)',
         'bch' => 'Bitcoin Cash (BCH)',
-        'trx' => 'TRON (TRX)',
-        'matic' => 'Polygon (MATIC)',
-        'ton' => 'Toncoin (TON)',
-        
-        // Nouveaux ajouts pertinents (2024)
+        'bnb' => 'Binance Coin (BNB)',
+        'bonk' => 'Bonk (BONK)',
+        'btc' => 'Bitcoin (BTC)',
+        'busdbsc' => 'Binance USD (BUSD-BEP20)',
+        'dai' => 'Dai (DAI)',
+        'doge' => 'Dogecoin (DOGE)',
+        'dot' => 'Polkadot (DOT)',
+        'egld' => 'Elrond (EGLD)',
+        'eth' => 'Ethereum (ETH)',
+        'fil' => 'Filecoin (FIL)',
+        'gala' => 'Gala (GALA)',
+        'hbar' => 'Hedera (HBAR)',
         'link' => 'Chainlink (LINK)',
-        'xlm' => 'Stellar (XLM)',
+        'ltc' => 'Litecoin (LTC)',
+        'mana' => 'Decentraland (MANA)',
+        'matic' => 'Polygon (MATIC)',
+        'pepe' => 'Pepe (PEPE)',
+        'sand' => 'The Sandbox (SAND)',
+        'sei' => 'Sei (SEI)',
+        'shib' => 'Shiba Inu (SHIB)',
+        'sol' => 'Solana (SOL)',
+        'sui' => 'Sui (SUI)',
+        'ton' => 'Toncoin (TON)',
+        'trx' => 'TRON (TRX)',
+        'tusd' => 'TrueUSD (TUSD)',
         'uni' => 'Uniswap (UNI)',
-        'atom' => 'Cosmos (ATOM)'
+        'usdc' => 'USD Coin (USDC)',
+        'usdcbsc' => 'USD Coin (USDC-BEP20)',
+        'usdcmatic' => 'USD Coin (USDC-Polygon)',
+        'usdterc20' => 'Tether (USDT-ERC20)',
+        'usdtmatic' => 'Tether (USDT-Polygon)',
+        'usdtsol' => 'Tether (USDT-Solana)',
+        'usdttrc20' => 'Tether (USDT-TRC20)',
+        'usdtarb' => 'Tether (USDT-Arbitrum)',
+        'usdtbsc' => 'Tether (USDT-BEP20)',
+        'vet' => 'VeChain (VET)',
+        'xlm' => 'Stellar (XLM)',
+        'xrp' => 'XRP (XRP)',
+        'xtz' => 'Tezos (XTZ)'
     ];
 
     private $mailer;

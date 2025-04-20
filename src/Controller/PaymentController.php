@@ -614,6 +614,7 @@ class PaymentController extends AbstractController
     private function sendConfirmationEmail(User $user, Transactions $transaction, array $ipnData): void
     {
         $email = (new TemplatedEmail())
+            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
             ->to($user->getEmail())
             ->subject('Confirmation de dépôt')
             ->htmlTemplate('emails/deposit_confirmed.html.twig')

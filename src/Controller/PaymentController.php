@@ -129,8 +129,8 @@ class PaymentController extends AbstractController
         }
 
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
+        dd($errors);
         if (!empty($errors)) {
-            dd($errors);
             $this->addFlash('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }

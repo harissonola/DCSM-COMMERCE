@@ -400,7 +400,7 @@ class PaymentController extends AbstractController
         }
     }
 
-    #[Route('/nowpayments/ipn', name: 'nowpayments_ipn')]
+    #[Route('/nowpayments/ipn', name: 'nowpayments_ipn', methods: ['POST'])]
     public function handleNowPaymentsIPN(Request $request): Response
     {
         $content = $request->getContent();

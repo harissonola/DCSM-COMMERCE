@@ -130,7 +130,6 @@ class PaymentController extends AbstractController
 
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
-            dd($errors);
             $this->addFlash('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }
@@ -138,27 +137,8 @@ class PaymentController extends AbstractController
         $fees = $this->calculateWithdrawalFees($amount);
         $totalAmount = $amount + $fees;
 
-        // Création de la transaction
-        $transaction = (new Transactions())
-            ->setUser($user)
-            ->setType('withdrawal')
-            ->setAmount($amount)
-            ->setFees($fees)
-            ->setMethod('crypto_' . $currency)
-            ->setStatus('pending')
-            ->setCreatedAt(new DateTimeImmutable())
-            ->setExternalId('WITHDRAW_' . $user->getId() . '_' . time());
-
-        dd($transaction);
-
-        $this->entityManager->beginTransaction();
         try {
-            // Mise à jour du solde utilisateur
-            $user->setBalance($user->getBalance() - $totalAmount);
-            $this->entityManager->persist($transaction);
-            $this->entityManager->flush();
-
-            // Appel API NowPayments avec gestion améliorée
+            // D'ABORD l'appel API (avant toute modification en base)
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
@@ -170,7 +150,7 @@ class PaymentController extends AbstractController
                     'withdrawal_currency' => $currency,
                     'address' => $address,
                     'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                    'unique_external_id' => $transaction->getExternalId()
+                    'unique_external_id' => 'WITHDRAW_' . $user->getId() . '_' . time()
                 ],
                 'timeout' => 15
             ]);
@@ -181,10 +161,16 @@ class PaymentController extends AbstractController
                 throw new \RuntimeException('Réponse API invalide: ' . json_encode($responseData));
             }
 
-            // Mise à jour de la transaction avec plus de métadonnées
-            $transaction
-                ->setExternalId($responseData['payout_id'])
+            // SEULEMENT SI l'API réussit, on modifie la base
+            $transaction = (new Transactions())
+                ->setUser($user)
+                ->setType('withdrawal')
+                ->setAmount($amount)
+                ->setFees($fees)
+                ->setMethod('crypto_' . $currency)
                 ->setStatus('processing')
+                ->setCreatedAt(new DateTimeImmutable())
+                ->setExternalId($responseData['payout_id'])
                 ->setMetadata([
                     'np_response' => $responseData,
                     'wallet_address' => $address,
@@ -197,8 +183,9 @@ class PaymentController extends AbstractController
                     'api_timestamp' => $responseData['created_at'] ?? null
                 ]);
 
+            $user->setBalance($user->getBalance() - $totalAmount);
+            $this->entityManager->persist($transaction);
             $this->entityManager->flush();
-            $this->entityManager->commit();
 
             // Notification
             $this->sendWithdrawalConfirmationEmail($user, $transaction);
@@ -211,31 +198,24 @@ class PaymentController extends AbstractController
                 strtoupper($currency)
             ));
 
-            // Log de succès
             $this->logInfo('Withdrawal initiated', [
                 'user_id' => $user->getId(),
-                'transaction_id' => $transaction->getId(),
                 'amount' => $amount,
                 'currency' => $currency,
                 'payout_id' => $responseData['payout_id']
             ]);
         } catch (\Exception $e) {
-            $this->entityManager->rollback();
-
-            // Log détaillé de l'erreur
             $this->logError('Withdrawal failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => [
                     'user_id' => $user->getId(),
                     'amount' => $amount,
-                    'currency' => $currency,
-                    'address' => substr($address, 0, 10) . '...' // Masquage partiel pour la sécurité
+                    'currency' => $currency
                 ]
             ]);
 
             $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
-            return $this->redirectToRoute('app_profile');
         }
 
         return $this->redirectToRoute('app_profile');

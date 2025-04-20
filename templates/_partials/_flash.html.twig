@@ -1,6 +1,6 @@
 {% if app.user and app.user.isVerified == 0 %}
   <script>
-    document.addEventListener('turbo:load', function () {
+    document.addEventListener('turbo:load', function() {
       showConfirm({
         title: '<span class="text-danger">Compte inactif</span>',
         text: `<div class="text-body">
@@ -20,16 +20,42 @@
 {% endif %}
 
 <script>
-  document.addEventListener('turbo:load', function () {
+  document.addEventListener('turbo:load', function() {
+    // Traitement des messages flash
     {% for label, messages in app.flashes %}
       {% for message in messages %}
+        {% set alertType = 'info' %}
+        {% if label in ['success', 'info', 'warning', 'danger', 'error'] %}
+          {% set alertType = label == 'error' ? 'danger' : label %}
+        {% endif %}
+        
         showAlert({
-          title: '{{ label|capitalize }}',
+          title: '{{ label|capitalize|replace({'_': ' '}) }}',
           text: '{{ message|e('js') }}',
-          type: '{{ label in ['danger','error'] ? 'error' : label }}',
-          timer: 5000
+          type: '{{ alertType }}',
+          timer: {{ alertType in ['success', 'info'] ? '5000' : '8000' }},
+          position: 'top-end',
+          showConfirmButton: false,
+          toast: true,
+          timerProgressBar: true
         });
       {% endfor %}
     {% endfor %}
   });
 </script>
+{% if app.request.query.get('error') %}
+  <script>
+    document.addEventListener('turbo:load', function() {
+      showAlert({
+        title: 'Erreur',
+        text: '{{ app.request.query.get('error')|e('js') }}',
+        type: 'danger',
+        timer: 8000,
+        position: 'top-end',
+        showConfirmButton: false,
+        toast: true,
+        timerProgressBar: true
+      });
+    });
+  </script>
+{% endif %}

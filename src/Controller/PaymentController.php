@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Mime\Address;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\{Request, Response, RedirectResponse, JsonResponse};
 use Symfony\Component\Routing\Annotation\Route;
@@ -505,6 +506,7 @@ class PaymentController extends AbstractController
     ): void {
         try {
             $email = (new TemplatedEmail())
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
                 ->to($email)
                 ->subject('[Important] Instructions pour votre dépôt en crypto')
                 ->htmlTemplate('emails/crypto_deposit_instructions.html.twig')

@@ -364,7 +364,8 @@ class PaymentController extends AbstractController
         if ($transaction->getStatus() === 'completed') {
             return $this->json([
                 'status' => 'completed',
-                'expires_at' => $transaction->getExpiresAt()->format('c')
+                'expires_at' => $transaction->getExpiresAt()->format('c'),
+                'new_balance' => $transaction->getUser()->getBalance()
             ]);
         }
 
@@ -372,11 +373,28 @@ class PaymentController extends AbstractController
             $paymentStatus = $this->checkNowPaymentsStatus($transaction->getExternalId());
 
             if ($paymentStatus === 'finished') {
-                $this->completeDeposit($transaction);
-                return $this->json([
-                    'status' => 'completed',
-                    'expires_at' => $transaction->getExpiresAt()->format('c')
-                ]);
+                $this->entityManager->beginTransaction();
+                try {
+                    // Créditer le compte utilisateur
+                    $user = $transaction->getUser();
+                    $user->setBalance($user->getBalance() + $transaction->getAmount());
+
+                    // Mettre à jour la transaction
+                    $transaction->setStatus('completed')
+                        ->setVerifiedAt(new \DateTime());
+
+                    $this->entityManager->flush();
+                    $this->entityManager->commit();
+
+                    return $this->json([
+                        'status' => 'completed',
+                        'expires_at' => $transaction->getExpiresAt()->format('c'),
+                        'new_balance' => $user->getBalance()
+                    ]);
+                } catch (\Exception $e) {
+                    $this->entityManager->rollback();
+                    throw $e;
+                }
             } elseif ($paymentStatus === 'expired') {
                 if ($transaction->getStatus() !== 'expired') {
                     $transaction->setStatus('expired');
@@ -404,12 +422,12 @@ class PaymentController extends AbstractController
     #[Route('/nowpayments/ipn', name: 'nowpayments_ipn', methods: ['POST', 'OPTIONS'])]
     public function handleNowPaymentsIPN(Request $request): Response
     {
-        $ipnLogPath = $this->getParameter('kernel.logs_dir').'/ipn.log';
+        $ipnLogPath = $this->getParameter('kernel.logs_dir') . '/ipn.log';
         $now = new \DateTime();
-        
+
         file_put_contents($ipnLogPath, "\n\n[{$now->format('Y-m-d H:i:s')}] Nouvelle requête IPN\n", FILE_APPEND);
-        file_put_contents($ipnLogPath, "Headers: ".json_encode($request->headers->all())."\n", FILE_APPEND);
-        file_put_contents($ipnLogPath, "Raw payload: ".$request->getContent()."\n", FILE_APPEND);
+        file_put_contents($ipnLogPath, "Headers: " . json_encode($request->headers->all()) . "\n", FILE_APPEND);
+        file_put_contents($ipnLogPath, "Raw payload: " . $request->getContent() . "\n", FILE_APPEND);
 
         if ($request->getMethod() === 'OPTIONS') {
             return new Response('', 204, [
@@ -430,7 +448,7 @@ class PaymentController extends AbstractController
 
         try {
             $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-            file_put_contents($ipnLogPath, "Payload décodé: ".print_r($data, true)."\n", FILE_APPEND);
+            file_put_contents($ipnLogPath, "Payload décodé: " . print_r($data, true) . "\n", FILE_APPEND);
 
             $requiredFields = ['payment_id', 'payment_status', 'actually_paid', 'pay_currency', 'order_id'];
             foreach ($requiredFields as $field) {
@@ -466,27 +484,26 @@ class PaymentController extends AbstractController
                 case 'finished':
                     $this->handleSuccessfulPayment($transaction, $data);
                     break;
-                    
+
                 case 'partially_paid':
                     $this->handlePartialPayment($transaction, $data);
                     break;
-                    
+
                 case 'failed':
                     $this->handleFailedPayment($transaction, $data);
                     break;
-                    
+
                 case 'expired':
                     $this->handleExpiredPayment($transaction);
                     break;
-                    
+
                 default:
                     throw new \RuntimeException("Statut de paiement non géré: {$data['payment_status']}");
             }
 
             return new JsonResponse(['status' => 'success'], 200);
-
         } catch (\Exception $e) {
-            file_put_contents($ipnLogPath, "ERREUR: ".$e->getMessage()."\nStack trace: ".$e->getTraceAsString()."\n", FILE_APPEND);
+            file_put_contents($ipnLogPath, "ERREUR: " . $e->getMessage() . "\nStack trace: " . $e->getTraceAsString() . "\n", FILE_APPEND);
             return new JsonResponse(['error' => $e->getMessage()], 400);
         }
     }
@@ -496,7 +513,7 @@ class PaymentController extends AbstractController
         $this->entityManager->beginTransaction();
         try {
             $receivedAmount = (float)$ipnData['actually_paid'];
-            
+
             $transaction
                 ->setStatus('partially_paid')
                 ->setMetadata(array_merge(
@@ -507,10 +524,10 @@ class PaymentController extends AbstractController
                         'remaining_amount' => $transaction->getAmount() - $receivedAmount
                     ]
                 ));
-            
+
             $this->entityManager->flush();
             $this->entityManager->commit();
-            
+
             $this->logInfo('Paiement partiel reçu', [
                 'transaction_id' => $transaction->getId(),
                 'received_amount' => $receivedAmount,
@@ -604,7 +621,6 @@ class PaymentController extends AbstractController
 
             $this->entityManager->flush();
             $this->entityManager->commit();
-
         } catch (\Exception $e) {
             $this->entityManager->rollback();
             throw $e;

@@ -2,43 +2,122 @@
 
 {% block title %}Sélection de cryptomonnaie{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .crypto-card {
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .crypto-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .crypto-card.selected {
+            border: 2px solid #0d6efd;
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+        .crypto-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+        #searchInput {
+            padding: 12px 20px;
+            border-radius: 25px;
+        }
+        .amount-badge {
+            font-size: 1.1rem;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        @media (max-width: 768px) {
+            .crypto-card {
+                padding: 15px;
+            }
+            .crypto-icon {
+                width: 30px;
+                height: 30px;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block body %}
-<div class="container py-5">
+<div class="container py-4 py-lg-5">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Sélectionnez une cryptomonnaie</h4>
+        <div class="col-lg-10">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-coins me-2"></i> Sélectionnez une cryptomonnaie</h4>
+                        <span class="amount-badge bg-light text-primary">
+                            {{ transaction.amount|number_format(2) }} USD
+                        </span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Montant à déposer : <strong>{{ transaction.amount|number_format(2) }} USD</strong>
+                
+                <div class="card-body p-4">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3 fs-4"></i>
+                        <div>
+                            <h5 class="alert-heading mb-2">Dépôt crypto</h5>
+                            <p class="mb-0">Sélectionnez votre cryptomonnaie et entrez votre adresse source pour continuer.</p>
+                        </div>
                     </div>
                     
+                    <!-- Barre de recherche -->
+                    <div class="mb-4 position-relative">
+                        <input type="text" id="searchInput" class="form-control border-2" 
+                               placeholder="Rechercher une cryptomonnaie..." autocomplete="off">
+                        <i class="fas fa-search position-absolute end-0 top-50 translate-middle-y me-3 text-muted"></i>
+                    </div>
+                    
+                    <!-- Liste des cryptos avec système de grille -->
+                    <div class="row g-3 mb-4" id="cryptoGrid">
+                        {% for key, name in supportedCryptos %}
+                            {% set network = key|split('_')[1] ?? null %}
+                            <div class="col-6 col-md-4 col-lg-3 crypto-item" data-crypto="{{ key }}" data-name="{{ name|lower }}">
+                                <div class="crypto-card card h-100 p-3 text-center" onclick="selectCrypto('{{ key }}')">
+                                    <div class="mb-2">
+                                        <img src="{{ asset('images/crypto/' ~ key|split('_')[0] ~ '.png') }}" 
+                                             alt="{{ name }}" class="crypto-icon"
+                                             onerror="this.src='{{ asset('images/crypto/default.png') }}'">
+                                    </div>
+                                    <h6 class="mb-1">{{ name|replace({'-': ' '}) }}</h6>
+                                    {% if network %}
+                                        <span class="badge bg-secondary">{{ network|upper }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Formulaire caché -->
                     <form method="post" action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" id="cryptoForm">
                         <input type="hidden" name="_token" value="{{ csrf_token('select_crypto') }}">
+                        <input type="hidden" id="selectedCrypto" name="crypto_type" required>
                         
                         <div class="mb-4">
-                            <label for="crypto_type" class="form-label fw-bold">Cryptomonnaie</label>
-                            <select class="form-select" id="crypto_type" name="crypto_type" required>
-                                <option value="">-- Sélectionnez --</option>
-                                {% for key, name in supportedCryptos %}
-                                    <option value="{{ key }}">{{ name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="source_address" class="form-label fw-bold">Votre adresse d'envoi</label>
-                            <input type="text" class="form-control" id="source_address" name="source_address" 
-                                   placeholder="Entrez l'adresse d'où proviendra le transfert" required>
-                            <small class="text-muted">Cette adresse doit correspondre à la crypto sélectionnée</small>
+                            <label for="source_address" class="form-label fw-bold">
+                                <i class="fas fa-wallet me-2"></i>Votre adresse d'envoi
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-qrcode"></i></span>
+                                <input type="text" class="form-control" id="source_address" name="source_address" 
+                                       placeholder="0x..." required>
+                                <button class="btn btn-outline-secondary" type="button" id="pasteBtn">
+                                    <i class="fas fa-paste"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Adresse compatible avec la crypto sélectionnée</small>
                         </div>
                         
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg py-3" id="submitBtn">
-                                <i class="fas fa-arrow-right me-2"></i> Confirmer
+                        <div class="d-grid gap-3 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg py-3" id="submitBtn" disabled>
+                                <i class="fas fa-arrow-right me-2"></i> Confirmer le dépôt
                             </button>
                             <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-2"></i> Annuler
@@ -50,20 +129,57 @@
         </div>
     </div>
 </div>
-
-{% block customScript %}
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('cryptoForm');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    form.addEventListener('submit', function(e) {
-        // Désactiver le bouton pour éviter les doubles soumissions
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Traitement...';
-    });
-});
-</script>
 {% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sélection de crypto
+            window.selectCrypto = function(cryptoKey) {
+                document.querySelectorAll('.crypto-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                event.currentTarget.classList.add('selected');
+                document.getElementById('selectedCrypto').value = cryptoKey;
+                document.getElementById('submitBtn').disabled = false;
+                
+                // Mise à jour du placeholder selon le réseau
+                const input = document.getElementById('source_address');
+                if (cryptoKey.includes('trc20')) {
+                    input.placeholder = 'T... (TRON address)';
+                } else if (cryptoKey.includes('erc20')) {
+                    input.placeholder = '0x... (Ethereum address)';
+                } else {
+                    input.placeholder = 'Entrez votre adresse';
+                }
+            };
+
+            // Recherche en temps réel
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                document.querySelectorAll('.crypto-item').forEach(item => {
+                    const cryptoName = item.getAttribute('data-name');
+                    item.style.display = cryptoName.includes(searchTerm) ? 'block' : 'none';
+                });
+            });
+
+            // Coller depuis le presse-papiers
+            document.getElementById('pasteBtn').addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    document.getElementById('source_address').value = text.trim();
+                } catch (err) {
+                    alert('Impossible d\'accéder au presse-papiers');
+                }
+            });
+
+            // Désactiver le bouton après soumission
+            document.getElementById('cryptoForm').addEventListener('submit', function() {
+                document.getElementById('submitBtn').disabled = true;
+                document.getElementById('submitBtn').innerHTML = 
+                    '<i class="fas fa-spinner fa-spin me-2"></i> Traitement en cours...';
+            });
+        });
+    </script>
 {% endblock %}

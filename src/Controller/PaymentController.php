@@ -257,15 +257,13 @@ class PaymentController extends AbstractController
                 $transaction->getUser()->getEmail()
             );
 
-            // Vérification des données requises
             if (!isset($depositData['payment_id']) || !isset($depositData['pay_address'])) {
                 throw new \RuntimeException('Réponse NowPayments incomplète');
             }
 
-            // Gestion de la date d'expiration
-            $expiryDate = isset($depositData['expiry_estimated_date']) 
+            $expiryDate = isset($depositData['expiry_estimated_date'])
                 ? new \DateTime($depositData['expiry_estimated_date'])
-                : new \DateTime('+2 hours');
+                : new \DateTime('+' . self::DEPOSIT_EXPIRATION_HOURS . ' hours');
 
             $transaction
                 ->setMethod('crypto_' . $cryptoType)
@@ -363,7 +361,10 @@ class PaymentController extends AbstractController
         }
 
         if ($transaction->getStatus() === 'completed') {
-            return $this->json(['status' => 'completed']);
+            return $this->json([
+                'status' => 'completed',
+                'expires_at' => $transaction->getExpiresAt()->format('c')
+            ]);
         }
 
         try {
@@ -371,16 +372,31 @@ class PaymentController extends AbstractController
 
             if ($paymentStatus === 'finished') {
                 $this->completeDeposit($transaction);
-                return $this->json(['status' => 'completed']);
+                return $this->json([
+                    'status' => 'completed',
+                    'expires_at' => $transaction->getExpiresAt()->format('c')
+                ]);
             } elseif ($paymentStatus === 'expired') {
-                $transaction->setStatus('expired');
-                $this->entityManager->flush();
-                return $this->json(['status' => 'expired']);
+                if ($transaction->getStatus() !== 'expired') {
+                    $transaction->setStatus('expired');
+                    $this->entityManager->flush();
+                }
+                return $this->json([
+                    'status' => 'expired',
+                    'expires_at' => $transaction->getExpiresAt()->format('c')
+                ]);
             }
 
-            return $this->json(['status' => 'pending']);
+            return $this->json([
+                'status' => 'pending',
+                'expires_at' => $transaction->getExpiresAt()->format('c')
+            ]);
         } catch (\Exception $e) {
-            return $this->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return $this->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'expires_at' => $transaction->getExpiresAt()->format('c')
+            ], 500);
         }
     }
 
@@ -415,7 +431,9 @@ class PaymentController extends AbstractController
                     break;
 
                 case 'expired':
-                    $this->handleExpiredPayment($transaction);
+                    if ($transaction->getStatus() !== 'expired') {
+                        $transaction->setStatus('expired');
+                    }
                     break;
 
                 case 'failed':
@@ -518,7 +536,9 @@ class PaymentController extends AbstractController
 
     private function handleExpiredPayment(Transactions $transaction): void
     {
-        $transaction->setStatus('expired');
+        if ($transaction->getStatus() !== 'expired') {
+            $transaction->setStatus('expired');
+        }
     }
 
     private function handleFailedPayment(Transactions $transaction, array $ipnData): void

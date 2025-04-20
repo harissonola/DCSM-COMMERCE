@@ -29,8 +29,8 @@
                 const distance = expiresAt - now;
                 
                 if (distance < 0) {
-                    document.getElementById('timer').innerHTML = "<span class='text-danger'>EXPIRÉ</span>";
-                    document.getElementById('timer-badge').classList.remove('bg-gradient-primary');
+                    document.getElementById('timer').innerHTML = "<span class='text-danger fw-bold'>EXPIRÉ</span>";
+                    document.getElementById('timer-badge').classList.remove('bg-purple');
                     document.getElementById('timer-badge').classList.add('bg-danger');
                     return;
                 }
@@ -92,68 +92,132 @@
 {% block stylesheets %}
     {{ parent() }}
     <style>
-        /* Thème Dark */
         body {
-            background-color: #121212; /* Fond sombre */
-            color: #e0e0e0; /* Texte clair */
+            background-color: #121212;
+            color: #e0e0e0;
         }
+        
         .card {
-            background-color: #1e1e1e; /* Carte sombre */
-            border: 1px solid #333; /* Bordure légèrement visible */
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
+        
         .card-header {
-            background: linear-gradient(135deg, #3a3a3a 0%, #555555 100%); /* En-tête sombre */
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             border-bottom: none;
         }
+        
+        .form-control, .form-control:focus {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border-color: #444;
+        }
+        
         .countdown-number {
-            color: #ffffff; /* Chiffres blancs */
+            font-weight: 800;
+            font-size: 1.2em;
+            color: #fff;
         }
+        
         .countdown-separator {
-            color: rgba(255, 255, 255, 0.7); /* Séparateurs gris clair */
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
         }
+        
         #timer-badge {
-            background: linear-gradient(135deg, #38ef7d 0%, #11998e 100%); /* Badge vert */
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-size: 0.9em;
+            padding: 0.5em 0.8em;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
+        
         .amount-display {
-            background: #2a2a2a; /* Fond sombre pour le montant */
-            border: 1px solid #444; /* Bordure légère */
-        }
-        .qr-container {
-            background: #2a2a2a; /* Fond sombre pour le QR code */
-            border: 1px solid #444; /* Bordure légère */
-        }
-        .btn-deposit {
-            background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             border: none;
+            color: white;
         }
+        
+        .qr-container {
+            background: #252525;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+        
+        .qr-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .btn-deposit {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            border: none;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        
         .btn-deposit:hover {
-            background: linear-gradient(135deg, #6a6ecf 0%, #a0a5ff 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(106, 17, 203, 0.5);
+            color: white;
         }
-        .input-group-text {
-            background: #333; /* Fond sombre pour les champs d'entrée */
-            color: #e0e0e0; /* Texte clair */
+        
+        .btn-outline-primary {
+            border-color: #6a11cb;
+            color: #6a11cb;
         }
+        
+        .btn-outline-primary:hover {
+            background-color: #6a11cb;
+            color: white;
+        }
+        
         .alert-highlight {
-            background: #2a2a2a; /* Fond sombre pour les alertes */
-            border-left: 4px solid #4e54c8; /* Bordure gauche bleue */
+            border-left: 4px solid #6a11cb;
+            background-color: #252525;
+            color: #e0e0e0;
+            border-color: #333;
         }
-        .alert-danger {
-            background-color: #442222; /* Rouge sombre pour les erreurs */
-            color: #ffcccc; /* Texte clair */
-        }
+        
         .alert-info {
-            background-color: #222c3c; /* Bleu sombre pour les infos */
-            color: #cceeff; /* Texte clair */
+            background-color: #1a365d;
+            border-color: #2c5282;
+            color: #ebf8ff;
         }
+        
+        .alert-danger {
+            background-color: #63171b;
+            border-color: #822727;
+            color: #fed7d7;
+        }
+        
+        hr {
+            border-color: #333;
+        }
+        
         .text-primary {
-            color: #bb86fc !important; /* Bleu violet pour les textes primaires */
+            color: #6a11cb !important;
         }
-        .text-danger {
-            color: #cf6679 !important; /* Rouge sombre pour les erreurs */
+        
+        .text-gradient-primary {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
         }
-        .toast.bg-success {
-            background-color: #1b5e20; /* Vert sombre pour les toasts */
-            color: #ffffff; /* Texte clair */
+        
+        .bg-purple {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
         }
     </style>
 {% endblock %}
@@ -162,19 +226,19 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-10 col-lg-8">
-            <div class="card border-0 shadow-lg overflow-hidden">
+            <div class="card border-0">
                 <div class="card-header text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">
                             <i class="fas fa-coins me-2"></i> Instructions pour votre dépôt
                         </h4>
-                        <span id="timer-badge" class="badge">
+                        <span id="timer-badge" class="badge bg-purple">
                             <i class="fas fa-clock me-1"></i> <span id="timer"></span>
                         </span>
                     </div>
                 </div>
                 
-                <div class="card-body bg-light">
+                <div class="card-body">
                     {% if not depositAddress or not sourceAddress %}
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -184,13 +248,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="amount-display mb-4">
-                                <h5 class="fw-bold text-primary">
+                                <h5 class="fw-bold">
                                     <i class="fas fa-money-bill-wave me-2"></i> Montant à envoyer
                                 </h5>
                                 <div class="display-4 fw-bold text-gradient-primary">
                                     {{ amount|number_format(2) }} USD
                                 </div>
-                                <small class="text-muted">en {{ network }}</small>
+                                <small class="text-white-50">en {{ network }}</small>
                             </div>
                             
                             <div class="mb-4">
@@ -252,7 +316,7 @@
                     <hr class="my-4">
                     
                     <div class="d-grid gap-3">
-                        <a href="{{ path('app_profile') }}" class="btn btn-deposit text-white btn-lg">
+                        <a href="{{ path('app_profile') }}" class="btn btn-deposit btn-lg">
                             <i class="fas fa-check-circle me-2"></i> J'ai effectué le transfert
                         </a>
                         <button class="btn btn-outline-primary" onclick="window.location.reload()">

@@ -19,6 +19,7 @@ use GuzzleHttp\Client;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Contracts\Cache\ItemInterface;
+use Psr\Log\LoggerInterface;
 
 class PaymentController extends AbstractController
 {
@@ -144,15 +145,15 @@ class PaymentController extends AbstractController
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
                 ],
-                'json' => [ // Ajout du payload JSON avec email
-                    'email' => $_ENV['NOWPAYMENTS_API_EMAIL'] // Fallback si non configuré
+                'json' => [
+                    'email' => $_ENV['NOWPAYMENTS_API_EMAIL'] ?? 'dcsmcommerce@gmail.com'
                 ],
                 'timeout' => 10
             ]);
 
             $authData = json_decode($authResponse->getBody(), true);
             if (!isset($authData['token'])) {
-                throw new \RuntimeException('Échec de la génération du token JWT: ' . json_encode($authData));
+                throw new \RuntimeException('Échec de la génération du token JWT');
             }
 
             // 2. Requête de paiement avec le nouveau token
@@ -175,7 +176,7 @@ class PaymentController extends AbstractController
             $responseData = json_decode($payoutResponse->getBody(), true);
 
             if (!isset($responseData['payout_id'])) {
-                throw new \RuntimeException('Réponse API invalide: ' . json_encode($responseData));
+                throw new \RuntimeException('Réponse API invalide');
             }
 
             // Création de la transaction
@@ -214,13 +215,6 @@ class PaymentController extends AbstractController
                 $fees,
                 strtoupper($currency)
             ));
-
-            $this->logInfo('Withdrawal initiated', [
-                'user_id' => $user->getId(),
-                'amount' => $amount,
-                'currency' => $currency,
-                'payout_id' => $responseData['payout_id']
-            ]);
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $errorResponse = json_decode($e->getResponse()->getBody(), true);
@@ -228,26 +222,23 @@ class PaymentController extends AbstractController
             $errorMessage = 'Erreur lors du traitement du retrait';
             if ($statusCode === 400 && isset($errorResponse['code']) && $errorResponse['code'] === 'INVALID_REQUEST_PARAMS') {
                 $errorMessage = 'Configuration API incomplète - email manquant';
-                $this->logger->critical('Configuration NowPayments manquante', [
-                    'solution' => 'Ajouter NOWPAYMENTS_API_EMAIL dans .env'
-                ]);
+                // Enregistrement alternatif de l'erreur
+                file_put_contents(
+                    __DIR__ . '/../../var/log/payment_errors.log',
+                    date('[Y-m-d H:i:s]') . ' ERREUR: Configuration NowPayments manquante - Ajouter NOWPAYMENTS_API_EMAIL dans .env' . PHP_EOL,
+                    FILE_APPEND
+                );
             } elseif ($statusCode === 403) {
                 $errorMessage = 'Problème d\'authentification avec le service de paiement';
             }
 
             $this->addFlash('danger', $errorMessage . '. Notre équipe a été notifiée.');
-            $this->logError('Withdrawal failed', [
-                'error' => $e->getMessage(),
-                'response' => $errorResponse,
-                'status_code' => $statusCode,
-                'user_id' => $user->getId()
-            ]);
         } catch (\Exception $e) {
-            $this->logError('Withdrawal failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'user_id' => $user->getId()
-            ]);
+            file_put_contents(
+                __DIR__ . '/../../var/log/payment_errors.log',
+                date('[Y-m-d H:i:s]') . ' ERREUR: ' . $e->getMessage() . PHP_EOL,
+                FILE_APPEND
+            );
             $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
         }
 

@@ -505,7 +505,7 @@ class PaymentController extends AbstractController
         }
 
         $transaction = $this->entityManager->getRepository(Transactions::class)
-            ->findOneBy(['external_id' => $ipnData['payout_id'], ['type' => 'withdrawal']);
+            ->findOneBy(['external_id' => $ipnData['payout_id'], ['type' => 'withdrawal']]);
 
         if (!$transaction) {
             throw new \RuntimeException("Transaction de retrait introuvable pour payout_id: " . $ipnData['payout_id']);

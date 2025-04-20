@@ -76,7 +76,8 @@ class PaymentController extends AbstractController
 
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            return $this->redirectWithFlash('danger', 'Token CSRF invalide');
+            $this->addFlash('danger', 'Token CSRF invalide');
+            return $this->redirectToRoute('app_profile');
         }
 
         $user = $this->getUser();
@@ -86,7 +87,8 @@ class PaymentController extends AbstractController
 
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
-            return $this->redirectWithFlash('danger', $errors[0]);
+            $this->addFlash('danger', $errors[0]);
+            return $this->redirectToRoute('app_profile');
         }
 
         $fees = $this->calculateWithdrawalFees($amount);
@@ -111,15 +113,17 @@ class PaymentController extends AbstractController
             $this->processWithdrawal($transaction, $currency, $address);
 
             $this->entityManager->commit();
-            return $this->redirectWithFlash('success', sprintf(
+            $this->addFlash('success', sprintf(
                 'Demande de retrait de %.2f USD enregistrée. Frais: %.2f USD',
                 $amount,
                 $fees
             ));
+            return $this->redirectToRoute('app_profile');
         } catch (\Exception $e) {
             $this->entityManager->rollback();
             $this->logError('Withdrawal failed', ['error' => $e->getMessage()]);
-            return $this->redirectWithFlash('danger', 'Erreur lors du traitement du retrait');
+            $this->addFlash('danger', 'Erreur lors du traitement du retrait');
+            return $this->redirectToRoute('app_profile');
         }
     }
 
@@ -130,7 +134,8 @@ class PaymentController extends AbstractController
 
         $token = new CsrfToken('deposit', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            return $this->redirectWithFlash('danger', 'Token CSRF invalide');
+            $this->addFlash('danger', 'Token CSRF invalide');
+            return $this->redirectToRoute('app_profile');
         }
 
         $amount = (float)$request->request->get('amount');
@@ -138,7 +143,8 @@ class PaymentController extends AbstractController
 
         $errors = $this->validateDeposit($amount, $method);
         if (!empty($errors)) {
-            return $this->redirectWithFlash('danger', $errors[0]);
+            $this->addFlash('danger', $errors[0]);
+            return $this->redirectToRoute('app_profile');
         }
 
         $user = $this->getUser();
@@ -184,23 +190,27 @@ class PaymentController extends AbstractController
 
         $token = new CsrfToken('select_crypto', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            return $this->redirectWithFlash('danger', 'Token CSRF invalide');
+            $this->addFlash('danger', 'Token CSRF invalide');
+            return $this->redirectToRoute('app_profile');
         }
 
         $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
         if (!$transaction || $transaction->getUser() !== $this->getUser()) {
-            return $this->redirectWithFlash('danger', 'Transaction invalide');
+            $this->addFlash('danger', 'Transaction invalide');
+            return $this->redirectToRoute('app_profile');
         }
 
         $cryptoType = strtolower($request->request->get('crypto_type'));
         $sourceAddress = trim($request->request->get('source_address'));
 
         if (!array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
-            return $this->redirectWithFlash('danger', 'Type de crypto non supporté');
+            $this->addFlash('danger', 'Type de crypto non supporté');
+            return $this->redirectToRoute('app_profile');
         }
 
         if (empty($sourceAddress)) {
-            return $this->redirectWithFlash('danger', 'Veuillez fournir votre adresse source');
+            $this->addFlash('danger', 'Veuillez fournir votre adresse source');
+            return $this->redirectToRoute('app_profile');
         }
 
         try {
@@ -211,7 +221,15 @@ class PaymentController extends AbstractController
                 $transaction->getUser()->getEmail()
             );
 
-            $expiryDate = new \DateTime($depositData['expiry_estimated_date']);
+            // Vérification des données requises
+            if (!isset($depositData['payment_id']) || !isset($depositData['pay_address'])) {
+                throw new \RuntimeException('Réponse NowPayments incomplète');
+            }
+
+            // Gestion de la date d'expiration
+            $expiryDate = isset($depositData['expiry_estimated_date']) 
+                ? new \DateTime($depositData['expiry_estimated_date'])
+                : new \DateTime('+2 hours');
 
             $transaction
                 ->setMethod('crypto_' . $cryptoType)
@@ -220,7 +238,7 @@ class PaymentController extends AbstractController
                 ->setMetadata([
                     'np_address' => $depositData['pay_address'],
                     'np_id' => $depositData['payment_id'],
-                    'np_expiry' => $depositData['expiry_estimated_date'],
+                    'np_expiry' => $expiryDate->format('Y-m-d H:i:s'),
                     'source_address' => $sourceAddress
                 ]);
 
@@ -240,8 +258,12 @@ class PaymentController extends AbstractController
                 'payment_id' => $depositData['payment_id']
             ]);
         } catch (\Exception $e) {
-            $this->logError('NowPayments deposit failed', ['error' => $e->getMessage()]);
-            return $this->redirectWithFlash('danger', 'Erreur lors de la création du dépôt');
+            $this->logError('NowPayments deposit failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->addFlash('danger', 'Erreur lors de la création du dépôt: ' . $e->getMessage());
+            return $this->redirectToRoute('app_profile');
         }
     }
 
@@ -273,6 +295,20 @@ class PaymentController extends AbstractController
             'initialExpiration' => $transaction->getExpiresAt()->getTimestamp() - time(),
             'csrf_token' => $this->csrfTokenManager->getToken('crypto_deposit')->getValue()
         ]);
+    }
+
+    #[Route('/deposit/success', name: 'deposit_success')]
+    public function depositSuccess(): Response
+    {
+        $this->addFlash('success', 'Dépôt effectué avec succès');
+        return $this->redirectToRoute('app_profile');
+    }
+
+    #[Route('/deposit/cancel', name: 'deposit_cancel')]
+    public function depositCancel(): Response
+    {
+        $this->addFlash('warning', 'Dépôt annulé');
+        return $this->redirectToRoute('app_profile');
     }
 
     #[Route('/deposit/crypto/check/{id}', name: 'app_check_crypto_deposit', methods: ['POST'])]
@@ -377,9 +413,7 @@ class PaymentController extends AbstractController
                 'pay_currency' => $currency,
                 'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
                 'order_id' => 'DEPO_' . $transactionId . '_' . time(),
-                'customer_email' => $email,
-                'success_url' => $this->generateUrl('deposit_success', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                'cancel_url' => $this->generateUrl('deposit_cancel', [], UrlGeneratorInterface::ABSOLUTE_URL)
+                'customer_email' => $email
             ],
             'timeout' => 15
         ]);
@@ -541,13 +575,11 @@ class PaymentController extends AbstractController
 
     private function validateCryptoAddress(string $currency, string $address): bool
     {
-        // Implémentez ici une validation plus poussée selon la cryptomonnaie
         return !empty($address) && strlen($address) >= 20;
     }
 
     private function processWithdrawal(Transactions $transaction, string $currency, string $address): void
     {
-        // Implémentez ici la logique réelle de retrait
         $this->logInfo('Withdrawal processed', [
             'transaction_id' => $transaction->getId(),
             'amount' => $transaction->getAmount(),
@@ -555,7 +587,6 @@ class PaymentController extends AbstractController
             'address' => $address
         ]);
     }
-
 
     private function generateQrCodeUrl(string $address): string
     {
@@ -598,12 +629,6 @@ class PaymentController extends AbstractController
             $this->entityManager->rollback();
             throw $e;
         }
-    }
-
-    private function redirectWithFlash(string $type, string $message): RedirectResponse
-    {
-        $this->addFlash($type, $message);
-        return $this->redirectToRoute('app_profile');
     }
 
     private function logInfo(string $message, array $context = []): void

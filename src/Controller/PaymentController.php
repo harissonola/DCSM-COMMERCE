@@ -146,7 +146,8 @@ class PaymentController extends AbstractController
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
                 ],
                 'json' => [
-                    'email' => 'dcsmcommerce@gmail.com' // Email directement intégré
+                    'email' => 'dcsmcommerce@gmail.com',
+                    'password' => 'votre_mot_de_passe' // Ajout du mot de passe requis
                 ],
                 'timeout' => 10
             ]);

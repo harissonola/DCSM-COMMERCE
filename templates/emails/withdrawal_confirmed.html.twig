@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de retrait - Bictrary</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+        .logo {
+            height: 50px;
+            margin-bottom: 15px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+        .title {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0 0 25px;
+            text-align: center;
+        }
+        .divider {
+            border-top: 1px solid #e2e8f0;
+            margin: 25px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .info-label {
+            color: #4a5568;
+            font-weight: 500;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        .amount-container {
+            background: linear-gradient(135deg, #f6f9fc 0%, #eef2f6 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2b6cb0;
+            margin: 5px 0;
+        }
+        .currency {
+            font-size: 18px;
+            color: #4a5568;
+        }
+        .tx-hash {
+            word-break: break-all;
+            font-family: monospace;
+            background-color: #edf2f7;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .button {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(66, 153, 225, 0.3);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #718096;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #48bb78;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .wallet-address {
+            font-family: monospace;
+            background-color: #edf2f7;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://raw.githubusercontent.com/harissonola/my-cdn/main/img/bactrary-logo.png" alt="Bictrary" class="logo">
+        </div>
+
+        <div class="card">
+            <div class="status-badge">Retrait Réussi</div>
+            <h1 class="title">Confirmation de Retrait</h1>
+            
+            <p>Bonjour,</p>
+            <p>Votre demande de retrait a été traitée avec succès. Voici le récapitulatif de votre transaction :</p>
+
+            <div class="amount-container">
+                <div style="color: #718096; font-size: 14px;">Montant reçu</div>
+                <div class="amount">{{ net_amount }} <span class="currency">{{ currency|upper }}</span></div>
+                <div style="color: #718096; font-size: 14px;">(Montant brut: {{ amount }} {{ currency|upper }})</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="info-row">
+                <span class="info-label">Frais de retrait :</span>
+                <span class="info-value">{{ fees }} {{ currency|upper }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Adresse de destination :</span>
+                <span class="wallet-address">{{ wallet_address }}</span>
+            </div>
+            {% if tx_hash %}
+            <div class="info-row">
+                <span class="info-label">Identifiant de transaction :</span>
+                <span class="tx-hash">{{ tx_hash }}</span>
+            </div>
+            {% endif %}
+            <div class="info-row">
+                <span class="info-label">Date et heure :</span>
+                <span class="info-value">{{ "now"|date("d/m/Y à H:i") }}</span>
+            </div>
+
+            <p style="margin-top: 25px;">Les fonds devraient apparaître dans votre portefeuille sous peu. Si vous ne constatez pas le crédit dans les 24 heures, vous pouvez consulter votre profil.</p>
+
+            <a href="{{ absolute_url(path('app_profile')) }}" class="button">Accéder à mon compte</a>
+        </div>
+
+        <div class="footer">
+            <p>Cet email vous a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            <p>© {{ "now"|date("Y") }} Bictrary. Tous droits réservés.</p>
+        </div>
+    </div>
+</body>
+</html>

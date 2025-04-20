@@ -26,6 +26,7 @@ class PaymentController extends AbstractController
     public const MAX_DEPOSIT_AMOUNT = 10000.0;
     public const MAX_WITHDRAWAL_AMOUNT = 5000.0;
     public const DEPOSIT_EXPIRATION_HOURS = 2;
+    public const PAYMENT_TOLERANCE = 0.05; // 5% tolerance for payment amounts
 
     public const SUPPORTED_CRYPTOS = [
         'ada' => 'Cardano (ADA)',
@@ -400,53 +401,124 @@ class PaymentController extends AbstractController
         }
     }
 
-    #[Route('/nowpayments/ipn', name: 'nowpayments_ipn', methods: ['POST'])]
+    #[Route('/nowpayments/ipn', name: 'nowpayments_ipn', methods: ['POST', 'OPTIONS'])]
     public function handleNowPaymentsIPN(Request $request): Response
     {
-        $content = $request->getContent();
-        $data = json_decode($content, true);
-        $providedHmac = $request->headers->get('x-nowpayments-sig');
+        $ipnLogPath = $this->getParameter('kernel.logs_dir').'/ipn.log';
+        $now = new \DateTime();
+        
+        file_put_contents($ipnLogPath, "\n\n[{$now->format('Y-m-d H:i:s')}] Nouvelle requête IPN\n", FILE_APPEND);
+        file_put_contents($ipnLogPath, "Headers: ".json_encode($request->headers->all())."\n", FILE_APPEND);
+        file_put_contents($ipnLogPath, "Raw payload: ".$request->getContent()."\n", FILE_APPEND);
 
-        $calculatedHmac = hash_hmac('sha512', $content, $_ENV['NOWPAYMENTS_IPN_SECRET']);
-        if (!hash_equals($calculatedHmac, $providedHmac)) {
-            $this->logError('Invalid IPN HMAC', [
-                'provided' => $providedHmac,
-                'calculated' => $calculatedHmac
+        if ($request->getMethod() === 'OPTIONS') {
+            return new Response('', 204, [
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'POST, OPTIONS',
+                'Access-Control-Allow-Headers' => 'x-nowpayments-sig, Content-Type'
             ]);
-            return new Response('Invalid HMAC', 403);
         }
 
-        $transaction = $this->entityManager->getRepository(Transactions::class)
-            ->findOneBy(['external_id' => $data['payment_id']]);
+        $receivedSignature = $request->headers->get('x-nowpayments-sig');
+        $payload = $request->getContent();
+        $expectedSignature = hash_hmac('sha512', $payload, $_ENV['NOWPAYMENTS_IPN_SECRET']);
 
-        if (!$transaction) {
-            return new Response('Transaction not found', 404);
+        if (!hash_equals($expectedSignature, $receivedSignature)) {
+            file_put_contents($ipnLogPath, "ERREUR: Signature HMAC invalide\n", FILE_APPEND);
+            return new JsonResponse(['error' => 'Invalid HMAC signature'], 403);
         }
 
-        $this->entityManager->beginTransaction();
         try {
+            $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+            file_put_contents($ipnLogPath, "Payload décodé: ".print_r($data, true)."\n", FILE_APPEND);
+
+            $requiredFields = ['payment_id', 'payment_status', 'actually_paid', 'pay_currency', 'order_id'];
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field])) {
+                    throw new \RuntimeException("Champ manquant: $field");
+                }
+            }
+
+            if (!preg_match('/^DEPO_(\d+)_\d+$/', $data['order_id'], $matches)) {
+                throw new \RuntimeException("Format order_id invalide");
+            }
+            $transactionId = $matches[1];
+
+            $transaction = $this->entityManager->getRepository(Transactions::class)->find($transactionId);
+            if (!$transaction) {
+                throw new \RuntimeException("Transaction introuvable pour ID: $transactionId");
+            }
+
+            if ($transaction->getType() !== 'deposit') {
+                throw new \RuntimeException("Type de transaction invalide");
+            }
+
+            $expectedCurrency = str_replace('crypto_', '', $transaction->getMethod());
+            if (strtolower($data['pay_currency']) !== strtolower($expectedCurrency)) {
+                throw new \RuntimeException(sprintf(
+                    "Devise mismatch: attendu %s, reçu %s",
+                    $expectedCurrency,
+                    $data['pay_currency']
+                ));
+            }
+
             switch ($data['payment_status']) {
                 case 'finished':
                     $this->handleSuccessfulPayment($transaction, $data);
                     break;
-
-                case 'expired':
-                    if ($transaction->getStatus() !== 'expired') {
-                        $transaction->setStatus('expired');
-                    }
+                    
+                case 'partially_paid':
+                    $this->handlePartialPayment($transaction, $data);
                     break;
-
+                    
                 case 'failed':
                     $this->handleFailedPayment($transaction, $data);
                     break;
+                    
+                case 'expired':
+                    $this->handleExpiredPayment($transaction);
+                    break;
+                    
+                default:
+                    throw new \RuntimeException("Statut de paiement non géré: {$data['payment_status']}");
             }
 
+            return new JsonResponse(['status' => 'success'], 200);
+
+        } catch (\Exception $e) {
+            file_put_contents($ipnLogPath, "ERREUR: ".$e->getMessage()."\nStack trace: ".$e->getTraceAsString()."\n", FILE_APPEND);
+            return new JsonResponse(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    private function handlePartialPayment(Transactions $transaction, array $ipnData): void
+    {
+        $this->entityManager->beginTransaction();
+        try {
+            $receivedAmount = (float)$ipnData['actually_paid'];
+            
+            $transaction
+                ->setStatus('partially_paid')
+                ->setMetadata(array_merge(
+                    $transaction->getMetadata() ?? [],
+                    [
+                        'ipn_data' => $ipnData,
+                        'actually_paid' => $receivedAmount,
+                        'remaining_amount' => $transaction->getAmount() - $receivedAmount
+                    ]
+                ));
+            
+            $this->entityManager->flush();
             $this->entityManager->commit();
-            return new Response('IPN processed');
+            
+            $this->logInfo('Paiement partiel reçu', [
+                'transaction_id' => $transaction->getId(),
+                'received_amount' => $receivedAmount,
+                'remaining_amount' => $transaction->getAmount() - $receivedAmount
+            ]);
         } catch (\Exception $e) {
             $this->entityManager->rollback();
-            $this->logError('IPN processing failed', ['error' => $e->getMessage()]);
-            return new Response('Processing error', 500);
+            throw $e;
         }
     }
 
@@ -503,41 +575,64 @@ class PaymentController extends AbstractController
         $expectedAmount = $transaction->getAmount();
         $receivedAmount = (float)($ipnData['actually_paid'] ?? 0);
 
-        if ($receivedAmount < $expectedAmount) {
+        if ($receivedAmount < $expectedAmount * (1 - self::PAYMENT_TOLERANCE)) {
             throw new \RuntimeException(sprintf(
-                'Amount mismatch: expected %.2f, got %.2f',
+                'Montant insuffisant: attendu %.2f USD, reçu %.2f USD',
                 $expectedAmount,
                 $receivedAmount
             ));
         }
 
-        $user = $transaction->getUser();
-        $user->setBalance($user->getBalance() + $expectedAmount);
+        $this->entityManager->beginTransaction();
+        try {
+            $user = $transaction->getUser();
+            $user->setBalance($user->getBalance() + $expectedAmount);
 
-        $transaction
-            ->setStatus('completed')
-            ->setVerifiedAt(new \DateTime())
-            ->setMetadata(array_merge(
-                $transaction->getMetadata() ?? [],
-                ['ipn_data' => $ipnData]
-            ));
+            $transaction
+                ->setStatus('completed')
+                ->setVerifiedAt(new \DateTime())
+                ->setMetadata(array_merge(
+                    $transaction->getMetadata() ?? [],
+                    [
+                        'ipn_data' => $ipnData,
+                        'tx_hash' => $ipnData['payin_hash'] ?? null,
+                        'actually_paid' => $receivedAmount
+                    ]
+                ));
 
-        $this->sendTransactionEmail(
-            $user->getEmail(),
-            'Confirmation de dépôt',
-            'emails/deposit_confirmed.html.twig',
-            [
-                'amount' => $expectedAmount,
+            $this->sendConfirmationEmail($user, $transaction, $ipnData);
+
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
+    }
+
+    private function sendConfirmationEmail(User $user, Transactions $transaction, array $ipnData): void
+    {
+        $email = (new TemplatedEmail())
+            ->to($user->getEmail())
+            ->subject('Confirmation de dépôt')
+            ->htmlTemplate('emails/deposit_confirmed.html.twig')
+            ->context([
+                'amount' => $transaction->getAmount(),
                 'currency' => str_replace('crypto_', '', $transaction->getMethod()),
-                'tx_hash' => $ipnData['payin_hash'] ?? null
-            ]
-        );
+                'tx_hash' => $ipnData['payin_hash'] ?? null,
+                'date' => new \DateTime(),
+                'received_amount' => $ipnData['actually_paid'] ?? $transaction->getAmount()
+            ]);
+
+        $this->mailer->send($email);
     }
 
     private function handleExpiredPayment(Transactions $transaction): void
     {
         if ($transaction->getStatus() !== 'expired') {
             $transaction->setStatus('expired');
+            $this->entityManager->flush();
         }
     }
 
@@ -549,6 +644,7 @@ class PaymentController extends AbstractController
                 $transaction->getMetadata() ?? [],
                 ['failure_reason' => $ipnData['payment_status'] ?? 'unknown']
             ));
+        $this->entityManager->flush();
     }
 
     private function sendDepositInstructionsEmail(

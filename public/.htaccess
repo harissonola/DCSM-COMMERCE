@@ -29,3 +29,15 @@ DirectoryIndex index.php
     # Protection contre les attaques MIME
     Header set X-Content-Type-Options "nosniff"
 </IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+    
+    # Autoriser les requêtes POST de NowPayments
+    SetEnvIf Origin "^https://api\.nowpayments\.io$" ACCESS_CONTROL_ALLOW_ORIGIN=$0
+    Header always set Access-Control-Allow-Origin %{ACCESS_CONTROL_ALLOW_ORIGIN}e env=ACCESS_CONTROL_ALLOW_ORIGIN
+    Header always set Access-Control-Allow-Methods "POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "x-nowpayments-sig, Content-Type"
+</IfModule>

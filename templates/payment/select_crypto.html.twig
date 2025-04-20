@@ -6,44 +6,144 @@
     {{ parent() }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #6c5ce7;
+            --secondary-color: #a29bfe;
+            --accent-color: #fd79a8;
+            --dark-color: #2d3436;
+            --light-color: #f5f6fa;
+        }
+        
         .crypto-card {
-            transition: all 0.3s ease;
-            border-radius: 10px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 12px;
             cursor: pointer;
+            border: none;
+            background: white;
+            overflow: hidden;
+            position: relative;
         }
+        
+        .crypto-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
         .crypto-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(108, 92, 231, 0.2);
         }
+        
+        .crypto-card:hover::before {
+            opacity: 1;
+        }
+        
         .crypto-card.selected {
-            border: 2px solid #0d6efd;
-            background-color: rgba(13, 110, 253, 0.05);
+            border: 2px solid var(--primary-color);
+            background-color: rgba(108, 92, 231, 0.05);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
         }
+        
+        .crypto-card.selected::before {
+            opacity: 1;
+        }
+        
         .crypto-icon {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             object-fit: contain;
+            transition: transform 0.3s ease;
         }
+        
+        .crypto-card:hover .crypto-icon {
+            transform: scale(1.1);
+        }
+        
         .crypto-svg {
-            width: 40px;
-            height: 40px;
-            display: flex; /* Active Flexbox */
-            align-items: center; /* Centre verticalement */
-            justify-content: center; /* Centre horizontalement */
-            background-color: #f0f8ff; /* Fond léger */
-            border-radius: 50%; /* Forme circulaire */
-            font-size: 14px; /* Taille du texte */
-            font-weight: bold; /* Texte en gras */
-            color: #0d6efd; /* Couleur du texte */
-            text-transform: uppercase; /* Texte en majuscules */
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            text-transform: uppercase;
         }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), #8c7ae6);
+            border-bottom: none;
+        }
+        
+        .amount-badge {
+            background: white;
+            color: var(--primary-color);
+            font-weight: bold;
+            padding: 8px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        #searchInput {
+            padding: 15px 20px;
+            border-radius: 30px;
+            border: 2px solid #dfe6e9;
+            transition: all 0.3s ease;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236c5ce7' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 95% center;
+            background-size: 20px;
+        }
+        
+        #searchInput:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(108, 92, 231, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #5649c0;
+            border-color: #5649c0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+        }
+        
+        .network-badge {
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 0.7rem;
+            margin-top: 5px;
+        }
+        
+        .alert-info {
+            background-color: #e0f3ff;
+            border-color: #b8e2ff;
+            color: #0069d9;
+        }
+        
         @media (max-width: 768px) {
+            .crypto-icon, .crypto-svg {
+                width: 36px;
+                height: 36px;
+            }
+            
             .crypto-card {
                 padding: 15px;
-            }
-            .crypto-icon, .crypto-svg {
-                width: 30px;
-                height: 30px;
             }
         }
     </style>
@@ -53,18 +153,18 @@
 <div class="container py-4 py-lg-5">
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-primary text-white py-3">
+            <div class="card shadow-lg border-0 overflow-hidden">
+                <div class="card-header text-white py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-coins me-2"></i> Sélectionnez une cryptomonnaie</h4>
-                        <span class="amount-badge bg-light text-primary">
+                        <span class="amount-badge">
                             {{ transaction.amount|number_format(2) }} USD
                         </span>
                     </div>
                 </div>
 
                 <div class="card-body p-4">
-                    <div class="alert alert-info d-flex align-items-center">
+                    <div class="alert alert-info d-flex align-items-center mb-4 border-0">
                         <i class="fas fa-info-circle me-3 fs-4"></i>
                         <div>
                             <h5 class="alert-heading mb-2">Dépôt crypto</h5>
@@ -72,35 +172,37 @@
                         </div>
                     </div>
 
-                    <!-- Barre de recherche -->
-                    <div class="mb-4 position-relative">
-                        <input type="text" id="searchInput" class="form-control border-2" 
+                    <!-- Barre de recherche améliorée -->
+                    <div class="mb-4">
+                        <input type="text" id="searchInput" class="form-control" 
                                placeholder="Rechercher une cryptomonnaie..." autocomplete="off">
-                        <i class="fas fa-search position-absolute end-0 top-50 translate-middle-y me-3 text-muted"></i>
                     </div>
 
-                    <!-- Liste des cryptos avec CDN -->
+                    <!-- Liste des cryptos -->
                     <div class="row g-3 mb-4" id="cryptoGrid">
                         {% for key, name in supportedCryptos %}
                             {% set symbol = key|split('_')[0]|lower %}
                             {% set network = key|split('_')[1] ?? null %}
                             <div class="col-6 col-md-4 col-lg-3 crypto-item" data-crypto="{{ key }}" data-name="{{ name|lower }}">
                                 <div class="crypto-card card h-100 p-3 text-center" onclick="selectCrypto('{{ key }}')">
-                                    <div class="mb-2">
-                                        <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@latest/128/color/{{ symbol }}.png"
+                                    <div class="mb-3 d-flex justify-content-center">
+                                        <img src="https://cryptologos.cc/logos/{{ symbol }}-logo.png?v=024"
                                              alt="{{ name }}" class="crypto-icon"
-                                             onerror="this.onerror=null;this.outerHTML=`<div class='crypto-svg'>{{ symbol|upper }}</div>`;">
+                                             onerror="this.onerror=null;this.outerHTML=`<div class='crypto-svg'>{{ symbol|slice(0,3)|upper }}</div>`;">
                                     </div>
-                                    <h6 class="mb-1">{{ name|replace({'-': ' '}) }}</h6>
-                                    {% if network %}
-                                        <span class="badge bg-secondary">{{ network|upper }}</span>
-                                    {% endif %}
+                                    <h6 class="mb-1 fw-bold">{{ name|replace({'-': ' '})|split('(')[0]|trim }}</h6>
+                                    <div class="mt-2">
+                                        <span class="badge bg-light text-dark">{{ name|split('(')[1]|replace({')': ''}) }}</span>
+                                        {% if network %}
+                                            <span class="network-badge badge">{{ network|upper }}</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         {% endfor %}
                     </div>
 
-                    <!-- Formulaire caché -->
+                    <!-- Formulaire -->
                     <form method="post" action="{{ path('app_process_crypto_deposit', {'id': transaction.id}) }}" id="cryptoForm">
                         <input type="hidden" name="_token" value="{{ csrf_token('select_crypto') }}">
                         <input type="hidden" id="selectedCrypto" name="crypto_type" required>
@@ -110,18 +212,18 @@
                                 <i class="fas fa-wallet me-2"></i>Votre adresse d'envoi
                             </label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-qrcode"></i></span>
+                                <span class="input-group-text bg-white"><i class="fas fa-qrcode text-primary"></i></span>
                                 <input type="text" class="form-control" id="source_address" name="source_address" 
-                                       placeholder="0x..." required>
-                                <button class="btn btn-outline-secondary" type="button" id="pasteBtn">
-                                    <i class="fas fa-paste"></i>
+                                       placeholder="Sélectionnez d'abord une crypto" required readonly>
+                                <button class="btn btn-outline-primary" type="button" id="pasteBtn">
+                                    <i class="fas fa-paste me-1"></i> Coller
                                 </button>
                             </div>
-                            <small class="text-muted">Adresse compatible avec la crypto sélectionnée</small>
+                            <small id="addressHelp" class="form-text text-end"></small>
                         </div>
 
                         <div class="d-grid gap-3 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg py-3" id="submitBtn" disabled>
+                            <button type="submit" class="btn btn-primary btn-lg py-3 fw-bold" id="submitBtn" disabled>
                                 <i class="fas fa-arrow-right me-2"></i> Confirmer le dépôt
                             </button>
                             <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary">
@@ -140,45 +242,98 @@
     {{ parent() }}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sélection de crypto
+            // Animation de sélection
             window.selectCrypto = function(cryptoKey) {
-                document.querySelectorAll('.crypto-card').forEach(card => card.classList.remove('selected'));
-                event.currentTarget.classList.add('selected');
+                document.querySelectorAll('.crypto-card').forEach(card => {
+                    card.classList.remove('selected');
+                    card.style.transform = '';
+                });
+                
+                const selectedCard = event.currentTarget;
+                selectedCard.classList.add('selected');
+                selectedCard.style.transform = 'translateY(-8px)';
+                
                 document.getElementById('selectedCrypto').value = cryptoKey;
-                document.getElementById('submitBtn').disabled = false;
-                const input = document.getElementById('source_address');
+                const addressInput = document.getElementById('source_address');
+                const helpText = document.getElementById('addressHelp');
+                
+                addressInput.removeAttribute('readonly');
+                addressInput.focus();
+                
+                // Configuration selon le réseau
                 if (cryptoKey.includes('trc20')) {
-                    input.placeholder = 'T... (TRON address)';
+                    addressInput.placeholder = 'T... (Adresse TRON)';
+                    helpText.textContent = 'Format TRC20 requis';
+                    helpText.className = 'form-text text-end text-info';
                 } else if (cryptoKey.includes('erc20')) {
-                    input.placeholder = '0x... (Ethereum address)';
+                    addressInput.placeholder = '0x... (Adresse Ethereum)';
+                    helpText.textContent = 'Format ERC20 requis';
+                    helpText.className = 'form-text text-end text-primary';
+                } else if (cryptoKey.includes('bep20')) {
+                    addressInput.placeholder = '0x... (Adresse BSC)';
+                    helpText.textContent = 'Format BEP20 requis';
+                    helpText.className = 'form-text text-end text-warning';
                 } else {
-                    input.placeholder = 'Entrez votre adresse';
+                    addressInput.placeholder = 'Entrez votre adresse';
+                    helpText.textContent = '';
                 }
+                
+                document.getElementById('submitBtn').disabled = false;
             };
 
-            // Recherche en temps réel
+            // Recherche dynamique avec debounce
+            let searchTimeout;
             document.getElementById('searchInput').addEventListener('input', function() {
-                const term = this.value.toLowerCase();
-                document.querySelectorAll('.crypto-item').forEach(item => {
-                    item.style.display = item.getAttribute('data-name').includes(term) ? 'block' : 'none';
-                });
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    const term = this.value.toLowerCase().trim();
+                    document.querySelectorAll('.crypto-item').forEach(item => {
+                        const matches = item.getAttribute('data-name').includes(term);
+                        item.style.display = matches ? 'block' : 'none';
+                        if (matches) {
+                            item.style.animation = 'fadeIn 0.5s ease';
+                        }
+                    });
+                }, 300);
             });
 
-            // Coller depuis le presse-papiers
+            // Coller depuis le presse-papiers avec feedback
             document.getElementById('pasteBtn').addEventListener('click', async () => {
                 try {
                     const text = await navigator.clipboard.readText();
-                    document.getElementById('source_address').value = text.trim();
+                    const input = document.getElementById('source_address');
+                    input.value = text.trim();
+                    
+                    // Animation de confirmation
+                    const btn = document.getElementById('pasteBtn');
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> Collé!';
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fas fa-paste me-1"></i> Coller';
+                        btn.classList.remove('btn-success');
+                        btn.classList.add('btn-outline-primary');
+                    }, 2000);
                 } catch {
-                    alert('Impossible d\'accéder au presse-papiers');
+                    alert('Autorisez l\'accès au presse-papiers pour utiliser cette fonction');
                 }
             });
 
-            // Désactiver le bouton après soumission
-            document.getElementById('cryptoForm').addEventListener('submit', function() {
+            // Soumission du formulaire
+            document.getElementById('cryptoForm').addEventListener('submit', function(e) {
                 const btn = document.getElementById('submitBtn');
+                if (!this.crypto_type.value) {
+                    e.preventDefault();
+                    // Animation d'erreur
+                    const cryptoGrid = document.getElementById('cryptoGrid');
+                    cryptoGrid.style.animation = 'shake 0.5s';
+                    setTimeout(() => cryptoGrid.style.animation = '', 500);
+                    return;
+                }
+                
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Traitement en cours...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Traitement...';
             });
         });
     </script>

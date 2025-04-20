@@ -585,26 +585,38 @@ class PaymentController extends AbstractController
 
     private function handleSuccessfulPayment(Transactions $transaction, array $ipnData): void
     {
+        // Ne pas traiter les transactions déjà complétées
         if ($transaction->getStatus() === 'completed') {
             return;
         }
 
+        // Validation des montants
         $expectedAmount = $transaction->getAmount();
         $receivedAmount = (float)($ipnData['actually_paid'] ?? 0);
+        $minAcceptedAmount = $expectedAmount * (1 - self::PAYMENT_TOLERANCE);
 
-        if ($receivedAmount < $expectedAmount * (1 - self::PAYMENT_TOLERANCE)) {
+        if ($receivedAmount < $minAcceptedAmount) {
+            $this->logError('Montant insuffisant', [
+                'expected' => $expectedAmount,
+                'received' => $receivedAmount,
+                'min_accepted' => $minAcceptedAmount
+            ]);
             throw new \RuntimeException(sprintf(
-                'Montant insuffisant: attendu %.2f USD, reçu %.2f USD',
+                'Montant insuffisant: attendu %.2f USD (min %.2f), reçu %.2f USD',
                 $expectedAmount,
+                $minAcceptedAmount,
                 $receivedAmount
             ));
         }
 
         $this->entityManager->beginTransaction();
         try {
+            // 1. Mettre à jour le solde utilisateur
             $user = $transaction->getUser();
-            $user->setBalance($user->getBalance() + $expectedAmount);
+            $newBalance = $user->getBalance() + $expectedAmount;
+            $user->setBalance($newBalance);
 
+            // 2. Mettre à jour la transaction
             $transaction
                 ->setStatus('completed')
                 ->setVerifiedAt(new \DateTime())
@@ -613,16 +625,30 @@ class PaymentController extends AbstractController
                     [
                         'ipn_data' => $ipnData,
                         'tx_hash' => $ipnData['payin_hash'] ?? null,
-                        'actually_paid' => $receivedAmount
+                        'actually_paid' => $receivedAmount,
+                        'credited_amount' => $expectedAmount,
+                        'new_balance' => $newBalance
                     ]
                 ));
 
+            // 3. Envoyer la confirmation
             $this->sendConfirmationEmail($user, $transaction, $ipnData);
 
+            // 4. Sauvegarder les changements
             $this->entityManager->flush();
             $this->entityManager->commit();
+
+            $this->logInfo('Paiement complété avec succès', [
+                'transaction_id' => $transaction->getId(),
+                'user_id' => $user->getId(),
+                'amount_credited' => $expectedAmount
+            ]);
         } catch (\Exception $e) {
             $this->entityManager->rollback();
+            $this->logError('Échec du traitement du paiement', [
+                'error' => $e->getMessage(),
+                'transaction_id' => $transaction->getId()
+            ]);
             throw $e;
         }
     }

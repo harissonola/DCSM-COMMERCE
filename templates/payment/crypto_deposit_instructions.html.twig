@@ -13,15 +13,25 @@
                 return;
             }
 
-            // Timer d'expiration
-            const expiresAt = new Date('{{ expiresAt|date('Y-m-d H:i:s') }}').getTime();
+            // Récupérer ou initialiser le timer dans le localStorage
+            let expiresAt;
+            const storedExpiresAt = localStorage.getItem('depositExpiresAt');
+            
+            if (storedExpiresAt) {
+                expiresAt = new Date(parseInt(storedExpiresAt));
+            } else {
+                expiresAt = new Date('{{ expiresAt|date('Y-m-d H:i:s') }}').getTime();
+                localStorage.setItem('depositExpiresAt', expiresAt);
+            }
             
             function updateTimer() {
                 const now = new Date().getTime();
                 const distance = expiresAt - now;
                 
                 if (distance < 0) {
-                    document.getElementById('timer').innerHTML = "Expiré";
+                    document.getElementById('timer').innerHTML = "<span class='text-danger'>EXPIRÉ</span>";
+                    document.getElementById('timer-badge').classList.remove('bg-gradient-primary');
+                    document.getElementById('timer-badge').classList.add('bg-danger');
                     return;
                 }
                 
@@ -30,11 +40,13 @@
                 const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                 
                 document.getElementById('timer').innerHTML = 
-                    `${hours}h ${minutes}m ${seconds}s`;
+                    `<span class="countdown-number">${hours}</span><span class="countdown-separator">h</span> 
+                    <span class="countdown-number">${minutes}</span><span class="countdown-separator">m</span> 
+                    <span class="countdown-number">${seconds}</span><span class="countdown-separator">s</span>`;
             }
             
             updateTimer();
-            setInterval(updateTimer, 1000);
+            const timerInterval = setInterval(updateTimer, 1000);
 
             // Vérification automatique du statut
             setInterval(function() {
@@ -48,13 +60,22 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'completed') {
+                        localStorage.removeItem('depositExpiresAt');
                         window.location.href = '{{ path('app_profile') }}?deposit=success';
                     } else if (data.status === 'expired') {
+                        localStorage.removeItem('depositExpiresAt');
                         window.location.reload();
                     }
                 })
                 .catch(error => console.error('Error:', error));
             }, 30000); // Toutes les 30 secondes
+
+            // Nettoyage du localStorage si l'utilisateur quitte la page
+            window.addEventListener('beforeunload', function() {
+                if (document.getElementById('timer').textContent.includes("EXPIRÉ")) {
+                    localStorage.removeItem('depositExpiresAt');
+                }
+            });
         });
 
         function copyToClipboard(elementId) {
@@ -68,23 +89,97 @@
     </script>
 {% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .card-header {
+            background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+            border-bottom: none;
+        }
+        
+        .countdown-number {
+            font-weight: 800;
+            font-size: 1.2em;
+            color: #fff;
+        }
+        
+        .countdown-separator {
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        #timer-badge {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            font-size: 0.9em;
+            padding: 0.5em 0.8em;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .amount-display {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .qr-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .btn-deposit {
+            background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+            border: none;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-deposit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(78, 84, 200, 0.4);
+        }
+        
+        .input-group-text {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .alert-highlight {
+            border-left: 4px solid #4e54c8;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+    </style>
+{% endblock %}
+
 {% block body %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-10 col-lg-8">
-            <div class="card shadow-lg">
-                <div class="card-header bg-success text-white">
+            <div class="card border-0 shadow-lg overflow-hidden">
+                <div class="card-header text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">
                             <i class="fas fa-coins me-2"></i> Instructions pour votre dépôt
                         </h4>
-                        <span class="badge bg-light text-dark">
-                            Expire dans: <span id="timer"></span>
+                        <span id="timer-badge" class="badge">
+                            <i class="fas fa-clock me-1"></i> <span id="timer"></span>
                         </span>
                     </div>
                 </div>
                 
-                <div class="card-body">
+                <div class="card-body bg-light">
                     {% if not depositAddress or not sourceAddress %}
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -93,24 +188,24 @@
                     {% else %}
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="mb-4 p-3 bg-light rounded">
-                                <h5 class="fw-bold text-success">
+                            <div class="amount-display mb-4">
+                                <h5 class="fw-bold text-primary">
                                     <i class="fas fa-money-bill-wave me-2"></i> Montant à envoyer
                                 </h5>
-                                <div class="display-4 fw-bold text-success">
+                                <div class="display-4 fw-bold text-gradient-primary">
                                     {{ amount|number_format(2) }} USD
                                 </div>
                                 <small class="text-muted">en {{ network }}</small>
                             </div>
                             
                             <div class="mb-4">
-                                <h5 class="fw-bold">
+                                <h5 class="fw-bold text-primary">
                                     <i class="fas fa-wallet me-2"></i> Adresse de destination
                                 </h5>
                                 <div class="input-group mb-2">
-                                    <input type="text" class="form-control" id="depositAddress" 
+                                    <input type="text" class="form-control form-control-lg" id="depositAddress" 
                                            value="{{ depositAddress }}" readonly>
-                                    <button class="btn btn-outline-primary" type="button"
+                                    <button class="btn btn-primary" type="button"
                                             onclick="copyToClipboard('depositAddress')">
                                         <i class="fas fa-copy"></i>
                                     </button>
@@ -119,13 +214,13 @@
                             </div>
 
                             <div class="mb-4">
-                                <h5 class="fw-bold">
+                                <h5 class="fw-bold text-primary">
                                     <i class="fas fa-address-card me-2"></i> Votre adresse source
                                 </h5>
                                 <div class="input-group mb-2">
-                                    <input type="text" class="form-control" id="sourceAddress" 
+                                    <input type="text" class="form-control form-control-lg" id="sourceAddress" 
                                            value="{{ sourceAddress }}" readonly>
-                                    <button class="btn btn-outline-primary" type="button"
+                                    <button class="btn btn-primary" type="button"
                                             onclick="copyToClipboard('sourceAddress')">
                                         <i class="fas fa-copy"></i>
                                     </button>
@@ -133,9 +228,9 @@
                                 <small class="text-muted">Nous surveillerons les transactions depuis cette adresse</small>
                             </div>
                             
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Important :</strong> 
+                            <div class="alert alert-highlight">
+                                <i class="fas fa-exclamation-circle me-2 text-primary"></i>
+                                <strong class="text-primary">Important :</strong> 
                                 <ul class="mb-0 mt-2">
                                     <li>Le dépôt expirera à {{ expiresAt|date('H:i') }}</li>
                                     <li>Envoyez le montant exact de {{ amount|number_format(2) }} USD en {{ network }}</li>
@@ -146,9 +241,9 @@
                         </div>
                         
                         <div class="col-md-6 text-center">
-                            <div class="mb-4 p-3 bg-light rounded">
+                            <div class="qr-container mb-4">
                                 <img src="{{ qrCodeUrl }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 250px;">
-                                <h5 class="fw-bold">Scanner pour envoyer</h5>
+                                <h5 class="fw-bold text-primary">Scanner pour envoyer</h5>
                                 <small class="text-muted">Utilisez votre wallet pour scanner ce QR code</small>
                             </div>
                             
@@ -159,10 +254,10 @@
                         </div>
                     </div>
                     
-                    <hr>
+                    <hr class="my-4">
                     
-                    <div class="d-grid gap-2">
-                        <a href="{{ path('app_profile') }}" class="btn btn-success btn-lg py-3">
+                    <div class="d-grid gap-3">
+                        <a href="{{ path('app_profile') }}" class="btn btn-deposit text-white btn-lg">
                             <i class="fas fa-check-circle me-2"></i> J'ai effectué le transfert
                         </a>
                         <button class="btn btn-outline-primary" onclick="window.location.reload()">
@@ -178,10 +273,11 @@
 
 <!-- Toast Notification -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="copyToast" class="toast bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="copyToast" class="toast bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-check-circle me-2"></i> Adresse copiée dans le presse-papier !
+            <div class="toast-body d-flex align-items-center">
+                <i class="fas fa-check-circle me-2 fs-4"></i> 
+                <span class="fs-5">Adresse copiée dans le presse-papier !</span>
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>

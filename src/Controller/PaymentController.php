@@ -124,13 +124,13 @@ class PaymentController extends AbstractController
 
         // Validation initiale
         if ($user->getBalance() < $amount) {
-            dd("Solde insuffisant");
             $this->addFlash('danger', 'Solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }
 
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
+            dd($errors);
             $this->addFlash('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }

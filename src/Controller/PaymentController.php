@@ -28,19 +28,32 @@ class PaymentController extends AbstractController
     public const DEPOSIT_EXPIRATION_HOURS = 2;
 
     public const SUPPORTED_CRYPTOS = [
+        // Cryptos principales
         'btc' => 'Bitcoin (BTC)',
         'eth' => 'Ethereum (ETH)',
         'ltc' => 'Litecoin (LTC)',
-        'usdt' => 'Tether (USDT) - ERC20',
-        'usdt_bep20' => 'Tether (USDT) - BEP20',
-        'usdt_trc20' => 'Tether (USDT) - TRC20',
-        'usdt_ton' => 'Tether (USDT) - TON',
-        'usdt_polygon' => 'Tether (USDT) - Polygon',
-        'usdc' => 'USD Coin (USDC)',
-        'doge' => 'Dogecoin (DOGE)',
-        'bch' => 'Bitcoin Cash (BCH)',
         'xrp' => 'Ripple (XRP)',
-        'trx' => 'TRON (TRX)'
+        'bch' => 'Bitcoin Cash (BCH)',
+        'doge' => 'Dogecoin (DOGE)',
+        'trx' => 'TRON (TRX)',
+        
+        // Stablecoins USDT avec réseaux
+        'usdt_erc20' => 'Tether (USDT-ERC20)',
+        'usdt_trc20' => 'Tether (USDT-TRC20)',
+        'usdt_bep20' => 'Tether (USDT-BEP20)',
+        'usdt_polygon' => 'Tether (USDT-Polygon)',
+        'usdt_ton' => 'Tether (USDT-TON)',
+        
+        // Autres stablecoins
+        'usdc' => 'USD Coin (USDC-ERC20)',
+        'usdc_trc20' => 'USD Coin (USDC-TRC20)',
+        'busd' => 'Binance USD (BUSD-BEP20)',
+        
+        // Ajouts récents populaires
+        'sol' => 'Solana (SOL)',
+        'ada' => 'Cardano (ADA)',
+        'dot' => 'Polkadot (DOT)',
+        'matic' => 'Polygon (MATIC)'
     ];
 
     private $mailer;

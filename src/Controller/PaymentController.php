@@ -18,6 +18,7 @@ use Symfony\Component\Security\Csrf\CsrfToken;
 use GuzzleHttp\Client;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
+use Symfony\Contracts\Cache\ItemInterface;
 
 class PaymentController extends AbstractController
 {
@@ -138,12 +139,26 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // D'ABORD l'appel API (avant toute modification en base)
+            // 1. Obtenir un nouveau token JWT
+            $jwtResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
+                'headers' => [
+                    'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
+                ],
+                'timeout' => 10
+            ]);
+
+            $jwtData = json_decode($jwtResponse->getBody(), true);
+            if (!isset($jwtData['token'])) {
+                throw new \RuntimeException('Échec de la génération du token JWT');
+            }
+            $jwtToken = $jwtData['token'];
+
+            // 2. Faire la requête de paiement avec le nouveau token
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $_ENV['NOWPAYMENTS_API_KEY']
+                    'Authorization' => 'Bearer ' . $jwtToken
                 ],
                 'json' => [
                     'withdrawal_amount' => $amount,
@@ -161,7 +176,7 @@ class PaymentController extends AbstractController
                 throw new \RuntimeException('Réponse API invalide: ' . json_encode($responseData));
             }
 
-            // SEULEMENT SI l'API réussit, on modifie la base
+            // Création de la transaction
             $transaction = (new Transactions())
                 ->setUser($user)
                 ->setType('withdrawal')
@@ -204,15 +219,28 @@ class PaymentController extends AbstractController
                 'currency' => $currency,
                 'payout_id' => $responseData['payout_id']
             ]);
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorResponse = json_decode($e->getResponse()->getBody(), true);
+
+            $errorMessage = 'Erreur lors du traitement du retrait';
+            if ($statusCode === 403) {
+                $errorMessage = 'Problème d\'authentification avec le service de paiement (token expiré)';
+            }
+
+            $this->logError('Withdrawal failed', [
+                'error' => $e->getMessage(),
+                'response' => $errorResponse,
+                'status_code' => $statusCode,
+                'user_id' => $user->getId()
+            ]);
+
+            $this->addFlash('danger', $errorMessage . '. Notre équipe a été notifiée.');
         } catch (\Exception $e) {
             $this->logError('Withdrawal failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'request_data' => [
-                    'user_id' => $user->getId(),
-                    'amount' => $amount,
-                    'currency' => $currency
-                ]
+                'user_id' => $user->getId()
             ]);
 
             $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');

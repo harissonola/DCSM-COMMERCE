@@ -149,7 +149,7 @@ class PaymentController extends AbstractController
             ->setCreatedAt(new DateTimeImmutable())
             ->setExternalId('WITHDRAW_' . $user->getId() . '_' . time());
 
-        dd($this->entityManager->beginTransaction());
+        dd($transaction);
 
         $this->entityManager->beginTransaction();
         try {

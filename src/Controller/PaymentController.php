@@ -139,26 +139,28 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Obtenir un nouveau token JWT
-            $jwtResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
+            // 1. Authentification avec email requis
+            $authResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
+                ],
+                'json' => [ // Ajout du payload JSON avec email
+                    'email' => $_ENV['NOWPAYMENTS_API_EMAIL'] // Fallback si non configuré
                 ],
                 'timeout' => 10
             ]);
 
-            $jwtData = json_decode($jwtResponse->getBody(), true);
-            if (!isset($jwtData['token'])) {
-                throw new \RuntimeException('Échec de la génération du token JWT');
+            $authData = json_decode($authResponse->getBody(), true);
+            if (!isset($authData['token'])) {
+                throw new \RuntimeException('Échec de la génération du token JWT: ' . json_encode($authData));
             }
-            $jwtToken = $jwtData['token'];
 
-            // 2. Faire la requête de paiement avec le nouveau token
+            // 2. Requête de paiement avec le nouveau token
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $jwtToken
+                    'Authorization' => 'Bearer ' . $authData['token']
                 ],
                 'json' => [
                     'withdrawal_amount' => $amount,
@@ -224,25 +226,28 @@ class PaymentController extends AbstractController
             $errorResponse = json_decode($e->getResponse()->getBody(), true);
 
             $errorMessage = 'Erreur lors du traitement du retrait';
-            if ($statusCode === 403) {
-                $errorMessage = 'Problème d\'authentification avec le service de paiement (token expiré)';
+            if ($statusCode === 400 && isset($errorResponse['code']) && $errorResponse['code'] === 'INVALID_REQUEST_PARAMS') {
+                $errorMessage = 'Configuration API incomplète - email manquant';
+                $this->logger->critical('Configuration NowPayments manquante', [
+                    'solution' => 'Ajouter NOWPAYMENTS_API_EMAIL dans .env'
+                ]);
+            } elseif ($statusCode === 403) {
+                $errorMessage = 'Problème d\'authentification avec le service de paiement';
             }
 
+            $this->addFlash('danger', $errorMessage . '. Notre équipe a été notifiée.');
             $this->logError('Withdrawal failed', [
                 'error' => $e->getMessage(),
                 'response' => $errorResponse,
                 'status_code' => $statusCode,
                 'user_id' => $user->getId()
             ]);
-
-            $this->addFlash('danger', $errorMessage . '. Notre équipe a été notifiée.');
         } catch (\Exception $e) {
             $this->logError('Withdrawal failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'user_id' => $user->getId()
             ]);
-
             $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
         }
 

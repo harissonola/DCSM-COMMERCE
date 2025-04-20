@@ -24,20 +24,23 @@
             height: 40px;
             object-fit: contain;
         }
-        #searchInput {
-            padding: 12px 20px;
-            border-radius: 25px;
-        }
-        .amount-badge {
-            font-size: 1.1rem;
-            padding: 8px 15px;
-            border-radius: 20px;
+        .crypto-svg {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f8ff;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            color: #0d6efd;
         }
         @media (max-width: 768px) {
             .crypto-card {
                 padding: 15px;
             }
-            .crypto-icon {
+            .crypto-icon, .crypto-svg {
                 width: 30px;
                 height: 30px;
             }
@@ -80,20 +83,12 @@
                         {% for key, name in supportedCryptos %}
                             {% set symbol = key|split('_')[0]|lower %}
                             {% set network = key|split('_')[1] ?? null %}
-                            {% set coingecko_id = coingecko_ids[symbol] ?? null %}
                             <div class="col-6 col-md-4 col-lg-3 crypto-item" data-crypto="{{ key }}" data-name="{{ name|lower }}">
                                 <div class="crypto-card card h-100 p-3 text-center" onclick="selectCrypto('{{ key }}')">
                                     <div class="mb-2">
-                                        {% if coingecko_id %}
-                                            <img src="https://assets.coingecko.com/coins/images/{{ coingecko_id }}/large/{{ symbol }}.png"
-                                                 alt="{{ name }}" class="crypto-icon"
-                                                 onerror="this.onerror=null;this.outerHTML='<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'40\' height=\'40\' fill=\'#0d6efd\'><path d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z\'/><path d=\'M12 6c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z\'/></svg>';">
-                                        {% else %}
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40" fill="#0d6efd">
-                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                                                <path d="M12 6c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
-                                            </svg>
-                                        {% endif %}
+                                        <img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@latest/128/color/{{ symbol }}.png"
+                                             alt="{{ name }}" class="crypto-icon"
+                                             onerror="this.onerror=null;this.outerHTML=`<div class='crypto-svg'>{{ symbol|upper }}</div>`;">
                                     </div>
                                     <h6 class="mb-1">{{ name|replace({'-': ' '}) }}</h6>
                                     {% if network %}

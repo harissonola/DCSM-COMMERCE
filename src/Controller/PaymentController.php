@@ -138,8 +138,6 @@ class PaymentController extends AbstractController
         $fees = $this->calculateWithdrawalFees($amount);
         $totalAmount = $amount + $fees;
 
-        dd($totalAmount);
-
         // Création de la transaction
         $transaction = (new Transactions())
             ->setUser($user)
@@ -150,6 +148,8 @@ class PaymentController extends AbstractController
             ->setStatus('pending')
             ->setCreatedAt(new DateTimeImmutable())
             ->setExternalId('WITHDRAW_' . $user->getId() . '_' . time());
+
+        dd($this->entityManager->beginTransaction());
 
         $this->entityManager->beginTransaction();
         try {

@@ -28,32 +28,38 @@ class PaymentController extends AbstractController
     public const DEPOSIT_EXPIRATION_HOURS = 2;
 
     public const SUPPORTED_CRYPTOS = [
-        // Cryptos principales
+        // Top 10 cryptos (par capitalisation)
         'btc' => 'Bitcoin (BTC)',
         'eth' => 'Ethereum (ETH)',
-        'ltc' => 'Litecoin (LTC)',
-        'xrp' => 'Ripple (XRP)',
-        'bch' => 'Bitcoin Cash (BCH)',
+        'usdt' => 'Tether (USDT)', // Spécifiez le réseau après
+        'bnb' => 'Binance Coin (BNB)',
+        'sol' => 'Solana (SOL)',
+        'usdc' => 'USD Coin (USDC)',
+        'xrp' => 'XRP (XRP)',
+        'ada' => 'Cardano (ADA)',
+        'avax' => 'Avalanche (AVAX)',
         'doge' => 'Dogecoin (DOGE)',
-        'trx' => 'TRON (TRX)',
-        
-        // Stablecoins USDT avec réseaux
+    
+        // Stablecoins USDT avec réseaux (vérifiés)
         'usdt_erc20' => 'Tether (USDT-ERC20)',
         'usdt_trc20' => 'Tether (USDT-TRC20)',
         'usdt_bep20' => 'Tether (USDT-BEP20)',
         'usdt_polygon' => 'Tether (USDT-Polygon)',
-        'usdt_ton' => 'Tether (USDT-TON)',
         
-        // Autres stablecoins
-        'usdc' => 'USD Coin (USDC-ERC20)',
-        'usdc_trc20' => 'USD Coin (USDC-TRC20)',
-        'busd' => 'Binance USD (BUSD-BEP20)',
-        
-        // Ajouts récents populaires
-        'sol' => 'Solana (SOL)',
-        'ada' => 'Cardano (ADA)',
+        // Autres cryptos importantes
+        'shib' => 'Shiba Inu (SHIB)',
         'dot' => 'Polkadot (DOT)',
-        'matic' => 'Polygon (MATIC)'
+        'ltc' => 'Litecoin (LTC)',
+        'bch' => 'Bitcoin Cash (BCH)',
+        'trx' => 'TRON (TRX)',
+        'matic' => 'Polygon (MATIC)',
+        'ton' => 'Toncoin (TON)',
+        
+        // Nouveaux ajouts pertinents (2024)
+        'link' => 'Chainlink (LINK)',
+        'xlm' => 'Stellar (XLM)',
+        'uni' => 'Uniswap (UNI)',
+        'atom' => 'Cosmos (ATOM)'
     ];
 
     private $mailer;

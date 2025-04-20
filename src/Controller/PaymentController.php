@@ -884,6 +884,7 @@ class PaymentController extends AbstractController
     ): void {
         try {
             $email = (new TemplatedEmail())
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
                 ->to($email)
                 ->subject($subject)
                 ->htmlTemplate($template)

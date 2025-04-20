@@ -13,23 +13,16 @@
                 return;
             }
 
-            // Récupérer ou initialiser le timer dans le localStorage
-            let expiresAt;
-            const storedExpiresAt = localStorage.getItem('depositExpiresAt');
-            
-            if (storedExpiresAt) {
-                expiresAt = new Date(parseInt(storedExpiresAt));
-            } else {
-                expiresAt = new Date('{{ expiresAt|date('Y-m-d H:i:s') }}').getTime();
-                localStorage.setItem('depositExpiresAt', expiresAt);
-            }
+            // Récupérer la date d'expiration depuis l'attribut data
+            const timerElement = document.getElementById('timer');
+            let expiresAt = new Date(timerElement.dataset.expiresAt).getTime();
             
             function updateTimer() {
                 const now = new Date().getTime();
                 const distance = expiresAt - now;
                 
                 if (distance < 0) {
-                    document.getElementById('timer').innerHTML = "<span class='text-danger fw-bold'>EXPIRÉ</span>";
+                    timerElement.innerHTML = "<span class='text-danger fw-bold'>EXPIRÉ</span>";
                     document.getElementById('timer-badge').classList.remove('bg-purple');
                     document.getElementById('timer-badge').classList.add('bg-danger');
                     return;
@@ -39,7 +32,7 @@
                 const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                 
-                document.getElementById('timer').innerHTML = 
+                timerElement.innerHTML = 
                     `<span class="countdown-number">${hours}</span><span class="countdown-separator">h</span> 
                     <span class="countdown-number">${minutes}</span><span class="countdown-separator">m</span> 
                     <span class="countdown-number">${seconds}</span><span class="countdown-separator">s</span>`;
@@ -49,7 +42,7 @@
             const timerInterval = setInterval(updateTimer, 1000);
 
             // Vérification automatique du statut
-            setInterval(function() {
+            const checkStatusInterval = setInterval(function() {
                 fetch('{{ path('app_check_crypto_deposit', {'id': transaction.id}) }}', {
                     method: 'POST',
                     headers: {
@@ -60,22 +53,24 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'completed') {
-                        localStorage.removeItem('depositExpiresAt');
+                        clearInterval(timerInterval);
+                        clearInterval(checkStatusInterval);
                         window.location.href = '{{ path('app_profile') }}?deposit=success';
                     } else if (data.status === 'expired') {
-                        localStorage.removeItem('depositExpiresAt');
+                        clearInterval(timerInterval);
+                        clearInterval(checkStatusInterval);
                         window.location.reload();
+                    } else if (data.expires_at) {
+                        // Mise à jour de la date d'expiration si elle a changé
+                        const newExpiresAt = new Date(data.expires_at).getTime();
+                        if (newExpiresAt !== expiresAt) {
+                            expiresAt = newExpiresAt;
+                            timerElement.dataset.expiresAt = data.expires_at;
+                        }
                     }
                 })
                 .catch(error => console.error('Error:', error));
             }, 30000); // Toutes les 30 secondes
-
-            // Nettoyage du localStorage si l'utilisateur quitte la page
-            window.addEventListener('beforeunload', function() {
-                if (document.getElementById('timer').textContent.includes("EXPIRÉ")) {
-                    localStorage.removeItem('depositExpiresAt');
-                }
-            });
         });
 
         function copyToClipboard(elementId) {
@@ -233,7 +228,8 @@
                             <i class="fas fa-coins me-2"></i> Instructions pour votre dépôt
                         </h4>
                         <span id="timer-badge" class="badge bg-purple">
-                            <i class="fas fa-clock me-1"></i> <span id="timer"></span>
+                            <i class="fas fa-clock me-1"></i> 
+                            <span id="timer" data-expires-at="{{ expiresAt|date('c') }}"></span>
                         </span>
                     </div>
                 </div>

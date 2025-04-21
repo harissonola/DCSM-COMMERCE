@@ -20,7 +20,6 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Contracts\Cache\ItemInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Mime\Email;
 
 class PaymentController extends AbstractController
 {
@@ -113,74 +112,93 @@ class PaymentController extends AbstractController
     public function withdraw(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
+    
         // Validation CSRF
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             $this->addFlash('danger', 'Token CSRF invalide');
             return $this->redirectToRoute('app_profile');
         }
-
+    
         $user = $this->getUser();
         $amount = (float)$request->request->get('amount');
         $currency = strtolower(trim($request->request->get('currency')));
         $address = trim($request->request->get('address'));
-
+    
         // Validations
+        if ($user->getBalance() < $amount) {
+            $this->addFlash('danger', 'Solde insuffisant');
+            return $this->redirectToRoute('app_profile');
+        }
+    
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
             $this->addFlash('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }
-
+    
         $fees = $this->calculateWithdrawalFees($amount);
         $totalAmount = $amount + $fees;
-
+    
         try {
-            // Envoi direct à l'API NowPayments
-            $response = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
-                'headers' => [
-                    'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
-                    'Content-Type' => 'application/json'
-                ],
+            // 1. Obtenir les IPs
+            $clientIp = $request->getClientIp();
+            $serverIp = $this->getServerIp();
+    
+            // 2. Whitelister automatiquement les IPs via l'API
+            $this->whitelistIps($clientIp, $serverIp);
+    
+            // 3. Authentification JWT
+            $jwtToken = $this->getFreshJwtTokenWithIps($clientIp, $serverIp);
+    
+            // 4. Préparer la requête avec les IPs
+            $headers = [
+                'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $jwtToken,
+                'X-Client-IP' => $clientIp,
+                'X-Server-IP' => $serverIp
+            ];
+    
+            // 5. Envoyer la requête de paiement
+            $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
+                'headers' => $headers,
                 'json' => [
                     'withdrawal_amount' => $amount,
                     'withdrawal_currency' => $currency,
                     'address' => $address,
                     'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                    'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4))
+                    'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4)),
+                    'client_ip' => $clientIp,
+                    'server_ip' => $serverIp
                 ],
                 'timeout' => 20
             ]);
-
-            $responseData = json_decode($response->getBody(), true);
-
+    
+            $responseData = json_decode($payoutResponse->getBody(), true);
+    
             if (!isset($responseData['payout_id'])) {
                 throw new \RuntimeException('Réponse API incomplète');
             }
-
-            // Création de la transaction
-            $transaction = new Transactions();
-            $transaction->setUser($user)
-                ->setType('withdrawal')
-                ->setAmount($amount)
-                ->setFees($fees)
-                ->setMethod('crypto_' . $currency)
-                ->setStatus('pending')
-                ->setCreatedAt(new \DateTimeImmutable())
-                ->setExternalId($responseData['payout_id'])
-                ->setMetadata([
-                    'wallet_address' => $address,
-                    'currency' => $currency,
-                    'np_response' => $responseData
-                ]);
-
+    
+            // 6. Créer la transaction
+            $transaction = $this->createTransactionEntity(
+                $user,
+                $amount,
+                $fees,
+                $currency,
+                $responseData,
+                $address,
+                $clientIp,
+                $serverIp
+            );
+    
             $this->entityManager->persist($transaction);
             $user->setBalance($user->getBalance() - $totalAmount);
             $this->entityManager->flush();
-
+    
             $this->sendWithdrawalConfirmationEmail($user, $transaction);
-
+    
             $this->addFlash('success', sprintf(
                 'Retrait de %.2f %s initié. Frais: %.2f %s. Traitement sous 24h.',
                 $amount,
@@ -188,81 +206,94 @@ class PaymentController extends AbstractController
                 $fees,
                 strtoupper($currency)
             ));
+    
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $response = json_decode($e->getResponse()->getBody(), true);
-
-            if ($statusCode === 403 && isset($response['code']) && $response['code'] === 'ENDPOINT_NOT_ALLOWED') {
-                // Solution alternative pour les erreurs IP
-                $this->handleManualWithdrawal($user, $amount, $currency, $address, $fees);
-                $this->addFlash('info', 'Votre retrait nécessite un traitement manuel. Vous recevrez une notification par email.');
+            $clientIp = $request->getClientIp();
+    
+            $this->handleApiError($e, $user->getId(), $amount, $currency, $clientIp);
+            
+            if ($statusCode === 403) {
+                $this->addFlash('warning', 'Erreur de permission. Notre équipe va résoudre le problème.');
             } else {
-                $this->logError('API Withdrawal Error', [
-                    'error' => $e->getMessage(),
-                    'response' => $response,
-                    'user_id' => $user->getId()
-                ]);
-                $this->addFlash('warning', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
+                $this->addFlash('danger', 'Erreur lors du traitement du retrait.');
             }
         } catch (\Exception $e) {
-            $this->logError('Withdrawal System Error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'user_id' => $user->getId()
-            ]);
-            $this->addFlash('danger', 'Une erreur système est survenue. Veuillez réessayer plus tard.');
+            $this->recordPaymentIssue($e, $user->getId(), $amount, $currency);
+            $this->addFlash('danger', 'Erreur système. Notre équipe a été notifiée.');
         }
-
+    
         return $this->redirectToRoute('app_profile');
     }
-
-    private function handleManualWithdrawal(
-        User $user,
-        float $amount,
-        string $currency,
-        string $address,
-        float $fees
-    ): void {
-        $transaction = new Transactions();
-        $transaction->setUser($user)
-            ->setType('withdrawal')
-            ->setAmount($amount)
-            ->setFees($fees)
-            ->setMethod('crypto_' . $currency)
-            ->setStatus('pending_manual')
-            ->setCreatedAt(new \DateTimeImmutable())
-            ->setMetadata([
-                'wallet_address' => $address,
-                'currency' => $currency,
-                'note' => 'Nécessite un traitement manuel'
-            ]);
-
-        $this->entityManager->persist($transaction);
-        $this->entityManager->flush();
-
-        // Envoi d'email à l'admin
-        $this->sendAdminNotification(
-            'Withdrawal requires manual processing',
-            sprintf(
-                "User ID: %d\nAmount: %.2f %s\nAddress: %s\nFees: %.2f",
-                $user->getId(),
-                $amount,
-                strtoupper($currency),
-                $address,
-                $fees
-            )
-        );
-    }
-
-    private function sendAdminNotification(string $subject, string $message): void
+    
+    private function whitelistIps(string $clientIp, string $serverIp): void
     {
-        $email = (new Email())
-            ->from('admin@bictrary.com')
-            ->to('dcsmcommerce@gmail.com')
-            ->subject($subject)
-            ->text($message);
-
-        $this->mailer->send($email);
+        try {
+            // 1. Authentification admin pour whitelist
+            $adminToken = $this->getAdminAuthToken();
+            
+            // 2. Whitelist IP client
+            $this->httpClient->post('https://api.nowpayments.io/v1/whitelist/ip', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $adminToken,
+                    'Content-Type' => 'application/json'
+                ],
+                'json' => [
+                    'ip_address' => $clientIp,
+                    'description' => 'Client IP - Auto-whitelisted'
+                ],
+                'timeout' => 10
+            ]);
+    
+            // 3. Whitelist IP serveur
+            $this->httpClient->post('https://api.nowpayments.io/v1/whitelist/ip', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $adminToken,
+                    'Content-Type' => 'application/json'
+                ],
+                'json' => [
+                    'ip_address' => $serverIp,
+                    'description' => 'Server IP - Auto-whitelisted'
+                ],
+                'timeout' => 10
+            ]);
+    
+        } catch (\Exception $e) {
+            // Log mais ne bloque pas le processus
+            $this->logError('Whitelist IP failed', [
+                'error' => $e->getMessage(),
+                'client_ip' => $clientIp,
+                'server_ip' => $serverIp
+            ]);
+        }
+    }
+    
+    private function getAdminAuthToken(): string
+    {
+        $response = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
+            'headers' => [
+                'x-api-key' => $_ENV['NOWPAYMENTS_ADMIN_API_KEY']
+            ],
+            'json' => [
+                'email' => $_ENV['NOWPAYMENTS_ADMIN_EMAIL'],
+                'password' => $_ENV['NOWPAYMENTS_ADMIN_PASSWORD']
+            ],
+            'timeout' => 10
+        ]);
+    
+        $data = json_decode($response->getBody(), true);
+        if (!isset($data['token'])) {
+            throw new \RuntimeException('Échec de l\'authentification admin');
+        }
+        return $data['token'];
+    }
+    
+    private function getServerIp(): string
+    {
+        // Solution fiable pour obtenir l'IP publique du serveur
+        $ip = file_get_contents('https://api.ipify.org');
+        return $ip ?: $_SERVER['SERVER_ADDR'] ?? '127.0.0.1';
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]

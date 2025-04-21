@@ -141,15 +141,10 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Vérification préalable de l'adresse
-            if (!$this->isAddressWhitelisted($address, $currency)) {
-                throw new \RuntimeException('Adresse non autorisée pour les retraits');
-            }
-
-            // 2. Authentification JWT
+            // 1. Authentification JWT
             $jwtToken = $this->getFreshJwtToken();
 
-            // 3. Requête de paiement
+            // 2. Requête de paiement
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
@@ -172,7 +167,7 @@ class PaymentController extends AbstractController
                 throw new \RuntimeException('Réponse API incomplète');
             }
 
-            // Création de la transaction
+            // 3. Création de la transaction
             $transaction = $this->createTransactionEntity(
                 $user,
                 $amount,
@@ -197,10 +192,10 @@ class PaymentController extends AbstractController
             ));
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $this->handleApiError($e, $user->getId(), $amount, $currency);
-            $this->addFlash('danger', 'Erreur API. Notre équipe a été notifiée.');
+            $this->addFlash('danger', 'Erreur lors du traitement du retrait. Veuillez réessayer.');
         } catch (\Exception $e) {
-            $this->logError($e, $user->getId(), $amount, $currency);
-            $this->addFlash('danger', 'Erreur de traitement. Veuillez réessayer.');
+            $this->recordPaymentIssue($e, $user->getId(), $amount, $currency);
+            $this->addFlash('danger', 'Erreur système. Notre équipe a été notifiée.');
         }
 
         return $this->redirectToRoute('app_profile');
@@ -218,14 +213,10 @@ class PaymentController extends AbstractController
         ]);
 
         $authData = json_decode($authResponse->getBody(), true);
-        return $authData['token'] ?? throw new \RuntimeException('Authentification échouée');
-    }
-
-    private function isAddressWhitelisted(string $address, string $currency): bool
-    {
-        // Implémentez votre logique de vérification
-        // Soit via cache, soit base de données, soit appel API
-        return true; // Temporaire - à adapter
+        if (!isset($authData['token'])) {
+            throw new \RuntimeException('Échec de l\'authentification: ' . json_encode($authData));
+        }
+        return $authData['token'];
     }
 
     private function createTransactionEntity(
@@ -261,8 +252,26 @@ class PaymentController extends AbstractController
     private function handleApiError(\GuzzleHttp\Exception\ClientException $e, int $userId, float $amount, string $currency): void
     {
         $errorDetails = [
+            'timestamp' => date('Y-m-d H:i:s'),
             'status' => $e->getResponse()->getStatusCode(),
             'response' => json_decode($e->getResponse()->getBody(), true),
+            'user_id' => $userId,
+            'amount' => $amount,
+            'currency' => $currency
+        ];
+
+        file_put_contents(
+            __DIR__ . '/../../var/log/payment_api_errors.log',
+            json_encode($errorDetails) . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+
+    private function recordPaymentIssue(\Exception $e, int $userId, float $amount, string $currency): void
+    {
+        $errorData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'error' => $e->getMessage(),
             'user_id' => $userId,
             'amount' => $amount,
             'currency' => $currency,
@@ -270,23 +279,8 @@ class PaymentController extends AbstractController
         ];
 
         file_put_contents(
-            __DIR__ . '/../../var/log/payment_api_errors.log',
-            date('[Y-m-d H:i:s]') . ' ERREUR: ' . json_encode($errorDetails) . PHP_EOL,
-            FILE_APPEND
-        );
-    }
-
-    private function logError(\Exception $e, int $userId, float $amount, string $currency): void
-    {
-        file_put_contents(
-            __DIR__ . '/../../var/log/payment_errors.log',
-            date('[Y-m-d H:i:s]') . ' ERREUR: ' . json_encode([
-                'error' => $e->getMessage(),
-                'user_id' => $userId,
-                'amount' => $amount,
-                'currency' => $currency,
-                'trace' => $e->getTraceAsString()
-            ]) . PHP_EOL,
+            __DIR__ . '/../../var/log/payment_issues.log',
+            json_encode($errorData) . PHP_EOL,
             FILE_APPEND
         );
     }

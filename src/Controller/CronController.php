@@ -83,6 +83,7 @@ class CronController extends AbstractController
                     // Conversion du prix en USD
                     $priceUsd = $product->getPrice() / self::EXCHANGE_RATE;
                     $rate     = $user->getReferralRewardRate(); // ex: 0.10 pour 10%
+                    dd($priceUsd, $rate);
                     $totalReward += $priceUsd * $rate;
                 }
 

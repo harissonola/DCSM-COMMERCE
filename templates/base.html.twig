@@ -294,33 +294,27 @@
         {% endif %}
         
         {% for label, messages in app.flashes %}
-            <script>
-            document.addEventListener('turbo:load', function() {
-                // Traitement des messages flash
-                {% for label, messages in app.flashes %}
-                    {% for message in messages %}
-                        Swal.fire({
-                            icon: '{{ label }}',
-                            title: '{{ label|capitalize }}',
-                            text: '{{ message|raw }}',
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 5000
-                        });
-                    {% endfor %}
-                {% endfor %}
-            });
+        <script>
+        document.addEventListener('turbo:load', function() {
+            {% for message in messages %}
+                // Déterminer le type d'alerte SweetAlert2
+                let swalType = 'info';
+                if (['success', 'info', 'warning', 'danger', 'error'].includes('{{ label }}')) {
+                    swalType = '{{ label }}' === 'error' ? 'error' : '{{ label }}';
+                }
         
-            // Gestion des requêtes Turbo
-            document.addEventListener('turbo:before-fetch-request', function() {
-                document.getElementById('custom-spinner').classList.remove('hidden');
-            });
-            
-            document.addEventListener('turbo:before-fetch-response', function() {
-                document.getElementById('custom-spinner').classList.add('hidden');
-            });
-        </script>        
+                // Afficher l'alerte SweetAlert2
+                Swal.fire({
+                    icon: swalType,
+                    title: '{{ label|capitalize|replace({'_': ' '}) }}',
+                    text: `{{ message|raw }}`,
+                    showConfirmButton: true, // Bouton "OK" visible
+                    toast: true,
+                    position: 'top-end'
+                });
+            {% endfor %}
+        });
+        </script>
         {% endfor %}
         
         {% if app.request.query.get('error') %}

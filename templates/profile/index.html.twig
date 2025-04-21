@@ -627,7 +627,7 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <form action="{{ path('app_withdraw') }}" method="post" >
+          <form action="{{ path('app_withdraw') }}" method="post" data-turbo="false">
             <input type="hidden" name="_token" value="{{ csrf_token('withdraw') }}" />
             <div class="mb-3">
               <label class="form-label fw-bold">Montant (USD)</label>

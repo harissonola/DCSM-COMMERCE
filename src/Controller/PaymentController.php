@@ -117,7 +117,9 @@ class PaymentController extends AbstractController
         // Validation CSRF
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            $this->addFlash('danger', 'Token CSRF invalide');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Token CSRF invalide');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -138,7 +140,9 @@ class PaymentController extends AbstractController
 
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
-            $this->addFlash('danger', $errors[0]);
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }
 
@@ -197,13 +201,17 @@ class PaymentController extends AbstractController
             // Envoi de l'email de confirmation
             $this->sendWithdrawalRequestedEmail($user, $transaction);
 
-            $this->addFlash('success', 'Demande de retrait enregistrée. Le solde sera débité après confirmation.');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Demande de retrait enregistrée. Le solde sera débité après confirmation.');
         } catch (\Exception $e) {
             $this->logError('Withdrawal failed', [
                 'error' => $e->getMessage(),
                 'user_id' => $user->getId()
             ]);
-            $this->addFlash('danger', 'Erreur lors de la demande de retrait');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Erreur lors de la demande de retrait');
         }
 
         return $this->redirectToRoute('app_profile');
@@ -711,7 +719,9 @@ class PaymentController extends AbstractController
 
         $token = new CsrfToken('deposit', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            $this->addFlash('danger', 'Token CSRF invalide');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Token CSRF invalide');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -720,7 +730,9 @@ class PaymentController extends AbstractController
 
         $errors = $this->validateDeposit($amount, $method);
         if (!empty($errors)) {
-            $this->addFlash('danger', $errors[0]);
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }
 
@@ -767,13 +779,17 @@ class PaymentController extends AbstractController
 
         $token = new CsrfToken('select_crypto', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
-            $this->addFlash('danger', 'Token CSRF invalide');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Token CSRF invalide');
             return $this->redirectToRoute('app_profile');
         }
 
         $transaction = $this->entityManager->getRepository(Transactions::class)->find($id);
         if (!$transaction || $transaction->getUser() !== $this->getUser()) {
-            $this->addFlash('danger', 'Transaction invalide');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Transaction invalide');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -781,12 +797,16 @@ class PaymentController extends AbstractController
         $sourceAddress = trim($request->request->get('source_address'));
 
         if (!array_key_exists($cryptoType, self::SUPPORTED_CRYPTOS)) {
-            $this->addFlash('danger', 'Type de crypto non supporté');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Type de crypto non supporté');
             return $this->redirectToRoute('app_profile');
         }
 
         if (empty($sourceAddress)) {
-            $this->addFlash('danger', 'Veuillez fournir votre adresse source');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Veuillez fournir votre adresse source');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -837,7 +857,9 @@ class PaymentController extends AbstractController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            $this->addFlash('danger', 'Erreur lors de la création du dépôt: ' . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Erreur lors de la création du dépôt: ' . $e->getMessage());
             return $this->redirectToRoute('app_profile');
         }
     }
@@ -1020,14 +1042,18 @@ class PaymentController extends AbstractController
     #[Route('/deposit/success', name: 'deposit_success')]
     public function depositSuccess(): Response
     {
-        $this->addFlash('success', 'Dépôt effectué avec succès');
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Dépôt effectué avec succès');
         return $this->redirectToRoute('app_profile');
     }
 
     #[Route('/deposit/cancel', name: 'deposit_cancel')]
     public function depositCancel(): Response
     {
-        $this->addFlash('warning', 'Dépôt annulé');
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('warning', 'Dépôt annulé');
         return $this->redirectToRoute('app_profile');
     }
 }

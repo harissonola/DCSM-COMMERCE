@@ -63,7 +63,7 @@ class CronController extends AbstractController
 
             $userRewards = [];
             foreach ($users as $user) {
-                $products = $user->getProducts();
+                $products = $user->getProduct();
                 if ($products->isEmpty()) {
                     continue;
                 }

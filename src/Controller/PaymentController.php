@@ -221,7 +221,7 @@ class PaymentController extends AbstractController
     
         return $this->redirectToRoute('app_profile');
     }
-
+    
     /**
      * Méthode unifiée pour logger les erreurs de paiement
      */

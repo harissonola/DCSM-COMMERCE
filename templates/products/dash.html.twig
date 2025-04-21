@@ -316,11 +316,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('turbo:load', function() {
   const ctx = document.getElementById('tradingChart');
   const errorElement = document.getElementById('chartError');
   const productSlug = '{{ prod.slug }}';
   let chartInstance = null;
+
+  function formatTime(date) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  }
 
   function initChart(data) {
     if (chartInstance) chartInstance.destroy();
@@ -362,7 +369,10 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 15,
             callbacks: {
               label: (context) => `$${context.parsed.y.toFixed(2)}`,
-              title: (items) => new Date(items[0].parsed.x).toLocaleString()
+              title: (items) => {
+                const date = new Date(items[0].parsed.x);
+                return formatTime(date);
+              }
             }
           }
         },
@@ -370,14 +380,23 @@ document.addEventListener('DOMContentLoaded', function() {
           x: {
             type: 'time',
             time: {
-              tooltipFormat: 'PPpp'
+              displayFormats: {
+                hour: 'HH:mm',
+                minute: 'HH:mm',
+                second: 'HH:mm:ss'
+              },
+              tooltipFormat: 'HH:mm:ss'
             },
             grid: { 
               display: false,
               color: 'rgba(255, 255, 255, 0.1)'
             },
             ticks: {
-              color: 'rgba(255, 255, 255, 0.7)'
+              color: 'rgba(255, 255, 255, 0.7)',
+              callback: function(value) {
+                const date = new Date(value);
+                return formatTime(date);
+              }
             }
           },
           y: {

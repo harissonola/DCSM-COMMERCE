@@ -190,6 +190,9 @@ class PaymentController extends AbstractController
             $this->entityManager->persist($transaction);
             $this->entityManager->flush();
 
+            // Envoi de l'email de confirmation
+            $this->sendWithdrawalRequestedEmail($user, $transaction);
+
             $this->addFlash('success', 'Demande de retrait enregistrée. Le solde sera débité après confirmation.');
         } catch (\Exception $e) {
             $this->logError('Withdrawal failed', [
@@ -200,6 +203,33 @@ class PaymentController extends AbstractController
         }
 
         return $this->redirectToRoute('app_profile');
+    }
+
+    private function sendWithdrawalRequestedEmail(User $user, Transactions $transaction): void
+    {
+        try {
+            $email = (new TemplatedEmail())
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+                ->to($user->getEmail())
+                ->subject('Confirmation de votre demande de retrait')
+                ->htmlTemplate('emails/withdrawal_requested.html.twig')
+                ->context([
+                    'amount' => $transaction->getAmount(),
+                    'currency' => str_replace('crypto_', '', $transaction->getMethod()),
+                    'fees' => $transaction->getFees(),
+                    'address' => $transaction->getMetadata()['wallet_address'],
+                    'date' => new \DateTime(),
+                    'total_amount' => $transaction->getAmount() + $transaction->getFees()
+                ]);
+
+            $this->mailer->send($email);
+        } catch (\Exception $e) {
+            $this->logError('Failed to send withdrawal requested email', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->getId(),
+                'transaction_id' => $transaction->getId()
+            ]);
+        }
     }
 
     private function handleWithdrawalIPN(array $ipnData): JsonResponse

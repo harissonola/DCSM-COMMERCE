@@ -112,59 +112,66 @@ class PaymentController extends AbstractController
     public function withdraw(Request $request): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-
+    
         // Validation CSRF
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             $this->addFlash('danger', 'Token CSRF invalide');
             return $this->redirectToRoute('app_profile');
         }
-
+    
         $user = $this->getUser();
         $amount = (float)$request->request->get('amount');
         $currency = strtolower(trim($request->request->get('currency')));
         $address = trim($request->request->get('address'));
-
+    
         // Validations
         if ($user->getBalance() < $amount) {
             $this->addFlash('danger', 'Solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }
-
+    
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
             $this->addFlash('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }
-
+    
         $fees = $this->calculateWithdrawalFees($amount);
         $totalAmount = $amount + $fees;
-
+    
         try {
             $jwtToken = $this->getFreshJwtToken();
-
+    
+            // Format correct selon la documentation NowPayments
+            $payload = [
+                'withdrawals' => [
+                    [
+                        'address' => $address,
+                        'currency' => $currency,
+                        'amount' => $amount
+                    ]
+                ],
+                'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4))
+            ];
+    
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer ' . $jwtToken
                 ],
-                'json' => [
-                    'withdrawal_amount' => $amount,
-                    'withdrawal_currency' => $currency,
-                    'address' => $address,
-                    'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                    'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4))
-                ],
+                'json' => $payload,
                 'timeout' => 20
             ]);
-
+    
             $responseData = json_decode($payoutResponse->getBody(), true);
-
+    
             if (!isset($responseData['payout_id'])) {
-                throw new \RuntimeException('Réponse API incomplète');
+                throw new \RuntimeException('Réponse API incomplète: ' . json_encode($responseData));
             }
-
+    
             $transaction = new Transactions();
             $transaction->setUser($user)
                 ->setType('withdrawal')
@@ -177,15 +184,16 @@ class PaymentController extends AbstractController
                 ->setMetadata([
                     'np_response' => $responseData,
                     'wallet_address' => $address,
-                    'currency' => $currency
+                    'currency' => $currency,
+                    'payload_sent' => $payload // Pour débogage
                 ]);
-
+    
             $this->entityManager->persist($transaction);
             $user->setBalance($user->getBalance() - $totalAmount);
             $this->entityManager->flush();
-
+    
             $this->sendWithdrawalConfirmationEmail($user, $transaction);
-
+    
             $this->addFlash('success', sprintf(
                 'Retrait de %.2f %s initié. Frais: %.2f %s. Traitement sous 24h.',
                 $amount,
@@ -193,14 +201,24 @@ class PaymentController extends AbstractController
                 $fees,
                 strtoupper($currency)
             ));
+    
         } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $responseBody = json_decode($response->getBody(), true);
+    
             $this->logPaymentError($e, $user->getId(), $amount, $currency, 'API');
-            $this->addFlash('danger', 'Erreur lors du traitement du retrait. Veuillez réessayer.');
+    
+            if ($statusCode === 400) {
+                $this->addFlash('warning', 'Erreur de validation: ' . ($responseBody['message'] ?? 'Paramètres invalides'));
+            } else {
+                $this->addFlash('danger', 'Erreur lors du traitement du retrait (Code: ' . $statusCode . ')');
+            }
         } catch (\Exception $e) {
             $this->logPaymentError($e, $user->getId(), $amount, $currency, 'SYSTEM');
             $this->addFlash('danger', 'Erreur système. Notre équipe a été notifiée.');
         }
-
+    
         return $this->redirectToRoute('app_profile');
     }
 

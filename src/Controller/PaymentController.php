@@ -113,6 +113,7 @@ class PaymentController extends AbstractController
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
+        // Validation CSRF
         $token = new CsrfToken('withdraw', $request->request->get('_token'));
         if (!$this->csrfTokenManager->isTokenValid($token)) {
             $this->addFlash('danger', 'Token CSRF invalide');
@@ -124,7 +125,7 @@ class PaymentController extends AbstractController
         $currency = strtolower(trim($request->request->get('currency')));
         $address = trim($request->request->get('address'));
 
-        // Validation initiale
+        // Validations
         if ($user->getBalance() < $amount) {
             $this->addFlash('danger', 'Solde insuffisant');
             return $this->redirectToRoute('app_profile');
@@ -140,70 +141,49 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Authentification avec credentials
-            $authResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
-                'headers' => [
-                    'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
-                ],
-                'json' => [
-                    'email' => $_ENV['NOWPAYMENTS_API_EMAIL'],
-                    'password' => $_ENV['NOWPAYMENTS_API_PASSWORD']
-                ],
-                'timeout' => 10
-            ]);
-
-            $authData = json_decode($authResponse->getBody(), true);
-            if (!isset($authData['token'])) {
-                throw new \RuntimeException('Échec de l\'authentification: ' . json_encode($authData));
+            // 1. Vérification préalable de l'adresse
+            if (!$this->isAddressWhitelisted($address, $currency)) {
+                throw new \RuntimeException('Adresse non autorisée pour les retraits');
             }
 
-            // 2. Requête de paiement
+            // 2. Authentification JWT
+            $jwtToken = $this->getFreshJwtToken();
+
+            // 3. Requête de paiement
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
                     'Content-Type' => 'application/json',
-                    'Authorization' => 'Bearer ' . $authData['token']
+                    'Authorization' => 'Bearer ' . $jwtToken
                 ],
                 'json' => [
                     'withdrawal_amount' => $amount,
                     'withdrawal_currency' => $currency,
                     'address' => $address,
                     'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                    'unique_external_id' => 'WITHDRAW_' . $user->getId() . '_' . time()
+                    'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4))
                 ],
-                'timeout' => 15
+                'timeout' => 20
             ]);
 
             $responseData = json_decode($payoutResponse->getBody(), true);
 
             if (!isset($responseData['payout_id'])) {
-                throw new \RuntimeException('Réponse API invalide: ' . json_encode($responseData));
+                throw new \RuntimeException('Réponse API incomplète');
             }
 
             // Création de la transaction
-            $transaction = (new Transactions())
-                ->setUser($user)
-                ->setType('withdrawal')
-                ->setAmount($amount)
-                ->setFees($fees)
-                ->setMethod('crypto_' . $currency)
-                ->setStatus('processing')
-                ->setCreatedAt(new DateTimeImmutable())
-                ->setExternalId($responseData['payout_id'])
-                ->setMetadata([
-                    'np_response' => $responseData,
-                    'wallet_address' => $address,
-                    'currency' => $currency,
-                    'fees_breakdown' => [
-                        'amount' => $amount,
-                        'fees' => $fees,
-                        'total_deducted' => $totalAmount
-                    ],
-                    'api_timestamp' => $responseData['created_at'] ?? null
-                ]);
+            $transaction = $this->createTransactionEntity(
+                $user,
+                $amount,
+                $fees,
+                $currency,
+                $responseData,
+                $address
+            );
 
-            $user->setBalance($user->getBalance() - $totalAmount);
             $this->entityManager->persist($transaction);
+            $user->setBalance($user->getBalance() - $totalAmount);
             $this->entityManager->flush();
 
             $this->sendWithdrawalConfirmationEmail($user, $transaction);
@@ -215,24 +195,100 @@ class PaymentController extends AbstractController
                 $fees,
                 strtoupper($currency)
             ));
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $this->handleApiError($e, $user->getId(), $amount, $currency);
+            $this->addFlash('danger', 'Erreur API. Notre équipe a été notifiée.');
         } catch (\Exception $e) {
-            $errorDetails = [
-                'user' => $user->getId(),
-                'amount' => $amount,
-                'currency' => $currency,
-                'error' => $e->getMessage()
-            ];
-
-            file_put_contents(
-                __DIR__ . '/../../var/log/payment_errors.log',
-                date('[Y-m-d H:i:s]') . ' ERREUR: ' . json_encode($errorDetails) . PHP_EOL,
-                FILE_APPEND
-            );
-
-            $this->addFlash('danger', 'Erreur de traitement. Notre équipe a été notifiée.');
+            $this->logError($e, $user->getId(), $amount, $currency);
+            $this->addFlash('danger', 'Erreur de traitement. Veuillez réessayer.');
         }
 
         return $this->redirectToRoute('app_profile');
+    }
+
+    private function getFreshJwtToken(): string
+    {
+        $authResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
+            'headers' => ['x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']],
+            'json' => [
+                'email' => $_ENV['NOWPAYMENTS_API_EMAIL'],
+                'password' => $_ENV['NOWPAYMENTS_API_PASSWORD']
+            ],
+            'timeout' => 10
+        ]);
+
+        $authData = json_decode($authResponse->getBody(), true);
+        return $authData['token'] ?? throw new \RuntimeException('Authentification échouée');
+    }
+
+    private function isAddressWhitelisted(string $address, string $currency): bool
+    {
+        // Implémentez votre logique de vérification
+        // Soit via cache, soit base de données, soit appel API
+        return true; // Temporaire - à adapter
+    }
+
+    private function createTransactionEntity(
+        User $user,
+        float $amount,
+        float $fees,
+        string $currency,
+        array $apiResponse,
+        string $address
+    ): Transactions {
+        return (new Transactions())
+            ->setUser($user)
+            ->setType('withdrawal')
+            ->setAmount($amount)
+            ->setFees($fees)
+            ->setMethod('crypto_' . $currency)
+            ->setStatus('processing')
+            ->setCreatedAt(new DateTimeImmutable())
+            ->setExternalId($apiResponse['payout_id'])
+            ->setMetadata([
+                'np_response' => $apiResponse,
+                'wallet_address' => $address,
+                'currency' => $currency,
+                'fees_breakdown' => [
+                    'amount' => $amount,
+                    'fees' => $fees,
+                    'total_deducted' => $amount + $fees
+                ],
+                'api_timestamp' => $apiResponse['created_at'] ?? null
+            ]);
+    }
+
+    private function handleApiError(\GuzzleHttp\Exception\ClientException $e, int $userId, float $amount, string $currency): void
+    {
+        $errorDetails = [
+            'status' => $e->getResponse()->getStatusCode(),
+            'response' => json_decode($e->getResponse()->getBody(), true),
+            'user_id' => $userId,
+            'amount' => $amount,
+            'currency' => $currency,
+            'trace' => $e->getTraceAsString()
+        ];
+
+        file_put_contents(
+            __DIR__ . '/../../var/log/payment_api_errors.log',
+            date('[Y-m-d H:i:s]') . ' ERREUR: ' . json_encode($errorDetails) . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+
+    private function logError(\Exception $e, int $userId, float $amount, string $currency): void
+    {
+        file_put_contents(
+            __DIR__ . '/../../var/log/payment_errors.log',
+            date('[Y-m-d H:i:s]') . ' ERREUR: ' . json_encode([
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+                'amount' => $amount,
+                'currency' => $currency,
+                'trace' => $e->getTraceAsString()
+            ]) . PHP_EOL,
+            FILE_APPEND
+        );
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]

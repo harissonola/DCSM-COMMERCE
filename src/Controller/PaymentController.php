@@ -141,25 +141,16 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Obtenir les IPs
-            $clientIp = $request->getClientIp();
-            $serverIp = $this->getServerIp();
-
-            // 2. Authentification standard (sans IP dans le payload)
+            // 1. Authentification JWT
             $jwtToken = $this->getFreshJwtToken();
 
-            // 3. Préparer la requête avec les IPs dans les headers
-            $headers = [
-                'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $jwtToken,
-                'X-Client-IP' => $clientIp,
-                'X-Server-IP' => $serverIp
-            ];
-
-            // 4. Envoyer la requête de paiement
+            // 2. Requête de paiement
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
-                'headers' => $headers,
+                'headers' => [
+                    'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $jwtToken
+                ],
                 'json' => [
                     'withdrawal_amount' => $amount,
                     'withdrawal_currency' => $currency,
@@ -176,7 +167,7 @@ class PaymentController extends AbstractController
                 throw new \RuntimeException('Réponse API incomplète');
             }
 
-            // 5. Créer la transaction
+            // 3. Création de la transaction
             $transaction = new Transactions();
             $transaction->setUser($user)
                 ->setType('withdrawal')
@@ -189,9 +180,7 @@ class PaymentController extends AbstractController
                 ->setMetadata([
                     'np_response' => $responseData,
                     'wallet_address' => $address,
-                    'currency' => $currency,
-                    'client_ip' => $clientIp,
-                    'server_ip' => $serverIp
+                    'currency' => $currency
                 ]);
 
             $this->entityManager->persist($transaction);
@@ -208,24 +197,80 @@ class PaymentController extends AbstractController
                 strtoupper($currency)
             ));
         } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $statusCode = $e->getResponse()->getStatusCode();
-            $response = json_decode($e->getResponse()->getBody(), true);
-            $clientIp = $request->getClientIp();
-
-            $this->handleApiError($e, $user->getId(), $amount, $currency, $clientIp);
-
-            if ($statusCode === 403) {
-                $this->addFlash('warning', 'Erreur de permission. Contactez le support avec cette information:');
-                $this->addFlash('info', 'IPs à whitelister: Client: ' . $clientIp . ' / Serveur: ' . $this->getServerIp());
-            } else {
-                $this->addFlash('danger', 'Erreur lors du traitement du retrait.');
-            }
+            $this->logApiError($e, $user->getId(), $amount, $currency);
+            $this->addFlash('danger', 'Erreur lors du traitement du retrait. Veuillez réessayer.');
         } catch (\Exception $e) {
-            $this->recordPaymentIssue($e, $user->getId(), $amount, $currency);
+            $this->logError($e, $user->getId(), $amount, $currency);
             $this->addFlash('danger', 'Erreur système. Notre équipe a été notifiée.');
         }
 
         return $this->redirectToRoute('app_profile');
+    }
+
+    private function logApiError(\GuzzleHttp\Exception\ClientException $e, int $userId, float $amount, string $currency): void
+    {
+        $response = $e->getResponse();
+        $statusCode = $response->getStatusCode();
+        $responseBody = json_decode($response->getBody(), true);
+
+        $errorData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'user_id' => $userId,
+            'amount' => $amount,
+            'currency' => $currency,
+            'status_code' => $statusCode,
+            'error_code' => $responseBody['code'] ?? null,
+            'error_message' => $responseBody['message'] ?? $e->getMessage(),
+            'request_uri' => $e->getRequest()->getUri(),
+            'client_ip' => $_SERVER['REMOTE_ADDR'] ?? null
+        ];
+
+        file_put_contents(
+            $this->getParameter('kernel.logs_dir') . '/payment_api_errors.log',
+            json_encode($errorData, JSON_PRETTY_PRINT) . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+
+    private function logError(\Exception $e, int $userId, float $amount, string $currency): void
+    {
+        $errorData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'user_id' => $userId,
+            'amount' => $amount,
+            'currency' => $currency,
+            'error_message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ];
+
+        file_put_contents(
+            $this->getParameter('kernel.logs_dir') . '/payment_errors.log',
+            json_encode($errorData, JSON_PRETTY_PRINT) . PHP_EOL,
+            FILE_APPEND
+        );
+
+        // Notification admin si nécessaire
+        $this->notifyAdmin(
+            'Erreur de retrait',
+            sprintf(
+                "User ID: %d\nMontant: %.2f %s\nErreur: %s",
+                $userId,
+                $amount,
+                strtoupper($currency),
+                $e->getMessage()
+            )
+        );
+    }
+
+    private function notifyAdmin(string $subject, string $message): void
+    {
+        $email = (new Email())
+            ->from($_ENV['ADMIN_EMAIL_FROM'])
+            ->to($_ENV['ADMIN_EMAIL_TO'])
+            ->subject($subject)
+            ->text($message);
+
+        $this->mailer->send($email);
     }
 
     private function getFreshJwtToken(): string
@@ -247,23 +292,6 @@ class PaymentController extends AbstractController
             throw new \RuntimeException('Échec de l\'authentification: ' . json_encode($authData));
         }
         return $authData['token'];
-    }
-
-    private function getServerIp(): string
-    {
-        // Méthode 1: Essayez d'obtenir l'IP publique
-        $publicIp = @file_get_contents('https://api.ipify.org');
-        if ($publicIp !== false) {
-            return trim($publicIp);
-        }
-
-        // Méthode 2: IP serveur locale
-        if (!empty($_SERVER['SERVER_ADDR'])) {
-            return $_SERVER['SERVER_ADDR'];
-        }
-
-        // Méthode 3: Fallback
-        return gethostbyname(gethostname());
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]

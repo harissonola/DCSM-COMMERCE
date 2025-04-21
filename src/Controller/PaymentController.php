@@ -274,6 +274,10 @@ class PaymentController extends AbstractController
                 case 'CREATING':
                     $transaction->setStatus('pending');
                     break;
+                
+                case 'creating':
+                    $transaction->setStatus('pending');
+                    break;
 
                 default:
                     throw new \RuntimeException("Statut inconnu: {$ipnData['status']}");

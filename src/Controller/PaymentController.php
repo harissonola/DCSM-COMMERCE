@@ -205,7 +205,7 @@ class PaymentController extends AbstractController
     private function handleWithdrawalIPN(array $ipnData): JsonResponse
     {
         // Vérification des champs obligatoires
-        $requiredFields = ['id', 'status', 'amount', 'currency'];
+        $requiredFields = ['batch_withdrawal_id', 'status', 'amount', 'currency'];
         foreach ($requiredFields as $field) {
             if (!isset($ipnData[$field])) {
                 throw new \RuntimeException("Champ manquant: $field");
@@ -214,10 +214,10 @@ class PaymentController extends AbstractController
 
         // Trouver la transaction correspondante
         $transaction = $this->entityManager->getRepository(Transactions::class)
-            ->findOneBy(['ExternalId' => $ipnData['id'], 'type' => 'withdrawal']);
+            ->findOneBy(['ExternalId' => $ipnData['batch_withdrawal_id'], 'type' => 'withdrawal']);
 
         if (!$transaction) {
-            throw new \RuntimeException("Transaction introuvable pour ID: {$ipnData['id']}");
+            throw new \RuntimeException("Transaction introuvable pour batch_withdrawal_id: {$ipnData['batch_withdrawal_id']}");
         }
 
         $user = $transaction->getUser();
@@ -227,7 +227,6 @@ class PaymentController extends AbstractController
         try {
             switch (strtolower($ipnData['status'])) {
                 case 'finished':
-                    // Soustraire le solde seulement quand le retrait est confirmé
                     $user->setBalance($user->getBalance() - $totalAmount);
                     $transaction->setStatus('completed');
                     $this->sendWithdrawalCompletedEmail($user, $transaction, $ipnData);
@@ -246,7 +245,6 @@ class PaymentController extends AbstractController
                     throw new \RuntimeException("Statut inconnu: {$ipnData['status']}");
             }
 
-            // Mettre à jour les métadonnées
             $metadata = $transaction->getMetadata() ?? [];
             $metadata['ipn_data'] = $ipnData;
             $metadata['updated_at'] = (new \DateTime())->format('c');
@@ -296,7 +294,7 @@ class PaymentController extends AbstractController
             // Détection du type de notification
             if (isset($data['payment_id'])) {
                 return $this->handleDepositIPN($data);
-            } elseif (isset($data['id']) && isset($data['batch_withdrawal_id'])) {
+            } elseif (isset($data['batch_withdrawal_id'])) {
                 return $this->handleWithdrawalIPN($data);
             }
 

@@ -16,6 +16,7 @@ class CronController extends AbstractController
 {
     private EntityManagerInterface $em;
     private LoggerInterface $logger;
+    private const EXCHANGE_RATE = 601.50;
 
     public function __construct(EntityManagerInterface $em, LoggerInterface $logger)
     {
@@ -55,6 +56,7 @@ class CronController extends AbstractController
             $this->em->flush();
 
             // 2️⃣ Calcul des récompenses utilisateurs
+            $now = new \DateTimeImmutable();
             $users = $this->em->getRepository(User::class)
                 ->createQueryBuilder('u')
                 ->innerJoin('u.product', 'p')
@@ -64,21 +66,34 @@ class CronController extends AbstractController
 
             $userRewards = [];
             foreach ($users as $user) {
+                // Vérifier intervalle de 24h depuis dernière récompense
+                $lastRewardAt = $user->getLastReferralRewardAt();
+                if ($lastRewardAt instanceof \DateTimeImmutable &&
+                    ($now->getTimestamp() - $lastRewardAt->getTimestamp()) < 86400) {
+                    continue;
+                }
+
                 $userProducts = $user->getProduct();
                 if ($userProducts->isEmpty()) {
-                    continue; // ne prend que les users avec au moins un produit
+                    continue;
                 }
 
                 $totalReward = 0.0;
                 foreach ($userProducts as $product) {
-                    $currentPrice = $product->getPrice();
-                    $rate         = $user->getReferralRewardRate(); // ex: 0.10 pour 10%
-                    $totalReward += $currentPrice * $rate;
+                    // Conversion du prix en USD
+                    $priceUsd = $product->getPrice() / self::EXCHANGE_RATE;
+                    $rate     = $user->getReferralRewardRate(); // ex: 0.10 pour 10%
+                    $totalReward += $priceUsd * $rate;
+                }
+
+                if ($totalReward <= 0) {
+                    continue;
                 }
 
                 $oldBalance = $user->getBalance();
                 $newBalance = $oldBalance + $totalReward;
                 $user->setBalance($newBalance);
+                $user->setLastReferralRewardAt($now);
 
                 $userRewards[] = [
                     'user_id'       => $user->getId(),
@@ -88,7 +103,7 @@ class CronController extends AbstractController
                 ];
 
                 $this->logger->info(sprintf(
-                    'User %d : récompense de %0.2f ajoutée (ancien solde: %0.2f, nouveau solde: %0.2f)',
+                    'User %d : récompense de %0.2f USD ajoutée (ancien solde: %0.2f, nouveau solde: %0.2f)',
                     $user->getId(),
                     $totalReward,
                     $oldBalance,
@@ -143,7 +158,7 @@ class CronController extends AbstractController
 
     private function calculateDynamicPrice(float $currentPrice, array $history): float
     {
-        $maxDailyVariation = 0.40;
+        $maxDailyVariation = 0.10;
         $volatilityFactor  = 2.5;
         $momentumFactor    = 0.5;
 
@@ -191,7 +206,7 @@ class CronController extends AbstractController
         for ($i = 1; $i < $count; $i++) {
             $weight = pow(3, $count - $i);
             $change = ($prices[$i-1]->getPrice() - $prices[$i]->getPrice()) / $prices[$i]->getPrice();
-            $total    += $change * $weight;
+            $total     += $change * $weight;
             $weightSum += $weight;
         }
 

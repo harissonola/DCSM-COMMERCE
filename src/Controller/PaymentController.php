@@ -384,6 +384,10 @@ class PaymentController extends AbstractController
                 $this->handleFailedPayment($transaction, $ipnData);
                 break;
 
+            case 'failed':
+                $this->handleWaitingPayment($transaction, $ipnData);
+                break;
+
             case 'expired':
                 $this->handleExpiredPayment($transaction);
                 break;
@@ -429,6 +433,37 @@ class PaymentController extends AbstractController
             ]);
 
         $this->mailer->send($email);
+    }
+
+    private function handleWaitingPayment(Transactions $transaction, array $ipnData): void
+    {
+        $this->entityManager->beginTransaction();
+        try {
+            $receivedAmount = (float)$ipnData['waiting'];
+
+            $transaction
+                ->setStatus('pending')
+                ->setMetadata(array_merge(
+                    $transaction->getMetadata() ?? [],
+                    [
+                        'ipn_data' => $ipnData,
+                        'waiting' => $receivedAmount,
+                        'remaining_amount' => $transaction->getAmount() - $receivedAmount
+                    ]
+                ));
+
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+
+            $this->logInfo('Paiement en cours (waiting)', [
+                'transaction_id' => $transaction->getId(),
+                'received_amount' => $receivedAmount,
+                'remaining_amount' => $transaction->getAmount() - $receivedAmount
+            ]);
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
     }
 
     private function handlePartialPayment(Transactions $transaction, array $ipnData): void

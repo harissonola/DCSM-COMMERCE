@@ -19,14 +19,18 @@ class UserController extends AbstractController
         $user = $this->getUser();
 
         if (!$user->getProduct()->contains($product)) {
-            $this->addFlash('danger', 'Vous ne possédez pas ce produit.');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Vous ne possédez pas ce produit.');
             return $this->redirectToRoute('app_profile');
         }
 
         // Vérification du token CSRF
         $token = $request->request->get('_token');
         if (!$this->isCsrfTokenValid('delete-product-' . $product->getId(), $token)) {
-            $this->addFlash('danger', 'Jeton de sécurité invalide.');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', 'Jeton de sécurité invalide.');
             return $this->redirectToRoute('app_profile');
         }
 
@@ -42,7 +46,9 @@ class UserController extends AbstractController
         // Enregistrer les modifications
         $entityManager->flush();
 
-        $this->addFlash('success', 'Produit supprimé avec succès. Votre solde a été crédité de ' . number_format($productPrice, 2) . ' $');
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Produit supprimé avec succès. Votre solde a été crédité de ' . number_format($productPrice, 2) . ' $');
 
         return $this->redirectToRoute('app_profile');
     }

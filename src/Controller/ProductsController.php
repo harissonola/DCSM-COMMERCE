@@ -61,7 +61,9 @@ class ProductsController extends AbstractController
         }
 
         if (!in_array('ROLE_ADMIN', $user->getRoles()) && !$product->getUsers()->contains($user)) {
-            $this->addFlash('danger', $this->generateAccessMessage($slug));
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('danger', $this->generateAccessMessage($slug));
             return $this->redirectToRoute('app_dashboard');
         }
 
@@ -136,7 +138,9 @@ class ProductsController extends AbstractController
 
                 if ($user->getId() === $currentUser->getId()) {
                     $formattedReward = $this->numberFormatter->formatCurrency($totalReward, 'USD');
-                    $this->addFlash('success', sprintf(
+                    // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', sprintf(
                         'Vous avez reçu %s de récompense pour vos produits !',
                         $formattedReward
                     ));
@@ -251,13 +255,17 @@ class ProductsController extends AbstractController
             /** @var User $user */
             $user = $this->getUser();
             if (!$user) {
-                $this->addFlash('error', 'Non authentifié');
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Non authentifié');
                 return $this->redirectToRoute('app_login');
             }
 
             $product = $productRepository->findOneBy(['slug' => $slug]);
             if (!$product) {
-                $this->addFlash('error', 'Produit introuvable');
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Produit introuvable');
                 return $this->redirectToRoute('app_dashboard');
             }
 
@@ -270,7 +278,9 @@ class ProductsController extends AbstractController
             ]);
 
             if ($user->getBalance() < $priceUSD) {
-                $this->addFlash('error', 'Solde insuffisant');
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Solde insuffisant');
                 return $this->redirectToRoute('app_dashboard');
             }
 
@@ -278,7 +288,9 @@ class ProductsController extends AbstractController
             $user->addProduct($product);
             $em->flush();
 
-            $this->addFlash('success', 'Achat réussi !');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Achat réussi !');
             return $this->redirectToRoute('app_dashboard');
         } catch (\Throwable $e) {
             $this->logger->error('Erreur transaction produit', [
@@ -286,7 +298,9 @@ class ProductsController extends AbstractController
                 'trace' => $e->getTraceAsString()
             ]);
 
-            $this->addFlash('error', 'Une erreur est survenue lors du traitement de l\'achat');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Une erreur est survenue lors du traitement de l\'achat');
             return $this->redirectToRoute('app_dashboard');
         }
     }
@@ -295,7 +309,9 @@ class ProductsController extends AbstractController
     public function cinetpayCallback(Request $request): Response
     {
         $status = $request->query->get('status');
-        $this->addFlash(
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add(
             $status === 'ACCEPTED' ? 'success' : 'error',
             $status === 'ACCEPTED' ? 'Paiement accepté !' : 'Échec du paiement'
         );
@@ -306,7 +322,9 @@ class ProductsController extends AbstractController
     public function paydunyaCallback(Request $request): Response
     {
         $status = $request->query->get('status');
-        $this->addFlash(
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add(
             $status === 'completed' ? 'success' : 'error',
             $status === 'completed' ? 'Paiement réussi avec PayDunya' : 'Échec du paiement PayDunya'
         );

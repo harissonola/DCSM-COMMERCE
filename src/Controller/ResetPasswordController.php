@@ -197,7 +197,9 @@ class ResetPasswordController extends AbstractController
         if ($request->isXmlHttpRequest()) {
             return new JsonResponse(['success' => false, 'message' => $message], $statusCode);
         }
-        $this->addFlash('error', $message);
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', $message);
         return $this->redirectToRoute('app_forgot_password_request');
     }
 

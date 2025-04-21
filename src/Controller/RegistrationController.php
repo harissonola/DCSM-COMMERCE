@@ -90,7 +90,9 @@ class RegistrationController extends AbstractController
 
                 return $security->login($user, AppAuthenticator::class, 'main');
             } catch (\Exception $e) {
-                $this->addFlash('error', $e->getMessage());
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', $e->getMessage());
                 $entityManager->clear();
             }
         }
@@ -106,9 +108,13 @@ class RegistrationController extends AbstractController
         $user = $this->getUser();
         try {
             $emailVerifier->handleEmailConfirmation($request, $user);
-            $this->addFlash('success', 'Votre email a été vérifié avec succès.');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Votre email a été vérifié avec succès.');
         } catch (VerifyEmailExceptionInterface $exception) {
-            $this->addFlash('error', $exception->getReason());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', $exception->getReason());
             return $this->redirectToRoute('app_register');
         }
         return $this->redirectToRoute('app_dashboard');
@@ -195,7 +201,9 @@ class RegistrationController extends AbstractController
             $user->setQrCodePath($cdnUrl);
             $entityManager->flush();
         } catch (\Exception $e) {
-            $this->addFlash('warning', "Échec de génération du QR Code : " . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('warning', "Échec de génération du QR Code : " . $e->getMessage());
         }
     }
 
@@ -308,7 +316,9 @@ class RegistrationController extends AbstractController
                 $user->setPhoto($this->getDefaultProfileImage());
             }
         } catch (\Exception $e) {
-            $this->addFlash('warning', "Erreur d'upload : " . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('warning', "Erreur d'upload : " . $e->getMessage());
             $user->setPhoto($this->getDefaultProfileImage());
         }
     }
@@ -349,7 +359,9 @@ class RegistrationController extends AbstractController
                 ]);
             $mailer->send($email);
         } catch (TransportExceptionInterface $e) {
-            $this->addFlash('error', 'Échec de l\'envoi de l\'email de parrainage.');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Échec de l\'envoi de l\'email de parrainage.');
         }
     }
 
@@ -403,9 +415,13 @@ class RegistrationController extends AbstractController
                     ->subject('Nouvelle confirmation de votre email')
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
-            $this->addFlash('success', 'Un nouveau lien de confirmation a été envoyé !');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Un nouveau lien de confirmation a été envoyé !');
         } catch (\Exception $e) {
-            $this->addFlash('error', 'Erreur lors de l\'envoi : ' . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Erreur lors de l\'envoi : ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('app_register');

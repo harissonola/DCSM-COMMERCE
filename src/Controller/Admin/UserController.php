@@ -87,10 +87,14 @@ class UserController extends AbstractController
                 // Génération et sauvegarde du QR Code
                 $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
 
-                $this->addFlash('success', 'Utilisateur créé avec succès');
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Utilisateur créé avec succès');
                 return $this->redirectToRoute('admin_user_index', [], Response::HTTP_SEE_OTHER);
             } catch (\Exception $e) {
-                $this->addFlash('error', 'Erreur lors de la création : ' . $e->getMessage());
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Erreur lors de la création : ' . $e->getMessage());
                 $entityManager->clear();
             }
         }
@@ -119,10 +123,14 @@ class UserController extends AbstractController
             try {
                 $this->handleProfileImageUpload($user, $form);
                 $entityManager->flush();
-                $this->addFlash('success', 'Utilisateur mis à jour avec succès');
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Utilisateur mis à jour avec succès');
                 return $this->redirectToRoute('admin_user_index', [], Response::HTTP_SEE_OTHER);
             } catch (\Exception $e) {
-                $this->addFlash('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
             }
         }
 
@@ -139,7 +147,9 @@ class UserController extends AbstractController
         $action = $request->request->get('action');
 
         if (!in_array($action, ['add', 'subtract', 'set'], true)) {
-            $this->addFlash('error', 'Action invalide');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Action invalide');
             return $this->redirectToRoute('admin_user_show', ['id' => $user->getId()]);
         }
 
@@ -159,9 +169,13 @@ class UserController extends AbstractController
             }
 
             $entityManager->flush();
-            $this->addFlash('success', $message);
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', $message);
         } catch (\Exception $e) {
-            $this->addFlash('error', 'Erreur lors de la mise à jour du solde : ' . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Erreur lors de la mise à jour du solde : ' . $e->getMessage());
         }
 
         return $this->redirectToRoute('admin_user_show', ['id' => $user->getId()]);
@@ -174,9 +188,13 @@ class UserController extends AbstractController
             try {
                 $entityManager->remove($user);
                 $entityManager->flush();
-                $this->addFlash('success', 'Utilisateur supprimé avec succès');
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Utilisateur supprimé avec succès');
             } catch (\Exception $e) {
-                $this->addFlash('error', 'Erreur lors de la suppression : '.$e->getMessage());
+                // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Erreur lors de la suppression : '.$e->getMessage());
             }
         }
 
@@ -204,7 +222,9 @@ class UserController extends AbstractController
                 $user->setPhoto('/uploads/profile_images/'.$newFilename);
             }
         } catch (\Exception $e) {
-            $this->addFlash('warning', "Erreur upload image : ".$e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('warning', "Erreur upload image : ".$e->getMessage());
         }
     }
 
@@ -234,7 +254,9 @@ class UserController extends AbstractController
             $user->setQrCodePath('/uploads/qrcodes/'.$filename);
             $entityManager->flush();
         } catch (\Exception $e) {
-            $this->addFlash('warning', "Erreur QR code : ".$e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('warning', "Erreur QR code : ".$e->getMessage());
         }
     }
 }

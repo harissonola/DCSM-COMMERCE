@@ -33,7 +33,9 @@ class ShopController extends AbstractController
             $entityManager->persist($shop);
             $entityManager->flush();
 
-            $this->addFlash('success', 'Boutique créée avec succès');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Boutique créée avec succès');
             return $this->redirectToRoute('admin_shop_index', [], Response::HTTP_SEE_OTHER);
         }
 
@@ -60,7 +62,9 @@ class ShopController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            $this->addFlash('success', 'Boutique mise à jour avec succès');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Boutique mise à jour avec succès');
             return $this->redirectToRoute('admin_shop_index', [], Response::HTTP_SEE_OTHER);
         }
 
@@ -76,7 +80,9 @@ class ShopController extends AbstractController
         if ($this->isCsrfTokenValid('delete'.$shop->getId(), $request->request->get('_token'))) {
             $entityManager->remove($shop);
             $entityManager->flush();
-            $this->addFlash('success', 'Boutique supprimée avec succès');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Boutique supprimée avec succès');
         }
 
         return $this->redirectToRoute('admin_shop_index', [], Response::HTTP_SEE_OTHER);

@@ -80,7 +80,9 @@ final class ProfileController extends AbstractController
             $this->sendReminderEmail($mailer, $referral, $user);
         }
 
-        $this->addFlash(
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add(
             'success', 
             sprintf('Message envoyé à %d filleul(s) inactif(s)', count($inactiveReferrals))
         );

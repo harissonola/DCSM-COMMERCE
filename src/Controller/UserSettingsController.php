@@ -233,7 +233,9 @@ final class UserSettingsController extends AbstractController
             ]);
         }
 
-        $this->addFlash('success', $message);
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', $message);
         return $this->redirectToRoute('app_user_settings');
     }
 
@@ -246,7 +248,9 @@ final class UserSettingsController extends AbstractController
             ], ($exception->getCode() > 0 ? $exception->getCode() : 400));
         }
 
-        $this->addFlash('error', $exception->getMessage());
+        // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', $exception->getMessage());
         return $this->redirectToRoute('app_user_settings');
     }
 

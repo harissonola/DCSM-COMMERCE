@@ -33,7 +33,9 @@ class ProductController extends AbstractController
             $entityManager->persist($product);
             $entityManager->flush();
 
-            $this->addFlash('success', 'Produit créé avec succès');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Produit créé avec succès');
             return $this->redirectToRoute('admin_product_index', [], Response::HTTP_SEE_OTHER);
         }
 
@@ -60,7 +62,9 @@ class ProductController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            $this->addFlash('success', 'Produit mis à jour avec succès');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Produit mis à jour avec succès');
             return $this->redirectToRoute('admin_product_index', [], Response::HTTP_SEE_OTHER);
         }
 
@@ -76,7 +80,9 @@ class ProductController extends AbstractController
         if ($this->isCsrfTokenValid('delete'.$product->getId(), $request->request->get('_token'))) {
             $entityManager->remove($product);
             $entityManager->flush();
-            $this->addFlash('success', 'Produit supprimé avec succès');
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('success', 'Produit supprimé avec succès');
         }
 
         return $this->redirectToRoute('admin_product_index', [], Response::HTTP_SEE_OTHER);

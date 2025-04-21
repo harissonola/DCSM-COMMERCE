@@ -121,7 +121,9 @@ class GoogleController extends AbstractController
 
             return $authenticator->authenticateUser($user, $appAuthenticator, $request);
         } catch (Exception $e) {
-            $this->addFlash('error', "Erreur lors de la création du compte : " . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', "Erreur lors de la création du compte : " . $e->getMessage());
             $entityManager->clear();
             return $this->redirectToRoute('app_register');
         }
@@ -176,7 +178,9 @@ class GoogleController extends AbstractController
             $user->setQrCodePath($cdnUrl);
             $entityManager->flush();
         } catch (Exception $e) {
-            $this->addFlash('warning', "Échec génération QR Code : " . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('warning', "Échec génération QR Code : " . $e->getMessage());
         }
     }
 
@@ -243,7 +247,9 @@ class GoogleController extends AbstractController
         try {
             $mailer->send($email);
         } catch (Exception $e) {
-            $this->addFlash('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
+            // Avant la redirection dans votre contrôleur
+            $session = $request->getSession();
+            $session->getFlashBag()->add('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
         }
     }
 

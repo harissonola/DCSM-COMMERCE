@@ -134,7 +134,7 @@ class PaymentController extends AbstractController
 
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
-            $this->addFlash('danger', $errors[0]);
+            $this->addflash('danger', $errors[0]);
             return $this->redirectToRoute('app_profile');
         }
 
@@ -144,7 +144,6 @@ class PaymentController extends AbstractController
         try {
             $jwtToken = $this->getFreshJwtToken();
 
-            // Format correct selon les dernières spécifications de l'API NowPayments
             $payload = [
                 'withdrawals' => [
                     [
@@ -154,10 +153,9 @@ class PaymentController extends AbstractController
                     ]
                 ],
                 'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL)
-                // 'unique_external_id' a été retiré car non supporté
             ];
 
-            $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
+            $response = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
                     'Content-Type' => 'application/json',
@@ -167,63 +165,99 @@ class PaymentController extends AbstractController
                 'timeout' => 20
             ]);
 
-            $responseData = json_decode($payoutResponse->getBody(), true);
+            $responseData = json_decode($response->getBody(), true);
 
-            if (!isset($responseData['id'])) {  // Note: le champ peut être 'id' au lieu de 'payout_id'
-                throw new \RuntimeException('Réponse API incomplète: ' . json_encode($responseData));
+            if (!isset($responseData['id'])) {
+                throw new \RuntimeException('Réponse API incomplète');
             }
 
-            // Générer un ID de transaction interne
-            $externalId = 'WDR_' . $user->getId() . '_' . time();
-
+            // Création de la transaction en statut "pending" sans soustraire le solde
             $transaction = new Transactions();
             $transaction->setUser($user)
                 ->setType('withdrawal')
                 ->setAmount($amount)
                 ->setFees($fees)
                 ->setMethod('crypto_' . $currency)
-                ->setStatus('processing')
+                ->setStatus('pending') // Statut initial
                 ->setCreatedAt(new \DateTimeImmutable())
-                ->setExternalId($externalId) // On utilise notre propre ID
+                ->setExternalId($responseData['id'])
                 ->setMetadata([
-                    'np_response' => $responseData,
                     'wallet_address' => $address,
-                    'currency' => $currency,
-                    'api_id' => $responseData['id'] ?? null
+                    'api_response' => $responseData,
+                    'total_amount' => $totalAmount
                 ]);
 
             $this->entityManager->persist($transaction);
-            $user->setBalance($user->getBalance() - $totalAmount);
             $this->entityManager->flush();
 
-            $this->sendWithdrawalConfirmationEmail($user, $transaction);
-
-            $this->addFlash('success', sprintf(
-                'Retrait de %.2f %s initié. Frais: %.2f %s. Traitement sous 24h.',
-                $amount,
-                strtoupper($currency),
-                $fees,
-                strtoupper($currency)
-            ));
-        } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $response = $e->getResponse();
-            $statusCode = $response->getStatusCode();
-            $responseBody = json_decode($response->getBody(), true);
-
-            $this->logPaymentError($e, $user->getId(), $amount, $currency, 'API');
-
-            if ($statusCode === 400) {
-                $errorMsg = $responseBody['message'] ?? 'Paramètres invalides';
-                $this->addFlash('warning', 'Erreur de validation: ' . $errorMsg);
-            } else {
-                $this->addFlash('danger', 'Erreur lors du traitement du retrait (Code: ' . $statusCode . ')');
-            }
+            $this->addFlash('success', 'Demande de retrait enregistrée. Le solde sera débité après confirmation.');
         } catch (\Exception $e) {
-            $this->logPaymentError($e, $user->getId(), $amount, $currency, 'SYSTEM');
-            $this->addFlash('danger', 'Erreur système. Notre équipe a été notifiée.');
+            $this->logError('Withdrawal failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->getId()
+            ]);
+            $this->addFlash('danger', 'Erreur lors de la demande de retrait');
         }
 
         return $this->redirectToRoute('app_profile');
+    }
+
+    private function handleWithdrawalIPN(array $ipnData): JsonResponse
+    {
+        // Vérification des champs obligatoires
+        $requiredFields = ['payout_id', 'withdrawal_status', 'amount', 'currency'];
+        foreach ($requiredFields as $field) {
+            if (!isset($ipnData[$field])) {
+                throw new \RuntimeException("Champ manquant: $field");
+            }
+        }
+
+        // Trouver la transaction correspondante
+        $transaction = $this->entityManager->getRepository(Transactions::class)
+            ->findOneBy(['external_id' => $ipnData['payout_id'], 'type' => 'withdrawal']);
+
+        if (!$transaction) {
+            throw new \RuntimeException("Transaction introuvable pour payout_id: {$ipnData['payout_id']}");
+        }
+
+        $user = $transaction->getUser();
+        $totalAmount = $transaction->getAmount() + $transaction->getFees();
+
+        $this->entityManager->beginTransaction();
+        try {
+            switch ($ipnData['withdrawal_status']) {
+                case 'finished':
+                    // Soustraire le solde seulement quand le retrait est confirmé
+                    $user->setBalance($user->getBalance() - $totalAmount);
+                    $transaction->setStatus('completed');
+                    break;
+
+                case 'failed':
+                    $transaction->setStatus('failed');
+                    break;
+
+                case 'pending':
+                    $transaction->setStatus('processing');
+                    break;
+
+                default:
+                    throw new \RuntimeException("Statut inconnu: {$ipnData['withdrawal_status']}");
+            }
+
+            // Mettre à jour les métadonnées
+            $metadata = $transaction->getMetadata() ?? [];
+            $metadata['ipn_data'] = $ipnData;
+            $metadata['updated_at'] = (new \DateTime())->format('c');
+            $transaction->setMetadata($metadata);
+
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+
+            return new JsonResponse(['status' => 'success']);
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
     }
 
     /**

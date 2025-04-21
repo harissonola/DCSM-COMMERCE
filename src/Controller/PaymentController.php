@@ -141,10 +141,8 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Authentification JWT
             $jwtToken = $this->getFreshJwtToken();
 
-            // 2. Requête de paiement
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
@@ -167,7 +165,6 @@ class PaymentController extends AbstractController
                 throw new \RuntimeException('Réponse API incomplète');
             }
 
-            // 3. Création de la transaction
             $transaction = new Transactions();
             $transaction->setUser($user)
                 ->setType('withdrawal')
@@ -197,80 +194,57 @@ class PaymentController extends AbstractController
                 strtoupper($currency)
             ));
         } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $this->logApiError($e, $user->getId(), $amount, $currency);
+            $this->logPaymentError($e, $user->getId(), $amount, $currency, 'API');
             $this->addFlash('danger', 'Erreur lors du traitement du retrait. Veuillez réessayer.');
         } catch (\Exception $e) {
-            $this->logError($e, $user->getId(), $amount, $currency);
+            $this->logPaymentError($e, $user->getId(), $amount, $currency, 'SYSTEM');
             $this->addFlash('danger', 'Erreur système. Notre équipe a été notifiée.');
         }
 
         return $this->redirectToRoute('app_profile');
     }
 
-    private function logApiError(\GuzzleHttp\Exception\ClientException $e, int $userId, float $amount, string $currency): void
+    /**
+     * Méthode unifiée pour logger les erreurs de paiement
+     */
+    private function logPaymentError(\Exception $e, int $userId, float $amount, string $currency, string $type = 'SYSTEM'): void
     {
-        $response = $e->getResponse();
-        $statusCode = $response->getStatusCode();
-        $responseBody = json_decode($response->getBody(), true);
-
-        $errorData = [
+        $logData = [
             'timestamp' => date('Y-m-d H:i:s'),
             'user_id' => $userId,
             'amount' => $amount,
             'currency' => $currency,
-            'status_code' => $statusCode,
-            'error_code' => $responseBody['code'] ?? null,
-            'error_message' => $responseBody['message'] ?? $e->getMessage(),
-            'request_uri' => $e->getRequest()->getUri(),
-            'client_ip' => $_SERVER['REMOTE_ADDR'] ?? null
+            'error_type' => $type,
+            'error_message' => $e->getMessage()
         ];
 
-        file_put_contents(
-            $this->getParameter('kernel.logs_dir') . '/payment_api_errors.log',
-            json_encode($errorData, JSON_PRETTY_PRINT) . PHP_EOL,
-            FILE_APPEND
-        );
-    }
-
-    private function logError(\Exception $e, int $userId, float $amount, string $currency): void
-    {
-        $errorData = [
-            'timestamp' => date('Y-m-d H:i:s'),
-            'user_id' => $userId,
-            'amount' => $amount,
-            'currency' => $currency,
-            'error_message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ];
+        if ($e instanceof \GuzzleHttp\Exception\ClientException) {
+            $response = $e->getResponse();
+            $logData['status_code'] = $response->getStatusCode();
+            $logData['response'] = json_decode($response->getBody(), true);
+        } else {
+            $logData['trace'] = $e->getTraceAsString();
+        }
 
         file_put_contents(
             $this->getParameter('kernel.logs_dir') . '/payment_errors.log',
-            json_encode($errorData, JSON_PRETTY_PRINT) . PHP_EOL,
+            json_encode($logData, JSON_PRETTY_PRINT) . PHP_EOL,
             FILE_APPEND
         );
 
-        // Notification admin si nécessaire
-        $this->notifyAdmin(
-            'Erreur de retrait',
-            sprintf(
-                "User ID: %d\nMontant: %.2f %s\nErreur: %s",
-                $userId,
-                $amount,
-                strtoupper($currency),
-                $e->getMessage()
-            )
-        );
-    }
-
-    private function notifyAdmin(string $subject, string $message): void
-    {
-        $email = (new Email())
-            ->from($_ENV['ADMIN_EMAIL_FROM'])
-            ->to($_ENV['ADMIN_EMAIL_TO'])
-            ->subject($subject)
-            ->text($message);
-
-        $this->mailer->send($email);
+        if ($type === 'SYSTEM') {
+            $this->notifyAdmin(
+                'Erreur de paiement critique',
+                sprintf(
+                    "Type: %s\nUser ID: %d\nMontant: %.2f %s\nErreur: %s",
+                    $type,
+                    $userId,
+                    $amount,
+                    strtoupper($currency),
+                    $e->getMessage()
+                )
+            );
+        }
     }
 
     private function getFreshJwtToken(): string
@@ -292,6 +266,21 @@ class PaymentController extends AbstractController
             throw new \RuntimeException('Échec de l\'authentification: ' . json_encode($authData));
         }
         return $authData['token'];
+    }
+
+    private function notifyAdmin(string $subject, string $message): void
+    {
+        if (!isset($_ENV['ADMIN_EMAIL'])) {
+            return;
+        }
+
+        $email = (new Email())
+            ->from($_ENV['MAILER_FROM_EMAIL'])
+            ->to($_ENV['ADMIN_EMAIL'])
+            ->subject($subject)
+            ->text($message);
+
+        $this->mailer->send($email);
     }
 
     #[Route('/deposit', name: 'app_deposit', methods: ['POST'])]

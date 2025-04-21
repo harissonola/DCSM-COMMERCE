@@ -5,23 +5,40 @@
   {% block stylesheets %}
     {{ parent() }}
     <style>
+      :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3f37c9;
+        --success-color: #4cc9f0;
+        --danger-color: #f72585;
+        --dark-color: #1e1e1e;
+        --light-color: #f8f9fa;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        --transition: all 0.3s ease;
+      }
+      
       .chart-container {
         position: relative;
         height: 500px;
         width: 100%;
+        background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
       }
+      
       #tradingChart, #tradingViewChart {
         width: 100% !important;
         height: 100% !important;
-        background: #1e1e1e;
-        border-radius: 8px;
-        padding: 15px;
-        border: 1px solid #333;
+        border-radius: var(--border-radius);
       }
+      
       .tradingview-style #tradingViewChart {
         background: #131722 !important;
         border-color: #2a2e39;
       }
+      
       .loading-overlay {
         position: absolute;
         top: 0;
@@ -33,76 +50,171 @@
         align-items: center;
         justify-content: center;
         z-index: 10;
+        border-radius: var(--border-radius);
       }
+      
       .chart-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 15px;
+        background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+        padding: 15px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(255, 255, 255, 0.08);
       }
+      
       .chart-price {
         font-size: 2rem;
-        font-weight: 500;
+        font-weight: 700;
+        background: linear-gradient(to right, var(--primary-color), var(--success-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
+      
       .chart-change {
         font-size: 1rem;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
       }
+      
       .positive {
         color: #4caf50;
-        background-color: rgba(76, 175, 80, 0.2);
+        background-color: rgba(76, 175, 80, 0.15);
+        border: 1px solid rgba(76, 175, 80, 0.3);
       }
+      
       .negative {
         color: #ef5350;
-        background-color: rgba(239, 83, 80, 0.2);
+        background-color: rgba(239, 83, 80, 0.15);
+        border: 1px solid rgba(239, 83, 80, 0.3);
       }
+      
       .time-range-buttons {
         display: flex;
         gap: 8px;
         margin-bottom: 15px;
+        flex-wrap: wrap;
       }
+      
       .time-range-buttons button {
-        background-color: #2e2e2e;
+        background-color: rgba(67, 97, 238, 0.1);
         color: #e0e0e0;
-        border: 1px solid #444;
-        padding: 6px 12px;
-        border-radius: 4px;
+        border: 1px solid rgba(67, 97, 238, 0.3);
+        padding: 6px 15px;
+        border-radius: 20px;
         cursor: pointer;
+        transition: var(--transition);
+        font-weight: 500;
       }
+      
+      .time-range-buttons button:hover {
+        background-color: rgba(67, 97, 238, 0.3);
+      }
+      
       .time-range-buttons button.active {
-        background-color: #1a73e8;
+        background-color: var(--primary-color);
         color: #fff;
-        border-color: #1a73e8;
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
       }
-      .view-selector {
+      
+      .stats-container {
         display: flex;
+        gap: 20px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+      
+      .stat-card {
+        flex: 1;
+        min-width: 200px;
+        background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+        border-radius: var(--border-radius);
+        padding: 20px;
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: var(--transition);
+      }
+      
+      .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      }
+      
+      .stat-title {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
         gap: 8px;
-        margin-bottom: 15px;
       }
-      .chart-views {
-        display: none;
+      
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
       }
-      .chart-views.active {
-        display: block;
+      
+      .stat-change {
+        font-size: 0.9rem;
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+      }
+      
+      .stat-icon {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(67, 97, 238, 0.2);
+        color: var(--primary-color);
+      }
+      
+      .view-selector {
+        margin-bottom: 20px;
+      }
+      
+      .view-btn {
+        border-radius: 20px !important;
+        padding: 8px 20px !important;
+        font-weight: 500 !important;
+        transition: var(--transition) !important;
+      }
+      
+      @media (max-width: 768px) {
+        .stats-container {
+          flex-direction: column;
+        }
+        
+        .stat-card {
+          min-width: 100%;
+        }
+        
+        .time-range-buttons {
+          justify-content: center;
+        }
       }
     </style>
   {% endblock %}
   {% block body %}
     <div class="container-fluid py-3 mt-3">
-      {# <div class="view-selector">
-        <button class="view-btn active btn btn-primary" data-view="classic">Vue Classique</button>
-        <button class="view-btn btn btn-info" data-view="tradingview">Style TradingView</button>
-      </div> #}
       <div id="chartError" class="alert alert-danger" style="display: none;">
         <i class="fas fa-exclamation-triangle me-2"></i>
         <span>Impossible de charger les données du graphique</span>
       </div>
+  
       <!-- Vue Classique -->
       <div id="classicView" class="chart-views active">
         <div class="chart-header">
           <div>
-            <h3>{{ prod.name }}</h3>
+            <h3 class="mb-2">{{ prod.name }} <span class="badge bg-primary">{{ prod.symbol }}</span></h3>
             {% if (chartData.price|length) > 0 %}
               {% set latestPrice = chartData.price[(chartData.price|length) - 1].y %}
               {% set previousPrice = chartData.price[(chartData.price|length) - 2].y ?? latestPrice %}
@@ -113,10 +225,11 @@
           </div>
           {% if (chartData.price|length) > 1 %}
             <div class="chart-change {% if priceDiff >= 0 %}positive{% else %}negative{% endif %}">
-              {{ pricePercent|number_format(2) }}% ({{ priceDiff|number_format(2) }})
+              {{ priceDiff|number_format(2) }} ({{ pricePercent|number_format(2) }}%)
             </div>
           {% endif %}
         </div>
+        
         <div class="time-range-buttons">
           <button class="range-btn active" data-range="1d">1J</button>
           <button class="range-btn" data-range="5d">5J</button>
@@ -126,48 +239,101 @@
           <button class="range-btn" data-range="5y">5A</button>
           <button class="range-btn" data-range="max">MAX</button>
         </div>
+        
         <div class="chart-container">
           <div class="loading-overlay" id="chartLoading">
-            <div class="spinner-border text-light" role="status">
+            <div class="spinner-border text-primary" role="status">
               <span class="visually-hidden">Chargement...</span>
             </div>
           </div>
           <canvas id="tradingChart"></canvas>
         </div>
-      </div>
-      <!-- Vue TradingView -->
-      <div id="tradingviewView" class="chart-views">
-        <div class="chart-header">
-          <div>
-            <h3>{{ prod.name }}</h3>
-            {% if (chartData.price|length) > 0 %}
-              {% set latestPrice = chartData.price[(chartData.price|length) - 1].y %}
-              {% set previousPrice = chartData.price[(chartData.price|length) - 2].y ?? latestPrice %}
-              {% set priceDiff = latestPrice - previousPrice %}
-              {% set pricePercent = priceDiff / previousPrice * 100 %}
-              <div class="chart-price">${{ latestPrice|number_format(2) }}</div>
-              <div class="chart-change {% if priceDiff >= 0 %}positive{% else %}negative{% endif %}">
-                {{ priceDiff|number_format(2) }} ({{ pricePercent|number_format(2) }}%)
+        
+        <!-- Stats Cards -->
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="stat-title">
+              <div class="stat-icon">
+                <i class="fas fa-dollar-sign"></i>
               </div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="time-range-buttons tradingview-time-ranges">
-          <button class="range-btn active" data-range="1d">1J</button>
-          <button class="range-btn" data-range="5d">5J</button>
-          <button class="range-btn" data-range="1m">1M</button>
-          <button class="range-btn" data-range="ytd">YTD</button>
-          <button class="range-btn" data-range="1y">1A</button>
-          <button class="range-btn" data-range="5y">5A</button>
-          <button class="range-btn" data-range="max">MAX</button>
-        </div>
-        <div class="chart-container tradingview-style">
-          <div class="loading-overlay" id="tradingViewLoading">
-            <div class="spinner-border text-light" role="status">
-              <span class="visually-hidden">Chargement...</span>
+              Valeur actuelle
+            </div>
+            <div class="stat-value text-primary">${{ latestPrice|number_format(2) }}</div>
+            <div class="stat-change {% if priceDiff >= 0 %}positive{% else %}negative{% endif %}">
+              {{ priceDiff|number_format(2) }} ({{ pricePercent|number_format(2) }}%)
             </div>
           </div>
-          <canvas id="tradingViewChart"></canvas>
+          
+          <div class="stat-card">
+            <div class="stat-title">
+              <div class="stat-icon">
+                <i class="fas fa-flag"></i>
+              </div>
+              Prix de départ
+            </div>
+            <div class="stat-value text-info">
+              {% if (chartData.price|length) > 0 %}
+                ${{ chartData.price[0].y|number_format(2) }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+            <div class="stat-change">
+              {% if (chartData.price|length) > 1 %}
+                {% set totalChange = latestPrice - chartData.price[0].y %}
+                {% set totalPercent = (totalChange / chartData.price[0].y) * 100 %}
+                <span class="{% if totalChange >= 0 %}positive{% else %}negative{% endif %}">
+                  {{ totalChange|number_format(2) }} ({{ totalPercent|number_format(2) }}%)
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-title">
+              <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              Fluctuation (24h)
+            </div>
+            <div class="stat-value">
+              {% if (chartData.price|length) > 1 %}
+                {% set high24h = chartData.price|slice(-24)|max(attribute='y') %}
+                {% set low24h = chartData.price|slice(-24)|min(attribute='y') %}
+                ${{ (high24h - low24h)|number_format(2) }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+            <div class="stat-change">
+              {% if (chartData.price|length) > 1 %}
+                <span class="text-muted">
+                  Haut: ${{ high24h|number_format(2) }} | Bas: ${{ low24h|number_format(2) }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-title">
+              <div class="stat-icon">
+                <i class="fas fa-chart-pie"></i>
+              </div>
+              Capitalisation
+            </div>
+            <div class="stat-value">
+              {% if prod.marketCap is defined and prod.marketCap %}
+                ${{ prod.marketCap|number_format(0, '.', ',') }}
+              {% else %}
+                N/A
+              {% endif %}
+            </div>
+            <div class="stat-change">
+              {% if prod.volume is defined and prod.volume %}
+                <span class="text-muted">Volume: ${{ prod.volume|number_format(0, '.', ',') }}</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -179,18 +345,15 @@
     <script>
       document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('tradingChart');
-        const tradingViewCtx = document.getElementById('tradingViewChart');
         const errorElement = document.getElementById('chartError');
         const productSlug = '{{ prod.slug }}';
         let chartInstance = null;
-        let tradingViewChartInstance = null;
   
         // Initialisation des graphiques
         function initCharts() {
           const initialData = {{ chartData|json_encode|raw }};
           if (initialData?.price?.length > 0) {
             initChart(initialData);
-            initTradingViewChart(initialData);
             updatePriceDisplay(initialData);
           } else {
             showError("Aucune donnée disponible");
@@ -199,41 +362,26 @@
   
         function initChart(data) {
           if (chartInstance) chartInstance.destroy();
+          
+          const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, 'rgba(67, 97, 238, 0.3)');
+          gradient.addColorStop(1, 'rgba(67, 97, 238, 0)');
+          
           chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
               datasets: [{
                 label: 'Price',
                 data: processData(data.price),
-                borderColor: '#1a73e8',
+                borderColor: '#4361ee',
                 borderWidth: 2,
-                backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                backgroundColor: gradient,
                 fill: true,
                 tension: 0.4,
                 pointRadius: 0
               }]
             },
             options: getChartOptions()
-          });
-        }
-  
-        function initTradingViewChart(data) {
-          if (tradingViewChartInstance) tradingViewChartInstance.destroy();
-          tradingViewChartInstance = new Chart(tradingViewCtx, {
-            type: 'line',
-            data: {
-              datasets: [{
-                label: 'Price',
-                data: processData(data.price),
-                borderColor: '#2962FF',
-                borderWidth: 2,
-                backgroundColor: 'rgba(41, 98, 255, 0.1)',
-                fill: true,
-                tension: 0.1,
-                pointRadius: 0
-              }]
-            },
-            options: getTradingViewChartOptions()
           });
         }
   
@@ -253,50 +401,12 @@
               tooltip: {
                 mode: 'nearest',
                 intersect: false,
-                backgroundColor: '#1e1e1e',
-                titleColor: '#e0e0e0',
-                bodyColor: '#b0b0b0',
-                borderColor: '#333',
+                backgroundColor: '#2a2a2a',
+                titleColor: '#fff',
+                bodyColor: 'rgba(255, 255, 255, 0.7)',
+                borderColor: '#4361ee',
                 borderWidth: 1,
-                callbacks: {
-                  label: (context) => `$${context.parsed.y.toFixed(2)}`,
-                  title: (items) => new Date(items[0].parsed.x).toLocaleString()
-                }
-              }
-            },
-            scales: {
-              x: {
-                type: 'time',
-                time: {
-                  tooltipFormat: 'PPpp'
-                },
-                grid: { display: false }
-              },
-              y: {
-                position: 'right',
-                grid: { color: '#333' },
-                ticks: {
-                  callback: (value) => `$${value}`
-                }
-              }
-            }
-          };
-        }
-  
-        function getTradingViewChartOptions() {
-          return {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                mode: 'nearest',
-                intersect: false,
-                backgroundColor: '#131722',
-                titleColor: '#b2b5be',
-                bodyColor: '#fff',
-                borderColor: '#2962FF',
-                borderWidth: 1,
+                padding: 12,
                 callbacks: {
                   label: (context) => `$${context.parsed.y.toFixed(2)}`,
                   title: (items) => new Date(items[0].parsed.x).toLocaleString()
@@ -311,22 +421,26 @@
                 },
                 grid: { 
                   display: false,
-                  color: '#2a2e39'
+                  color: 'rgba(255, 255, 255, 0.1)'
                 },
-                ticks: { 
-                  color: '#b2b5be'
+                ticks: {
+                  color: 'rgba(255, 255, 255, 0.7)'
                 }
               },
               y: {
                 position: 'right',
                 grid: { 
-                  color: '#2a2e39'
+                  color: 'rgba(255, 255, 255, 0.1)'
                 },
                 ticks: {
-                  color: '#b2b5be',
+                  color: 'rgba(255, 255, 255, 0.7)',
                   callback: (value) => `$${value}`
                 }
               }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
             }
           };
         }
@@ -346,6 +460,24 @@
             el.textContent = `${priceDiff.toFixed(2)} (${pricePercent.toFixed(2)}%)`;
             el.className = `chart-change ${priceDiff >= 0 ? 'positive' : 'negative'}`;
           });
+          
+          // Mise à jour des cartes de stats
+          if (data.price.length > 1) {
+            const high24h = data.price.slice(-24).reduce((max, item) => Math.max(max, item.y), -Infinity);
+            const low24h = data.price.slice(-24).reduce((min, item) => Math.min(min, item.y), Infinity);
+            
+            document.querySelectorAll('.stat-card:nth-child(1) .stat-value').forEach(el => {
+              el.textContent = `$${latestPrice.toFixed(2)}`;
+            });
+            
+            document.querySelectorAll('.stat-card:nth-child(3) .stat-value').forEach(el => {
+              el.textContent = `$${(high24h - low24h).toFixed(2)}`;
+            });
+            
+            document.querySelectorAll('.stat-card:nth-child(3) .stat-change span').forEach(el => {
+              el.textContent = `Haut: $${high24h.toFixed(2)} | Bas: $${low24h.toFixed(2)}`;
+            });
+          }
         }
   
         async function updateChart(range) {
@@ -354,14 +486,12 @@
             errorElement.style.display = 'none';
             const response = await fetch(`/products/${productSlug}/dashboard/data?range=${range}`);
             const newData = await response.json();
+            
             if (chartInstance) {
               chartInstance.data.datasets[0].data = processData(newData.price);
               chartInstance.update();
             }
-            if (tradingViewChartInstance) {
-              tradingViewChartInstance.data.datasets[0].data = processData(newData.price);
-              tradingViewChartInstance.update();
-            }
+            
             updatePriceDisplay(newData);
           } catch (error) {
             showError(`Erreur: ${error.message}`);
@@ -374,24 +504,6 @@
           errorElement.style.display = 'block';
           errorElement.querySelector('span').textContent = message;
         }
-  
-        // Gestion des boutons de vue
-        document.querySelectorAll('.view-btn').forEach(button => {
-          button.addEventListener('click', function() {
-            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            document.querySelectorAll('.chart-views').forEach(view => view.classList.remove('active'));
-  
-            const viewId = `${this.dataset.view.charAt(0).toUpperCase() + this.dataset.view.slice(1)}View`;
-            const viewElement = document.getElementById(viewId);
-            if (viewElement) {
-              viewElement.classList.add('active');
-              document.body.classList.toggle('tradingview-style', this.dataset.view === 'tradingview');
-            } else {
-              console.error(`Element with ID "${viewId}" not found.`);
-            }
-          });
-        });
   
         // Gestion des boutons de plage de temps
         document.querySelectorAll('.range-btn').forEach(button => {

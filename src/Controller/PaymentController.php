@@ -140,24 +140,24 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Authentification avec email directement dans le code
+            // 1. Authentification avec credentials
             $authResponse = $this->httpClient->post('https://api.nowpayments.io/v1/auth', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY']
                 ],
                 'json' => [
-                    'email' => 'dcsmcommerce@gmail.com',
-                    'password' => 'votre_mot_de_passe' // Ajout du mot de passe requis
+                    'email' => $_ENV['NOWPAYMENTS_API_EMAIL'],
+                    'password' => $_ENV['NOWPAYMENTS_API_PASSWORD']
                 ],
                 'timeout' => 10
             ]);
 
             $authData = json_decode($authResponse->getBody(), true);
             if (!isset($authData['token'])) {
-                throw new \RuntimeException('Échec de la génération du token JWT');
+                throw new \RuntimeException('Échec de l\'authentification: ' . json_encode($authData));
             }
 
-            // 2. Requête de paiement avec le nouveau token
+            // 2. Requête de paiement
             $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
                 'headers' => [
                     'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
@@ -177,7 +177,7 @@ class PaymentController extends AbstractController
             $responseData = json_decode($payoutResponse->getBody(), true);
 
             if (!isset($responseData['payout_id'])) {
-                throw new \RuntimeException('Réponse API invalide');
+                throw new \RuntimeException('Réponse API invalide: ' . json_encode($responseData));
             }
 
             // Création de la transaction
@@ -206,38 +206,30 @@ class PaymentController extends AbstractController
             $this->entityManager->persist($transaction);
             $this->entityManager->flush();
 
-            // Notification
             $this->sendWithdrawalConfirmationEmail($user, $transaction);
 
             $this->addFlash('success', sprintf(
-                'Demande de retrait de %.2f %s enregistrée. Frais: %.2f %s. Le traitement peut prendre jusqu\'à 24h.',
+                'Retrait de %.2f %s initié. Frais: %.2f %s. Traitement sous 24h.',
                 $amount,
                 strtoupper($currency),
                 $fees,
                 strtoupper($currency)
             ));
-        } catch (\GuzzleHttp\Exception\ClientException $e) {
-            $statusCode = $e->getResponse()->getStatusCode();
-            $errorResponse = json_decode($e->getResponse()->getBody(), true);
-
-            $errorMessage = 'Erreur lors du traitement du retrait';
-            if ($statusCode === 403) {
-                $errorMessage = 'Problème d\'authentification avec le service de paiement';
-            }
-
-            $this->addFlash('danger', $errorMessage . '. Notre équipe a été notifiée.');
-            file_put_contents(
-                __DIR__ . '/../../var/log/payment_errors.log',
-                date('[Y-m-d H:i:s]') . ' ERREUR: ' . $e->getMessage() . PHP_EOL,
-                FILE_APPEND
-            );
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
+            $errorDetails = [
+                'user' => $user->getId(),
+                'amount' => $amount,
+                'currency' => $currency,
+                'error' => $e->getMessage()
+            ];
+
             file_put_contents(
                 __DIR__ . '/../../var/log/payment_errors.log',
-                date('[Y-m-d H:i:s]') . ' ERREUR: ' . $e->getMessage() . PHP_EOL,
+                date('[Y-m-d H:i:s]') . ' ERREUR: ' . json_encode($errorDetails) . PHP_EOL,
                 FILE_APPEND
             );
+
+            $this->addFlash('danger', 'Erreur de traitement. Notre équipe a été notifiée.');
         }
 
         return $this->redirectToRoute('app_profile');

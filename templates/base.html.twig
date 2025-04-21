@@ -102,43 +102,6 @@
         .hidden {
             display: none;
         }
-        
-        /* Styles pour les alertes personnalisées */
-        .custom-alert {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1100;
-            min-width: 300px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            overflow: hidden;
-            transform: translateX(100%);
-            transition: transform 0.3s ease-out;
-        }
-        .custom-alert.show {
-            transform: translateX(0);
-        }
-        .custom-alert.success {
-            background: linear-gradient(135deg, #28a745, #218838);
-            border-left: 4px solid #1e7e34;
-        }
-        .custom-alert.error {
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            border-left: 4px solid #bd2130;
-        }
-        .custom-alert.warning {
-            background: linear-gradient(135deg, #ffc107, #e0a800);
-            border-left: 4px solid #d39e00;
-        }
-        .custom-alert.info {
-            background: linear-gradient(135deg, #17a2b8, #138496);
-            border-left: 4px solid #117a8b;
-        }
-        .custom-alert-question {
-            background: linear-gradient(135deg, #6c757d, #5a6268);
-            border-left: 4px solid #545b62;
-        }
     </style>
 
     {% block stylesheets %}{% endblock %}
@@ -158,16 +121,10 @@
         <div class="spinner-text">Chargement...</div>
     </div>
 
-    <!-- Alertes personnalisées -->
-    <div id="customAlertContainer"></div>
-
     <!-- Navigation -->
     {% if app.current_route not in ['app_login', 'app_register'] %}
         {% include '_partials/_nav.html.twig' %}
     {% endif %}
-
-    <!-- Flash messages -->
-    {% include '_partials/_flash.html.twig' %}
 
     <!-- Main content -->
     {% block body %}{% endblock %}
@@ -185,11 +142,12 @@
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
     <script src="//code.tidio.co/1ke8d6pi5gzmnbfqlibfj63nxob1djzm.js" async></script>
 
-    <!-- Turbo Loader -->
+    <!-- Turbo Loader avec gestion des messages flash -->
     <script>
         document.addEventListener('turbo:load', function() {
             AOS.init();
             
+            // Gestion du loader pendant les requêtes Turbo
             document.addEventListener('turbo:before-fetch-request', function() {
                 document.getElementById('custom-spinner').classList.remove('hidden');
             });
@@ -197,80 +155,47 @@
             document.addEventListener('turbo:before-fetch-response', function() {
                 document.getElementById('custom-spinner').classList.add('hidden');
             });
+
+            // Traitement direct des messages flash
+            {% for label, messages in app.flashes %}
+                {% for message in messages %}
+                    showSweetAlertFlash('{{ label }}', `{{ message|e('js') }}`);
+                {% endfor %}
+            {% endfor %}
         });
-        
-        // Fonction pour afficher des alertes personnalisées
-        function showAlert(options) {
-            const container = document.getElementById('customAlertContainer');
-            const alertId = 'alert-' + Date.now();
-            const alertEl = document.createElement('div');
+
+        /**
+         * Affiche un message flash avec SweetAlert2
+         * @param {string} type - Type de message (success, warning, error, info)
+         * @param {string} message - Contenu du message
+         */
+        function showSweetAlertFlash(type, message) {
+            const iconMap = {
+                'success': 'success',
+                'warning': 'warning',
+                'danger': 'error',
+                'error': 'error',
+                'info': 'info'
+            };
             
-            alertEl.id = alertId;
-            alertEl.className = `custom-alert ${options.type || 'info'}`;
-            alertEl.innerHTML = `
-                <div class="d-flex align-items-center p-3 text-white">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-0">${options.title || 'Notification'}</h6>
-                        <div class="small">${options.text || ''}</div>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white ms-2" onclick="document.getElementById('${alertId}').remove()"></button>
-                </div>
-            `;
-            
-            container.appendChild(alertEl);
-            setTimeout(() => alertEl.classList.add('show'), 10);
-            
-            if (options.timer) {
-                setTimeout(() => {
-                    alertEl.classList.remove('show');
-                    setTimeout(() => alertEl.remove(), 300);
-                }, options.timer);
-            }
-        }
-        
-        // Fonction pour afficher une confirmation
-        function showConfirm(options) {
-            return new Promise((resolve) => {
-                const modalId = 'confirmModal-' + Date.now();
-                const modalEl = document.createElement('div');
-                
-                modalEl.id = modalId;
-                modalEl.className = 'modal fade';
-                modalEl.innerHTML = `
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header bg-${options.type || 'primary'} text-white">
-                                <h5 class="modal-title">${options.title || 'Confirmation'}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                ${options.text || 'Êtes-vous sûr de vouloir continuer ?'}
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${options.cancelText || 'Annuler'}</button>
-                                <button type="button" class="btn btn-${options.type || 'primary'}" id="${modalId}-confirm">${options.confirmText || 'Confirmer'}</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(modalEl);
-                const modal = new bootstrap.Modal(modalEl);
-                modal.show();
-                
-                document.getElementById(`${modalId}-confirm`).addEventListener('click', () => {
-                    modal.hide();
-                    resolve(true);
-                });
-                
-                modalEl.addEventListener('hidden.bs.modal', () => {
-                    modalEl.remove();
-                    resolve(false);
-                });
+            Swal.fire({
+                icon: iconMap[type.toLowerCase()] || 'info',
+                title: type.charAt(0).toUpperCase() + type.slice(1),
+                html: message,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 5000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
             });
         }
     </script>
 
+    <!-- Gestion du compte non validé -->
     {% if app.user and app.user.isVerified == 0 %}
         <script>
         document.addEventListener('turbo:load', function () {
@@ -285,52 +210,29 @@
                         </a>
                     </div>
                 `,
-                showConfirmButton: true, // Bouton "OK" visible
+                showConfirmButton: true,
                 toast: true,
                 position: 'top-end'
             });
         });
         </script>
-        {% endif %}
+    {% endif %}
         
-        {% for label, messages in app.flashes %}
-        <script>
-        document.addEventListener('turbo:load', function() {
-            {% for message in messages %}
-                // Déterminer le type d'alerte SweetAlert2
-                let swalType = 'info';
-                if (['success', 'info', 'warning', 'danger', 'error'].includes('{{ label }}')) {
-                    swalType = '{{ label }}' === 'error' ? 'error' : '{{ label }}';
-                }
-        
-                // Afficher l'alerte SweetAlert2
-                Swal.fire({
-                    icon: swalType,
-                    title: '{{ label|capitalize|replace({'_': ' '}) }}',
-                    text: `{{ message|raw }}`,
-                    showConfirmButton: true, // Bouton "OK" visible
-                    toast: true,
-                    position: 'top-end'
-                });
-            {% endfor %}
-        });
-        </script>
-        {% endfor %}
-        
-        {% if app.request.query.get('error') %}
+    <!-- Gestion des erreurs dans l'URL -->
+    {% if app.request.query.get('error') %}
         <script>
         document.addEventListener('turbo:load', function() {
             Swal.fire({
                 icon: 'error',
                 title: 'Erreur',
-                text: `{{ app.request.query.get('error')|raw }}`,
-                showConfirmButton: true, // Bouton "OK" visible
+                text: `{{ app.request.query.get('error')|e('js') }}`,
+                showConfirmButton: true,
                 toast: true,
                 position: 'top-end'
             });
         });
         </script>
-        {% endif %}
+    {% endif %}
 
     {% block javascripts_end %}{% endblock %}
 </body>

@@ -251,18 +251,32 @@ class PaymentController extends AbstractController
 
     private function handleApiError(\GuzzleHttp\Exception\ClientException $e, int $userId, float $amount, string $currency): void
     {
+        $response = json_decode($e->getResponse()->getBody(), true);
+        $clientIp = $_SERVER['REMOTE_ADDR'] ?? 'IP inconnue';
+
         $errorDetails = [
             'timestamp' => date('Y-m-d H:i:s'),
             'status' => $e->getResponse()->getStatusCode(),
-            'response' => json_decode($e->getResponse()->getBody(), true),
+            'response' => $response,
             'user_id' => $userId,
             'amount' => $amount,
-            'currency' => $currency
+            'currency' => $currency,
+            'client_ip' => $clientIp, // Ajout de l'IP du client
+            'server_ip' => $_SERVER['SERVER_ADDR'] ?? 'IP serveur inconnue'
         ];
+
+        // Message plus informatif pour les logs
+        $logMessage = sprintf(
+            "[%s] ERREUR API - IP Client: %s | Code: %s | Message: %s",
+            date('Y-m-d H:i:s'),
+            $clientIp,
+            $response['code'] ?? 'inconnu',
+            $response['message'] ?? 'Message d\'erreur non disponible'
+        );
 
         file_put_contents(
             __DIR__ . '/../../var/log/payment_api_errors.log',
-            json_encode($errorDetails) . PHP_EOL,
+            $logMessage . PHP_EOL . json_encode($errorDetails, JSON_PRETTY_PRINT) . PHP_EOL . PHP_EOL,
             FILE_APPEND
         );
     }

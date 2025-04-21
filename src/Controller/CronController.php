@@ -8,7 +8,7 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\jsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -35,14 +35,14 @@ class CronController extends AbstractController
         try {
             // 1️⃣ Mise à jour des prix des produits
             $this->logger->info('Début mise à jour des prix');
-            $products = $this->em->getRepository(Product::class)->findAll();
+            $allProducts = $this->em->getRepository(Product::class)->findAll();
             $updatedPrices = [];
 
-            if (empty($products)) {
+            if (empty($allProducts)) {
                 return new JsonResponse(['status' => 'Aucun produit trouvé']);
             }
 
-            foreach ($products as $product) {
+            foreach ($allProducts as $product) {
                 $newPrice = $this->processProduct($product);
                 $updatedPrices[] = [
                     'product_id' => $product->getId(),
@@ -55,24 +55,25 @@ class CronController extends AbstractController
             $this->em->flush();
 
             // 2️⃣ Calcul des récompenses utilisateurs
-            $users = $this->em->getRepository(User::class)->createQueryBuilder('u')
-                ->innerJoin('u.products', 'p')
+            $users = $this->em->getRepository(User::class)
+                ->createQueryBuilder('u')
+                ->innerJoin('u.product', 'p')
                 ->distinct()
                 ->getQuery()
                 ->getResult();
 
             $userRewards = [];
             foreach ($users as $user) {
-                $products = $user->getProduct();
-                if ($products->isEmpty()) {
-                    continue;
+                $userProducts = $user->getProduct();
+                if ($userProducts->isEmpty()) {
+                    continue; // ne prend que les users avec au moins un produit
                 }
 
                 $totalReward = 0.0;
-                foreach ($products as $product) {
-                    $price = $product->getPrice();
-                    $rate  = $user->getReferralRewardRate(); // ex: 0.10 pour 10%
-                    $totalReward += $price * $rate;
+                foreach ($userProducts as $product) {
+                    $currentPrice = $product->getPrice();
+                    $rate         = $user->getReferralRewardRate(); // ex: 0.10 pour 10%
+                    $totalReward += $currentPrice * $rate;
                 }
 
                 $oldBalance = $user->getBalance();
@@ -103,7 +104,7 @@ class CronController extends AbstractController
             // 3️⃣ Réponse JSON
             return new JsonResponse([
                 'status'         => 'success',
-                'count'          => count($products),
+                'count'          => count($allProducts),
                 'updated_prices' => $updatedPrices,
                 'user_rewards'   => $userRewards,
                 'execution_time' => (new \DateTime())->format('Y-m-d H:i:s'),
@@ -124,7 +125,9 @@ class CronController extends AbstractController
         $prices = $this->em->getRepository(ProductPrice::class)
             ->findBy(['product' => $product], ['timestamp' => 'DESC'], 5);
 
+        // Prix de base si pas d'historique
         $basePrice = $product->getPrice() ?? 100.00;
+
         if (empty($prices)) {
             $newPrice = $this->generateRandomPrice($basePrice, 0.30);
             $this->createPriceEntry($product, $newPrice);
@@ -144,22 +147,27 @@ class CronController extends AbstractController
         $volatilityFactor  = 2.5;
         $momentumFactor    = 0.5;
 
+        // Calcul de la tendance pondérée
         $trend = $this->calculateWeightedTrend($history);
         $variation = $trend * $volatilityFactor * ($maxDailyVariation / 24);
+
         if ($trend > 0) {
             $variation += $momentumFactor * ($maxDailyVariation / 24);
         } elseif ($trend < 0) {
             $variation -= $momentumFactor * ($maxDailyVariation / 24);
         }
 
+        // Composante aléatoire
         $randomComponent = $this->getGaussianRandom(0, 3) * ($maxDailyVariation / 24);
         $variation += $randomComponent;
 
+        // Pression baissière accrue
         if ($currentPrice < 20) {
             $variation *= 1.5;
             $variation = max($variation, -0.4);
         }
 
+        // Limites
         $variation = max($variation, -0.50);
         $variation = min($variation, 0.50);
 
@@ -190,10 +198,10 @@ class CronController extends AbstractController
         return $weightSum ? $total / $weightSum : 0;
     }
 
-    private function generateRandomPrice(float $base, float $stdDev): float
+    private function generateRandomPrice(float $basePrice, float $variationPercent): float
     {
-        $rand = $this->getGaussianRandom(0, $stdDev);
-        return round($base * (1 + $rand), 2);
+        $variation = $this->getGaussianRandom(0, $variationPercent);
+        return round($basePrice * (1 + $variation), 2);
     }
 
     private function createPriceEntry(Product $product, float $price): void

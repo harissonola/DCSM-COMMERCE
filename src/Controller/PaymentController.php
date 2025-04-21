@@ -268,7 +268,11 @@ class PaymentController extends AbstractController
                     break;
 
                 case 'pending':
-                    $transaction->setStatus('processing');
+                    $transaction->setStatus('pending');
+                    break;
+
+                case 'CREATING':
+                    $transaction->setStatus('pending');
                     break;
 
                 default:

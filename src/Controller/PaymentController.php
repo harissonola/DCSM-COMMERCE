@@ -128,10 +128,11 @@ class PaymentController extends AbstractController
 
         // Validations
         if ($user->getBalance() < $amount) {
-            $this->addFlash('danger', 'Solde insuffisant');
+            
             // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
-            $session->getFlashBag()->peekAll();
+            $session->getFlashBag()->add('danger', 'Solde insuffisant');
+            //$session->getFlashBag()->peekAll();
             return $this->redirectToRoute('app_profile', [], Response::HTTP_SEE_OTHER);
         }
 

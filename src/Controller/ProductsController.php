@@ -69,7 +69,6 @@ class ProductsController extends AbstractController
 
         $chartData = $this->generateChartData($product, $priceRepository);
         
-        // Log pour débogage
         $this->logger->debug('Chart data generated', [
             'product' => $product->getName(),
             'data_points' => count($chartData['price']),
@@ -101,7 +100,6 @@ class ProductsController extends AbstractController
         $prices = $this->getPricesForRange($priceRepository, $product, $startDate);
         $data = $this->formatChartData($prices);
 
-        // Log pour débogage
         $this->logger->debug('Dashboard data response', [
             'range' => $range,
             'start_date' => $startDate ? $startDate->format('Y-m-d H:i:s') : null,
@@ -199,7 +197,7 @@ class ProductsController extends AbstractController
         $data = ['price' => [], 'market_cap' => []];
 
         foreach ($prices as $price) {
-            $timestamp = $price->getTimestamp()->format('c');
+            $timestamp = $price->getTimestamp()->getTimestamp() * 1000; // Convertir en millisecondes
             $data['price'][] = [
                 'x' => $timestamp, 
                 'y' => round($price->getPrice() / self::EXCHANGE_RATE, 2)

@@ -127,11 +127,6 @@ class PaymentController extends AbstractController
         $address = trim($request->request->get('address'));
 
         // Validations
-        if ($user->getBalance() < $amount) {
-            $this->addFlash('danger', 'Solde insuffisant');
-            return $this->redirectToRoute('app_profile');
-        }
-
         $errors = $this->validateWithdrawal($user, $amount, $currency, $address);
         if (!empty($errors)) {
             $this->addFlash('danger', $errors[0]);
@@ -142,54 +137,43 @@ class PaymentController extends AbstractController
         $totalAmount = $amount + $fees;
 
         try {
-            // 1. Obtenir l'IP du serveur et du client
-            $clientIp = $request->getClientIp();
-            $serverIp = gethostbyname(gethostname());
-
-            // 2. Authentification JWT avec enregistrement IP
-            $jwtToken = $this->getFreshJwtToken($clientIp, $serverIp);
-
-            // 3. Préparer les headers avec les IP
-            $headers = [
-                'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $jwtToken,
-                'X-Client-IP' => $clientIp,
-                'X-Server-IP' => $serverIp
-            ];
-
-            // 4. Envoyer la requête avec les IP dans le payload
-            $payoutResponse = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
-                'headers' => $headers,
+            // Envoi direct à l'API NowPayments
+            $response = $this->httpClient->post('https://api.nowpayments.io/v1/payout', [
+                'headers' => [
+                    'x-api-key' => $_ENV['NOWPAYMENTS_API_KEY'],
+                    'Content-Type' => 'application/json'
+                ],
                 'json' => [
                     'withdrawal_amount' => $amount,
                     'withdrawal_currency' => $currency,
                     'address' => $address,
                     'ipn_callback_url' => $this->generateUrl('nowpayments_ipn', [], UrlGeneratorInterface::ABSOLUTE_URL),
-                    'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4)),
-                    'client_ip' => $clientIp,
-                    'server_ip' => $serverIp
+                    'unique_external_id' => 'WDR_' . $user->getId() . '_' . bin2hex(random_bytes(4))
                 ],
                 'timeout' => 20
             ]);
 
-            $responseData = json_decode($payoutResponse->getBody(), true);
+            $responseData = json_decode($response->getBody(), true);
 
             if (!isset($responseData['payout_id'])) {
                 throw new \RuntimeException('Réponse API incomplète');
             }
 
-            // 5. Création de la transaction
-            $transaction = $this->createTransactionEntity(
-                $user,
-                $amount,
-                $fees,
-                $currency,
-                $responseData,
-                $address,
-                $clientIp,
-                $serverIp
-            );
+            // Création de la transaction
+            $transaction = new Transactions();
+            $transaction->setUser($user)
+                ->setType('withdrawal')
+                ->setAmount($amount)
+                ->setFees($fees)
+                ->setMethod('crypto_' . $currency)
+                ->setStatus('pending')
+                ->setCreatedAt(new \DateTimeImmutable())
+                ->setExternalId($responseData['payout_id'])
+                ->setMetadata([
+                    'wallet_address' => $address,
+                    'currency' => $currency,
+                    'np_response' => $responseData
+                ]);
 
             $this->entityManager->persist($transaction);
             $user->setBalance($user->getBalance() - $totalAmount);
@@ -207,19 +191,26 @@ class PaymentController extends AbstractController
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $response = json_decode($e->getResponse()->getBody(), true);
-            $clientIp = $request->getClientIp();
 
             if ($statusCode === 403 && isset($response['code']) && $response['code'] === 'ENDPOINT_NOT_ALLOWED') {
-                // Solution alternative sans file d'attente
+                // Solution alternative pour les erreurs IP
                 $this->handleManualWithdrawal($user, $amount, $currency, $address, $fees);
                 $this->addFlash('info', 'Votre retrait nécessite un traitement manuel. Vous recevrez une notification par email.');
             } else {
-                $this->handleApiError($e, $user->getId(), $amount, $currency, $clientIp);
-                $this->addFlash('warning', 'Traitement en cours. Notre équipe a été notifiée.');
+                $this->logError('API Withdrawal Error', [
+                    'error' => $e->getMessage(),
+                    'response' => $response,
+                    'user_id' => $user->getId()
+                ]);
+                $this->addFlash('warning', 'Erreur lors du traitement du retrait. Notre équipe a été notifiée.');
             }
         } catch (\Exception $e) {
-            $this->recordPaymentIssue($e, $user->getId(), $amount, $currency);
-            $this->addFlash('info', 'Votre demande est en cours de traitement.');
+            $this->logError('Withdrawal System Error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $user->getId()
+            ]);
+            $this->addFlash('danger', 'Une erreur système est survenue. Veuillez réessayer plus tard.');
         }
 
         return $this->redirectToRoute('app_profile');
@@ -232,10 +223,8 @@ class PaymentController extends AbstractController
         string $address,
         float $fees
     ): void {
-        // Créer une entrée manuelle dans la base de données
-        $manualWithdrawal = new Transactions();
-        $manualWithdrawal
-            ->setUser($user)
+        $transaction = new Transactions();
+        $transaction->setUser($user)
             ->setType('withdrawal')
             ->setAmount($amount)
             ->setFees($fees)
@@ -248,28 +237,28 @@ class PaymentController extends AbstractController
                 'note' => 'Nécessite un traitement manuel'
             ]);
 
-        $this->entityManager->persist($manualWithdrawal);
+        $this->entityManager->persist($transaction);
         $this->entityManager->flush();
 
-        // Envoyer une notification email à l'admin
-        $this->sendAdminNotificationEmail(
+        // Envoi d'email à l'admin
+        $this->sendAdminNotification(
             'Withdrawal requires manual processing',
             sprintf(
-                "User ID: %d\nAmount: %.2f %s\nAddress: %s",
+                "User ID: %d\nAmount: %.2f %s\nAddress: %s\nFees: %.2f",
                 $user->getId(),
                 $amount,
                 strtoupper($currency),
-                $address
+                $address,
+                $fees
             )
         );
     }
 
-    private function sendAdminNotificationEmail(string $subject, string $message): void
+    private function sendAdminNotification(string $subject, string $message): void
     {
-        // Utilisation du mailer Symfony
         $email = (new Email())
-            ->from("admin@bictrary@alwaysdata.net")
-            ->to("dcsmcommerce@gmail.com")
+            ->from('admin@bictrary.com')
+            ->to('dcsmcommerce@gmail.com')
             ->subject($subject)
             ->text($message);
 

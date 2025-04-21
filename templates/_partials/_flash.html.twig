@@ -1,154 +1,66 @@
 {% if app.user and app.user.isVerified == 0 %}
-  <div class="global-message message-danger" id="inactive-account-message">
-    <div class="message-content">
-      <h4><i class="fas fa-exclamation-circle"></i> Compte inactif</h4>
-      <p>Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !</p>
-      <div class="message-actions">
-        <a href="{{ path('app_verify_email_send') }}" class="btn btn-sm btn-light">
-          <i class="fas fa-paper-plane me-2"></i>Renvoyer le lien
-        </a>
-        <button class="btn btn-sm btn-light message-close">
-          <i class="fas fa-times me-2"></i>Fermer
-        </button>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-  
-  {# Conteneur pour les messages flash #}
-  <div id="flash-messages-container">
-    {% for label, messages in app.flashes %}
-      {% for message in messages %}
-        {% set alertType = 'info' %}
-        {% if label in ['success', 'info', 'warning', 'danger', 'error'] %}
-          {% set alertType = label == 'error' ? 'danger' : label %}
-        {% endif %}
-        
-        <div class="global-message message-{{ alertType }}" data-auto-close="{{ alertType in ['success', 'info'] ? '5000' : '8000' }}">
-          <div class="message-content">
-            <h4><i class="fas fa-{{ alertType == 'success' ? 'check-circle' : (alertType == 'danger' ? 'exclamation-triangle' : 'info-circle') }}"></i> 
-              {{ label|capitalize|replace({'_': ' '}) }}
-            </h4>
-            <p>{{ message|raw }}</p>
-            <button class="btn btn-sm btn-light message-close">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        </div>
-      {% endfor %}
-    {% endfor %}
-  </div>
-  
-  {# Message pour les erreurs dans l'URL #}
-  {% if app.request.query.get('error') %}
-  <div class="global-message message-danger">
-    <div class="message-content">
-      <h4><i class="fas fa-exclamation-triangle"></i> Erreur</h4>
-      <p>{{ app.request.query.get('error')|raw }}</p>
-      <button class="btn btn-sm btn-light message-close">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  </div>
-  {% endif %}
-  
-  <style>
-    .global-message {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 90%;
-      max-width: 600px;
-      z-index: 9999;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      padding: 15px 20px;
-      margin-bottom: 15px;
-      animation: slideIn 0.3s ease-out;
-      display: flex;
-      align-items: center;
-    }
-    
-    .message-content {
-      width: 100%;
-      position: relative;
-    }
-    
-    .message-close {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      opacity: 0.7;
-      transition: opacity 0.2s;
-    }
-    
-    .message-close:hover {
-      opacity: 1;
-    }
-    
-    .message-actions {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
-    }
-    
-    .message-success {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      color: #155724;
-    }
-    
-    .message-danger {
-      background-color: #f8d7da;
-      border-left: 4px solid #dc3545;
-      color: #721c24;
-    }
-    
-    .message-warning {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      color: #856404;
-    }
-    
-    .message-info {
-      background-color: #d1ecf1;
-      border-left: 4px solid #17a2b8;
-      color: #0c5460;
-    }
-    
-    @keyframes slideIn {
-      from { top: -100px; opacity: 0; }
-      to { top: 20px; opacity: 1; }
-    }
-    
-    @keyframes fadeOut {
-      from { opacity: 1; }
-      to { opacity: 0; }
-    }
-  </style>
-  
+  <script>
+    document.addEventListener('turbo:load', function () {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Compte inactif',
+        html: `
+                  Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !
+                  <div style="margin-top: 10px;">
+                      <a href="{{ path('app_verify_email_send') }}" class="btn btn-light btn-sm">
+                          <i class="fas fa-paper-plane me-2"></i>Renvoyer le lien
+                      </a>
+                  </div>
+              `,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+        timer: 10000,
+        timerProgressBar: true
+      })
+    })
+  </script>
+{% endif %}
+
+{% for label, messages in app.flashes %}
   <script>
   document.addEventListener('turbo:load', function() {
-    // Fermeture manuelle des messages
-    document.querySelectorAll('.message-close').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const message = this.closest('.global-message');
-        message.style.animation = 'fadeOut 0.3s ease-out';
-        setTimeout(() => message.remove(), 300);
-      });
-    });
-    
-    // Fermeture automatique
-    document.querySelectorAll('.global-message[data-auto-close]').forEach(message => {
-      const delay = parseInt(message.getAttribute('data-auto-close'));
-      setTimeout(() => {
-        message.style.animation = 'fadeOut 0.3s ease-out';
-        setTimeout(() => message.remove(), 300);
-      }, delay);
-    });
+      {% for message in messages %}
+          // Déterminer le type d'alerte SweetAlert2
+          let swalType = 'info';
+          if (['success', 'info', 'warning', 'danger', 'error'].includes('{{ label }}')) {
+              swalType = '{{ label }}' === 'error' ? 'error' : '{{ label }}';
+          }
+  
+          // Afficher l'alerte SweetAlert2
+          Swal.fire({
+              icon: swalType,
+              title: '{{ label|capitalize|replace({'_': ' '}) }}',
+              text: `{{ message|raw }}`,
+              timer: swalType === 'error' || swalType === 'warning' ? 8000 : 5000,
+              showConfirmButton: false,
+              toast: true,
+              position: 'top-end',
+              timerProgressBar: true
+          });
+      {% endfor %}
   });
   </script>
+{% endfor %}
+
+{% if app.request.query.get('error') %}
+  <script>
+  document.addEventListener('turbo:load', function() {
+      Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: `{{ app.request.query.get('error')|raw }}`,
+          timer: 8000,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+          timerProgressBar: true
+      });
+  });
+  </script>
+{% endif %}

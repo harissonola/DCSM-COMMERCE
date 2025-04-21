@@ -1,28 +1,26 @@
 {% if app.user and app.user.isVerified == 0 %}
   <script>
-    document.addEventListener('turbo:load', function () {
+  document.addEventListener('turbo:load', function () {
       Swal.fire({
-        icon: 'warning',
-        title: 'Compte inactif',
-        html: `
-                  Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !
-                  <div style="margin-top: 10px;">
-                      <a href="{{ path('app_verify_email_send') }}" class="btn btn-light btn-sm">
-                          <i class="fas fa-paper-plane me-2"></i>Renvoyer le lien
-                      </a>
-                  </div>
-              `,
-        showConfirmButton: false,
-        toast: true,
-        position: 'top-end',
-        timer: 10000,
-        timerProgressBar: true
-      })
-    })
+          icon: 'warning',
+          title: 'Compte inactif',
+          html: `
+              Votre compte n'est pas activé. Veuillez vérifier votre boîte mail !
+              <div style="margin-top: 10px;">
+                  <a href="{{ path('app_verify_email_send') }}" class="btn btn-light btn-sm">
+                      <i class="fas fa-paper-plane me-2"></i>Renvoyer le lien
+                  </a>
+              </div>
+          `,
+          showConfirmButton: true, // Bouton "OK" visible
+          toast: true,
+          position: 'top-end'
+      });
+  });
   </script>
-{% endif %}
-
-{% for label, messages in app.flashes %}
+  {% endif %}
+  
+  {% for label, messages in app.flashes %}
   <script>
   document.addEventListener('turbo:load', function() {
       {% for message in messages %}
@@ -37,30 +35,26 @@
               icon: swalType,
               title: '{{ label|capitalize|replace({'_': ' '}) }}',
               text: `{{ message|raw }}`,
-              timer: swalType === 'error' || swalType === 'warning' ? 8000 : 5000,
-              showConfirmButton: false,
+              showConfirmButton: true, // Bouton "OK" visible
               toast: true,
-              position: 'top-end',
-              timerProgressBar: true
+              position: 'top-end'
           });
       {% endfor %}
   });
   </script>
-{% endfor %}
-
-{% if app.request.query.get('error') %}
+  {% endfor %}
+  
+  {% if app.request.query.get('error') %}
   <script>
   document.addEventListener('turbo:load', function() {
       Swal.fire({
           icon: 'error',
           title: 'Erreur',
           text: `{{ app.request.query.get('error')|raw }}`,
-          timer: 8000,
-          showConfirmButton: false,
+          showConfirmButton: true, // Bouton "OK" visible
           toast: true,
-          position: 'top-end',
-          timerProgressBar: true
+          position: 'top-end'
       });
   });
   </script>
-{% endif %}
+  {% endif %}

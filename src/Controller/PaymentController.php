@@ -20,6 +20,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Contracts\Cache\ItemInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mime\Email;
 
 class PaymentController extends AbstractController
 {

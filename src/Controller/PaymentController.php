@@ -128,10 +128,7 @@ class PaymentController extends AbstractController
 
         // Validations
         if ($user->getBalance() < $amount) {
-            $this->addFlash(
-                'success', 
-                sprintf('Message envoyé à %d filleul(s) inactif(s)', $amount)
-            );
+            $this->addFlash('danger', 'Solde insuffisant');
             return $this->redirectToRoute('app_profile');
         }
 

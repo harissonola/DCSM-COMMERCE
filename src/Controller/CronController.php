@@ -183,8 +183,8 @@ class CronController extends AbstractController
         }
 
         // Limites
-        $variation = max($variation, -0.50);
-        $variation = min($variation, 0.50);
+        $variation = max($variation, -0.12);
+        $variation = min($variation, 0.05);
 
         $newPrice = max(round($currentPrice * (1 + $variation), 2), 0);
         if ($newPrice === $currentPrice) {

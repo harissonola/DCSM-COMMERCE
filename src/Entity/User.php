@@ -126,7 +126,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $imageFile = null;
 
     #[ORM\Column]
-    private float $referralRewardRate = 0.4;
+    private float $referralRewardRate = 0.04;
 
     #[ORM\Column(nullable: true)]
     private ?array $lastReferralRewards = null;

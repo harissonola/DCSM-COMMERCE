@@ -3,7 +3,7 @@
 {% block title %}Dashboard | {{ prod.name }}{% endblock %}
 
 {% block stylesheets %}
-{{ parent() }}
+{{ parent() %}
 <style>
   :root {
     --primary-color: #4361ee;
@@ -380,11 +380,18 @@ document.addEventListener('DOMContentLoaded', function() {
   let refreshInterval = null;
   let currentRange = '1d';
 
-  function formatTime(date) {
-    const hours = String(date.getHours()).padStart(2, '0');
+  // Formatage de la date en français JJ:MOIS:AA HH:MM:SS
+  function formatDateTime(date) {
+    const mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    
+    const jour = String(date.getDate()).padStart(2, '0');
+    const moisStr = mois[date.getMonth()];
+    const annee = date.getFullYear().toString().substr(-2);
+    const heures = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    const secondes = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${jour}:${moisStr}:${annee} ${heures}:${minutes}:${secondes}`;
   }
 
   function createGradient(ctx) {
@@ -444,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
               label: (context) => `$${context.parsed.y.toFixed(2)}`,
               title: (items) => {
                 const date = new Date(items[0].parsed.x);
-                return formatTime(date);
+                return formatDateTime(date);
               }
             }
           }
@@ -454,11 +461,12 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'time',
             time: {
               displayFormats: {
-                hour: 'HH:mm',
-                minute: 'HH:mm',
+                day: 'dd:MMM:yy',
+                hour: 'dd:MMM:yy HH:mm',
+                minute: 'HH:mm:ss',
                 second: 'HH:mm:ss'
               },
-              tooltipFormat: 'HH:mm:ss'
+              tooltipFormat: 'dd:MMM:yy HH:mm:ss'
             },
             grid: { 
               display: false,
@@ -468,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
               color: 'rgba(255, 255, 255, 0.6)',
               callback: function(value) {
                 const date = new Date(value);
-                return formatTime(date);
+                return formatDateTime(date);
               },
               maxRotation: 0,
               autoSkip: true,
@@ -546,12 +554,10 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function setupAutoRefresh() {
-    // Nettoyer l'intervalle existant
     if (refreshInterval) {
       clearInterval(refreshInterval);
     }
     
-    // Actualiser toutes les minutes (60000 ms)
     refreshInterval = setInterval(() => {
       updateChart(currentRange);
     }, 60000);

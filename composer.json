@@ -16,6 +16,7 @@
         "endroid/qr-code": "^6.0",
         "endroid/qr-code-bundle": "^6.0",
         "fakerphp/faker": "^1.24",
+        "fedapay/fedapay-php": "^0.4.5",
         "guzzlehttp/guzzle": "*",
         "knplabs/github-api": "^3.16",
         "knpuniversity/oauth2-client-bundle": "^2.18",

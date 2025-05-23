@@ -145,7 +145,10 @@
 							<div class="card-body">
 								<h3 class="card-title fw-bold text-white">{{ product.name }}</h3>
 								<div class="d-flex justify-content-between align-items-center mb-3">
-									<span class="h4 text-primary">${{ (product.price / 601.51)|number_format(2) }}</span>
+									<div class="d-flex">
+										<span class="h4 text-primary me-3">${{ (product.price / 601.51)|number_format(2) }}</span>
+										<span class="h4 text-primary">{{ (product.price)|number_format(2) }} XOF</span>
+									</div>
 									<span class="badge bg-warning text-dark">{{ (app.user.referralRewardRate * 100) }}% quotidien</span>
 								</div>
 								<p class="card-text text-muted">{{ (product.description|slice(0, 100)) ~ '...' }}</p>

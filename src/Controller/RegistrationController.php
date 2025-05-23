@@ -85,14 +85,13 @@ class RegistrationController extends AbstractController
                     $entityManager,
                     $urlGenerator,
                     $mailer,
-                    $request  // Passage de l'objet Request ici
+                    $request
                 );
 
                 return $security->login($user, AppAuthenticator::class, 'main');
             } catch (\Exception $e) {
-                // Avant la redirection dans votre contrôleur
-            $session = $request->getSession();
-            $session->getFlashBag()->add('error', $e->getMessage());
+                $session = $request->getSession();
+                $session->getFlashBag()->add('error', $e->getMessage());
                 $entityManager->clear();
             }
         }
@@ -108,11 +107,9 @@ class RegistrationController extends AbstractController
         $user = $this->getUser();
         try {
             $emailVerifier->handleEmailConfirmation($request, $user);
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('success', 'Votre email a été vérifié avec succès.');
         } catch (VerifyEmailExceptionInterface $exception) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('error', $exception->getReason());
             return $this->redirectToRoute('app_register');
@@ -127,7 +124,7 @@ class RegistrationController extends AbstractController
         EntityManagerInterface $entityManager,
         UrlGeneratorInterface $urlGenerator,
         MailerInterface $mailer,
-        Request $request   // Ajout de Request dans la signature
+        Request $request
     ): void {
         // Génération d'un referralCode sans point
         $referralCode = uniqid('ref_', false);
@@ -140,9 +137,9 @@ class RegistrationController extends AbstractController
             ->setBalance(0);
 
         // Upload de l'image de profil
-        $this->handleProfileImageUpload($user, $form);
+        $this->handleProfileImageUpload($user, $form, $request);
 
-        // Gestion du système de parrainage (on passe désormais l'objet Request)
+        // Gestion du système de parrainage
         $this->handleReferralSystem($user, $request, $entityManager);
 
         // Sauvegarde en base
@@ -150,17 +147,18 @@ class RegistrationController extends AbstractController
         $entityManager->flush();
 
         // Génération et upload du QR Code
-        $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager);
+        $this->generateAndSaveQrCode($user, $urlGenerator, $entityManager, $request);
 
         // Envoi des emails
         $this->sendConfirmationEmail($user);
-        $this->sendReferralEmail($user, $urlGenerator, $mailer);
+        $this->sendReferralEmail($user, $urlGenerator, $mailer, $request);
     }
 
     private function generateAndSaveQrCode(
         User $user,
         UrlGeneratorInterface $urlGenerator,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        Request $request
     ): void {
         try {
             // Génération du lien d'affiliation
@@ -181,8 +179,8 @@ class RegistrationController extends AbstractController
             // Configuration du QR Code
             $qrCode = new QrCode($referralLink);
             $writer = new PngWriter([
-                'errorCorrectionLevel' => 'L', // Niveau de correction 'Low'
-                'size' => 300 // Taille 300x300 pixels
+                'errorCorrectionLevel' => 'L',
+                'size' => 300
             ]);
             $qrResult = $writer->write($qrCode);
             $qrResult->saveToFile($tempFilePath);
@@ -201,15 +199,11 @@ class RegistrationController extends AbstractController
             $user->setQrCodePath($cdnUrl);
             $entityManager->flush();
         } catch (\Exception $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('warning', "Échec de génération du QR Code : " . $e->getMessage());
         }
     }
 
-    /**
-     * Méthode pour uploader un fichier sur GitHub en utilisant l'API Git Data.
-     */
     private function uploadToGitHub(string $filePath, string $content, string $message): string
     {
         $repoOwner = 'harissonola';
@@ -266,26 +260,24 @@ class RegistrationController extends AbstractController
         }
     }
 
-    private function handleReferralSystem(User $user, string $referredBy, EntityManagerInterface $entityManager): void
+    private function handleReferralSystem(User $user, Request $request, EntityManagerInterface $entityManager): void
     {
-        $referrer = $entityManager->getRepository(User::class)
-            ->findOneBy(['referralCode' => $referredBy]);
+        $referredBy = $request->request->get('registration_form')['referredBy'] ?? null;
+        
+        if ($referredBy) {
+            $referrer = $entityManager->getRepository(User::class)
+                ->findOneBy(['referralCode' => $referredBy]);
 
-        if ($referrer) {
-            $referrer->addReferral($user);
-            $this->updateReferrerRewards($referrer, $entityManager);
-
-            // Pas besoin de persist ici car cascade: ['persist'] s'en charge
-            $entityManager->flush();
+            if ($referrer) {
+                $referrer->addReferral($user);
+                // Ajouter directement 10% au solde du parrain
+                $referrer->setBalance($referrer->getBalance() + 10);
+                $entityManager->flush();
+            }
         }
     }
 
-    /**
-     * Gestion de l'upload de l'image de profil.
-     * Si une image est sélectionnée, elle est uploadée sur GitHub dans le dossier "users/img/".
-     * Sinon, on attribue à l'utilisateur une image par défaut.
-     */
-    private function handleProfileImageUpload(User $user, $form): void
+    private function handleProfileImageUpload(User $user, $form, Request $request): void
     {
         try {
             $image = $form->get('photo')->getData();
@@ -312,11 +304,10 @@ class RegistrationController extends AbstractController
 
                 $user->setPhoto($cdnUrl);
             } else {
-                // Si aucune image n'est sélectionnée, on attribue une image par défaut déjà présente sur GitHub
+                // Si aucune image n'est sélectionnée, on attribue une image par défaut
                 $user->setPhoto($this->getDefaultProfileImage());
             }
         } catch (\Exception $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('warning', "Erreur d'upload : " . $e->getMessage());
             $user->setPhoto($this->getDefaultProfileImage());
@@ -339,7 +330,8 @@ class RegistrationController extends AbstractController
     private function sendReferralEmail(
         User $user,
         UrlGeneratorInterface $urlGenerator,
-        MailerInterface $mailer
+        MailerInterface $mailer,
+        Request $request
     ): void {
         try {
             $email = (new TemplatedEmail())
@@ -359,35 +351,11 @@ class RegistrationController extends AbstractController
                 ]);
             $mailer->send($email);
         } catch (TransportExceptionInterface $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('error', 'Échec de l\'envoi de l\'email de parrainage.');
         }
     }
 
-    private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
-    {
-        // Calculer le nombre de filleuls depuis la relation
-        $count = count($referrer->getReferrals());
-
-        if ($count >= 40) {
-            $referrer->setReferralRewardRate(0.13)
-                ->setBalance($referrer->getBalance() + 10);
-        } elseif ($count >= 20) {
-            $referrer->setReferralRewardRate(0.10);
-        } elseif ($count >= 10) {
-            $referrer->setReferralRewardRate(0.07);
-        } elseif ($count >= 5) {
-            $referrer->setReferralRewardRate(0.06);
-        }
-
-        $entityManager->persist($referrer);
-        $entityManager->flush();
-    }
-
-    /**
-     * Retourne l'URL d'une image de profil par défaut déjà uploadée sur GitHub.
-     */
     private function getDefaultProfileImage(): string
     {
         $defaultNumber = rand(1, 7);
@@ -415,11 +383,9 @@ class RegistrationController extends AbstractController
                     ->subject('Nouvelle confirmation de votre email')
                     ->htmlTemplate('registration/confirmation_email.html.twig')
             );
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('success', 'Un nouveau lien de confirmation a été envoyé !');
         } catch (\Exception $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('error', 'Erreur lors de l\'envoi : ' . $e->getMessage());
         }

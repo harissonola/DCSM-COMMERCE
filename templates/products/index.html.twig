@@ -150,10 +150,12 @@
 							<div class="d-flex justify-content-between align-items-center mt-auto">
 								<div class="d-flex align-items-center">
 									<span class="price-tag me-3">
-										<i class="fa-solid fa-scale-balanced me-1 text-muted" style="font-size: 0.8em;"></i>
+										
 										${{ (product.price / 601.51)|number_format(2) }}
 									</span>
-									<span class="price-tag">{{ product.price }}
+									<span class="price-tag">
+                                        <i class="fa-solid fa-scale-balanced me-1 text-muted" style="font-size: 0.8em;"></i>
+                                        {{ product.price }}
 										XOF</span>
 								</div>
 								<span class="badge bg-secondary">{{ product.shop.name ?? 'Crypto' }}</span>

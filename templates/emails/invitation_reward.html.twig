@@ -1,0 +1,17 @@
+{% extends 'emails/base_email.html.twig' %}
+
+{% block content %}
+	<p>Bonjour
+		{{ user.username }},</p>
+
+	<p>Félicitations ! Vous avez reçu une récompense de
+		{{ reward_amount|number_format(2) }}€ 
+		        parce que
+		{{ invited_user.username }}, que vous avez invité, a effectué un dépôt sur notre plateforme.</p>
+
+	<p>Cette somme a été créditée directement sur votre solde disponible.</p>
+
+	<p>Continuez à inviter vos amis pour gagner encore plus !</p>
+
+	<p>Cordialement,<br>L'équipe Bictrary</p>
+{% endblock %}

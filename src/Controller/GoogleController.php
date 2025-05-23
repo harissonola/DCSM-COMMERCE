@@ -58,13 +58,13 @@ class GoogleController extends AbstractController
         MailerInterface $mailer,
         UrlGeneratorInterface $urlGenerator
     ): Response {
-        $client   = $clientRegistry->getClient('google');
+        $client = $clientRegistry->getClient('google');
         $userData = $client->fetchUser();
 
-        $email    = $userData->getEmail();
+        $email = $userData->getEmail();
         $googleId = $userData->getId();
-        $fname    = $userData->getFirstName() ?? $userData->getName();
-        $lname    = $userData->getLastName()  ?? '';
+        $fname = $userData->getFirstName() ?? $userData->getName();
+        $lname = $userData->getLastName() ?? '';
         $username = strtolower(substr($lname, 0, 1) . $fname);
         if (empty(trim($username))) {
             $username = strtolower($email);
@@ -84,7 +84,7 @@ class GoogleController extends AbstractController
         }
 
         // Création d'un nouvel utilisateur
-        $user         = new User();
+        $user = new User();
         $referralCode = uniqid('ref_', false);
 
         try {
@@ -103,6 +103,7 @@ class GoogleController extends AbstractController
                 ->setReferralCode($referralCode);
 
             $user->setAgreeTerms(true); // Accepte automatiquement les CGU
+            
             // Gestion du parrainage
             $referredBy = $request->getSession()->get('google_referral_code');
             if ($referredBy) {
@@ -117,11 +118,10 @@ class GoogleController extends AbstractController
             $entityManager->flush();
 
             // Envoi de l'email
-            $this->sendReferralEmail($user, $user->getReferralCode(), $user->getQrCodePath(), $mailer);
+            $this->sendReferralEmail($user, $mailer, $urlGenerator, $request);
 
             return $authenticator->authenticateUser($user, $appAuthenticator, $request);
         } catch (Exception $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('error', "Erreur lors de la création du compte : " . $e->getMessage());
             $entityManager->clear();
@@ -136,9 +136,8 @@ class GoogleController extends AbstractController
 
         if ($referrer) {
             $referrer->addReferral($user);
-            $this->updateReferrerRewards($referrer, $entityManager);
-
-            // Pas besoin de persist ici car cascade: ['persist'] s'en charge
+            // Ajouter directement 10% au solde du parrain
+            $referrer->setBalance($referrer->getBalance() + 10);
             $entityManager->flush();
         }
     }
@@ -158,7 +157,7 @@ class GoogleController extends AbstractController
             $qrCode = new QrCode($referralLink);
             $writer = new PngWriter([
                 'errorCorrectionLevel' => 'L',
-                'size'                 => 300
+                'size' => 300
             ]);
             $qrResult = $writer->write($qrCode);
 
@@ -170,15 +169,14 @@ class GoogleController extends AbstractController
             $qrResult->saveToFile($tempFilePath);
 
             $fileContent = file_get_contents($tempFilePath);
-            $filePath    = "uploads/qrcodes/{$user->getReferralCode()}.png";
-            $cdnUrl      = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
+            $filePath = "uploads/qrcodes/{$user->getReferralCode()}.png";
+            $cdnUrl = $this->uploadToGitHub($filePath, $fileContent, 'QR Code via Google Login');
 
             $this->filesystem->remove($tempFilePath);
 
             $user->setQrCodePath($cdnUrl);
             $entityManager->flush();
         } catch (Exception $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('warning', "Échec génération QR Code : " . $e->getMessage());
         }
@@ -187,34 +185,34 @@ class GoogleController extends AbstractController
     private function uploadToGitHub(string $filePath, string $content, string $message): string
     {
         $repoOwner = 'harissonola';
-        $repoName  = 'my-cdn';
-        $branch    = 'main';
+        $repoName = 'my-cdn';
+        $branch = 'main';
 
         $this->githubClient->authenticate($_ENV['GH_TOKEN_BASE64'], null, Client::AUTH_ACCESS_TOKEN);
 
-        $ref        = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);
+        $ref = $this->githubClient->api('git')->references()->show($repoOwner, $repoName, 'heads/' . $branch);
         $currentSha = $ref['object']['sha'];
-        $commit     = $this->githubClient->api('git')->commits()->show($repoOwner, $repoName, $currentSha);
-        $treeSha    = $commit['tree']['sha'];
+        $commit = $this->githubClient->api('git')->commits()->show($repoOwner, $repoName, $currentSha);
+        $treeSha = $commit['tree']['sha'];
 
         $blob = $this->githubClient->api('git')->blobs()->create($repoOwner, $repoName, [
-            'content'  => base64_encode($content),
+            'content' => base64_encode($content),
             'encoding' => 'base64',
         ]);
 
         $tree = $this->githubClient->api('git')->trees()->create($repoOwner, $repoName, [
             'base_tree' => $treeSha,
-            'tree'      => [[
+            'tree' => [[
                 'path' => $filePath,
                 'mode' => '100644',
                 'type' => 'blob',
-                'sha'  => $blob['sha'],
+                'sha' => $blob['sha'],
             ]]
         ]);
 
         $newCommit = $this->githubClient->api('git')->commits()->create($repoOwner, $repoName, [
             'message' => $message,
-            'tree'    => $tree['sha'],
+            'tree' => $tree['sha'],
             'parents' => [$currentSha],
         ]);
 
@@ -227,48 +225,31 @@ class GoogleController extends AbstractController
 
     private function sendReferralEmail(
         User $user,
-        string $referralCode,
-        string $qrCodePath,
-        MailerInterface $mailer
+        MailerInterface $mailer,
+        UrlGeneratorInterface $urlGenerator,
+        Request $request
     ): void {
-        $referralLink = $this->generateUrl('app_register', ['ref' => $referralCode], UrlGeneratorInterface::ABSOLUTE_URL);
-
-        $email = (new TemplatedEmail())
-            ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
-            ->to($user->getEmail())
-            ->subject('Votre QR Code et lien d\'affiliation')
-            ->htmlTemplate('emails/referral_email.html.twig')
-            ->context([
-                'user'         => $user,
-                'referralLink' => $referralLink,
-                'qrCodePath'   => $qrCodePath,
-            ]);
-
         try {
+            $email = (new TemplatedEmail())
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+                ->to($user->getEmail())
+                ->subject('Votre QR Code et lien d\'affiliation')
+                ->htmlTemplate('emails/referral_email.html.twig')
+                ->context([
+                    'user' => $user,
+                    'referralLink' => $urlGenerator->generate(
+                        'app_register',
+                        ['ref' => $user->getReferralCode()],
+                        UrlGeneratorInterface::ABSOLUTE_URL
+                    ),
+                    'qrCodePath' => $user->getQrCodePath(),
+                    'app_name' => 'Bictrary',
+                ]);
+
             $mailer->send($email);
         } catch (Exception $e) {
-            // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('error', 'Échec de l\'envoi de l\'email : ' . $e->getMessage());
         }
-    }
-
-    private function updateReferrerRewards(User $referrer, EntityManagerInterface $entityManager): void
-    {
-        $count = count($referrer->getReferrals());
-
-        if ($count >= 40) {
-            $referrer->setReferralRewardRate(0.13)
-                ->setBalance($referrer->getBalance() + 10);
-        } elseif ($count >= 20) {
-            $referrer->setReferralRewardRate(0.10);
-        } elseif ($count >= 10) {
-            $referrer->setReferralRewardRate(0.07);
-        } elseif ($count >= 5) {
-            $referrer->setReferralRewardRate(0.06);
-        }
-
-        $entityManager->persist($referrer);
-        $entityManager->flush();
     }
 }

@@ -98,15 +98,41 @@ class PaymentController extends AbstractController
 
     private function calculateWithdrawalFees(float $amount): float
     {
-        if ($amount <= 20) {
-            return max($amount * 0.05, 1.0);
-        } elseif ($amount <= 100) {
-            return $amount * 0.03;
-        } elseif ($amount <= 500) {
-            return $amount * 0.02;
-        } else {
-            return $amount * 0.01;
+        // Frais fixes de 15% pour tous les retraits
+        return $amount * 0.15;
+    }
+
+    private function handleInvitationReward(User $invitedUser, float $depositAmount): void
+    {
+        $inviter = $invitedUser->getInvitedBy();
+        if (!$inviter) {
+            return;
         }
+
+        $rewardAmount = $depositAmount * 0.10; // 10% du dépôt
+
+        // Créer une transaction de récompense
+        $rewardTransaction = new Transactions();
+        $rewardTransaction->setUser($inviter)
+            ->setType('invitation_reward')
+            ->setAmount($rewardAmount)
+            ->setFees(0)
+            ->setMethod('system')
+            ->setStatus('completed')
+            ->setCreatedAt(new \DateTimeImmutable())
+            ->setMetadata([
+                'invited_user_id' => $invitedUser->getId(),
+                'deposit_amount' => $depositAmount
+            ]);
+
+        // Mettre à jour le solde de l'inviteur
+        $inviter->setBalance($inviter->getBalance() + $rewardAmount);
+
+        $this->entityManager->persist($rewardTransaction);
+        $this->entityManager->flush();
+
+        // Envoyer un email de notification à l'inviteur
+        $this->sendInvitationRewardEmail($inviter, $invitedUser, $rewardAmount);
     }
 
     #[Route('/withdraw', name: 'app_withdraw', methods: ['POST'])]
@@ -130,7 +156,7 @@ class PaymentController extends AbstractController
 
         // Validations
         if ($user->getBalance() < $amount) {
-            
+
             // Avant la redirection dans votre contrôleur
             $session = $request->getSession();
             $session->getFlashBag()->add('danger', 'Solde insuffisant');
@@ -557,6 +583,11 @@ class PaymentController extends AbstractController
                     ]
                 ));
 
+            // Gérer la récompense d'invitation si c'est un dépôt
+            if ($transaction->getType() === 'deposit') {
+                $this->handleInvitationReward($user, $expectedAmount);
+            }
+
             $this->sendConfirmationEmail($user, $transaction, $ipnData);
 
             $this->entityManager->flush();
@@ -574,6 +605,30 @@ class PaymentController extends AbstractController
                 'transaction_id' => $transaction->getId()
             ]);
             throw $e;
+        }
+    }
+
+    private function sendInvitationRewardEmail(User $inviter, User $invitedUser, float $rewardAmount): void
+    {
+        try {
+            $email = (new TemplatedEmail())
+                ->from(new Address('no-reply@bictrary.com', 'Bictrary'))
+                ->to($inviter->getEmail())
+                ->subject('Vous avez reçu une récompense d\'invitation')
+                ->htmlTemplate('emails/invitation_reward.html.twig')
+                ->context([
+                    'invited_user' => $invitedUser,
+                    'reward_amount' => $rewardAmount,
+                    'date' => new \DateTime()
+                ]);
+
+            $this->mailer->send($email);
+        } catch (\Exception $e) {
+            $this->logError('Failed to send invitation reward email', [
+                'error' => $e->getMessage(),
+                'inviter_id' => $inviter->getId(),
+                'invited_user_id' => $invitedUser->getId()
+            ]);
         }
     }
 
@@ -1043,8 +1098,8 @@ class PaymentController extends AbstractController
     public function depositSuccess(): Response
     {
         // Avant la redirection dans votre contrôleur
-            $session = $request->getSession();
-            $session->getFlashBag()->add('success', 'Dépôt effectué avec succès');
+        $session = $request->getSession();
+        $session->getFlashBag()->add('success', 'Dépôt effectué avec succès');
         return $this->redirectToRoute('app_profile');
     }
 
@@ -1052,8 +1107,8 @@ class PaymentController extends AbstractController
     public function depositCancel(): Response
     {
         // Avant la redirection dans votre contrôleur
-            $session = $request->getSession();
-            $session->getFlashBag()->add('warning', 'Dépôt annulé');
+        $session = $request->getSession();
+        $session->getFlashBag()->add('warning', 'Dépôt annulé');
         return $this->redirectToRoute('app_profile');
     }
 }

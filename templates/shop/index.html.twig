@@ -150,6 +150,7 @@
 								id: {{ loop.index }},
 								name: "{{ prod.name }}",
 								displayPrice: "{{ (prod.price / 601.50)|format_currency('USD') }}",
+								price: {{ prod.price }},  // ← AJOUTE CETTE LIGNE
 								slug: "{{ prod.slug }}",
 								image: "{{ prod.image }}",
 								description: "{{ prod.description }}",

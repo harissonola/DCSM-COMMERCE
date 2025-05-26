@@ -143,71 +143,80 @@
 	</section>
 
 	 <script>
-				document.addEventListener('turbo:load', function() {
-					const products = [
-						{% for prod in prods %}
-						{
-							id: {{ loop.index }},
-							name: "{{ prod.name }}",
-							displayPrice: "{{ (prod.price / 601.50)|format_currency('USD') }}",
-							slug: "{{ prod.slug }}",
-							image: "{{ prod.image }}",
-							description: "{{ prod.description }}",
-							userHasProduct: {% if app.user and prod.id in app.user.product|map(p => p.id) %}true{% else %}false{% endif %},
-							dashboardUrl: "{{ path('app_products_dashboard', { slug: prod.slug }) }}",
-							buyUrl: "{{ path('app_products_sell_product', { slug: prod.slug }) }}"
-						},
-						{% endfor %}
-					];
-		
-					setTimeout(() => {
-						products.forEach(product => {
-							const card = document.getElementById(`prod-card-${product.id}`);
-							let buttonHtml = '';
-							
-							{% if is_granted('ROLE_ADMIN') %}
-								buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
-							{% else %}
-								if (product.userHasProduct) {
-									buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
-								} else {
-									buttonHtml = `
-										<form action="${product.buyUrl}" method="POST" style="display: inline;" data-turbo="false">
-											<button type="submit" class="btn btn-primary float-end">Acheter</button>
-										</form>
-									`;
-								}
-							{% endif %}
-		
-							const content = `
-								<div class="prod-card card">
-									<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
-									<div class="card-body">
-										<h5 class="card-title">${product.name}</h5>
-										<h6 class="card-subtitle mb-2 text-muted">${product.displayPrice} </h6>
-										<p class="card-text">${product.description}</p>
-										${buttonHtml}
-									</div>
-								</div>
-							`;
-							card.classList.remove('skeleton');
-							card.innerHTML = content;
-		
-							// Animation d'apparition
-							setTimeout(() => {
-								card.querySelector('.prod-card').classList.add('visible');
-							}, 100 * product.id);
-						});
-					}, 1000);
-		
-					// Gestion des messages flash
-					const alerts = document.querySelectorAll('.alert');
-					alerts.forEach(alert => {
+					document.addEventListener('turbo:load', function() {
+						const products = [
+							{% for prod in prods %}
+							{
+								id: {{ loop.index }},
+								name: "{{ prod.name }}",
+								displayPrice: "{{ (prod.price / 601.50)|format_currency('USD') }}",
+								slug: "{{ prod.slug }}",
+								image: "{{ prod.image }}",
+								description: "{{ prod.description }}",
+								userHasProduct: {% if app.user and prod.id in app.user.product|map(p => p.id) %}true{% else %}false{% endif %},
+								dashboardUrl: "{{ path('app_products_dashboard', { slug: prod.slug }) }}",
+								buyUrl: "{{ path('app_products_sell_product', { slug: prod.slug }) }}"
+							},
+							{% endfor %}
+						];
+			
 						setTimeout(() => {
-							alert.classList.add('fade');
-							setTimeout(() => alert.remove(), 150);
-						}, 5000);
+							products.forEach(product => {
+								const card = document.getElementById(`prod-card-${product.id}`);
+								let buttonHtml = '';
+								
+								{% if is_granted('ROLE_ADMIN') %}
+									buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
+								{% else %}
+									if (product.userHasProduct) {
+										buttonHtml = `<a href="${product.dashboardUrl}" class="btn btn-primary float-end">Visualiser</a>`;
+									} else {
+										buttonHtml = `
+											<form action="${product.buyUrl}" method="POST" style="display: inline;" data-turbo="false">
+												<button type="submit" class="btn btn-primary float-end">Acheter</button>
+											</form>
+										`;
+									}
+								{% endif %}
+			
+								const content = `
+									<div class="prod-card card">
+										<img src="${product.image}" class="card-img-top" alt="${product.name}-IMG-${product.id}" style="max-height: 273px; object-fit: cover;" />
+										<div class="card-body">
+											<h5 class="card-title">${product.name}</h5>
+											<div class="d-flex align-items-center mb-2">
+		<span class="h6 text-primary me-3">
+			${product.displayPrice}
+		</span>
+		<span class="h6 text-primary">
+			<i class="fa-solid fa-scale-balanced me-1" title="Conversion approximative"></i>
+			${product.price} XOF
+		</span>
+	</div>
+	
+											<p class="card-text">${product.description}</p>
+											${buttonHtml}
+										</div>
+									</div>
+								`;
+								card.classList.remove('skeleton');
+								card.innerHTML = content;
+			
+								// Animation d'apparition
+								setTimeout(() => {
+									card.querySelector('.prod-card').classList.add('visible');
+								}, 100 * product.id);
+							});
+						}, 1000);
+			
+						// Gestion des messages flash
+						const alerts = document.querySelectorAll('.alert');
+						alerts.forEach(alert => {
+							setTimeout(() => {
+								alert.classList.add('fade');
+								setTimeout(() => alert.remove(), 150);
+							}, 5000);
+						});
 					});
-				});
-			</script>
+				</script>
 {% endblock %}

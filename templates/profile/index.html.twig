@@ -597,9 +597,7 @@
               <div class="d-grid gap-2">
                 {% set paymentMethods = [
                   { id: 'crypto', label: 'Crypto', icon: 'currency-btc' },
-                  { id: 'paypal', label: 'PayPal', icon: 'paypal' },
-                  { id: 'mtn', label: 'Mobile Money - MTN Bénin', icon: 'mobile' },
-                  { id: 'moov', label: 'Mobile Money - MOOV Bénin', icon: 'mobile' }
+                  { id: 'paypal', label: 'PayPal', icon: 'paypal' }
                 ] %}
                 {% for method in paymentMethods %}
                   <div class="form-check payment-method-card p-3 rounded bg-dark border-0">
@@ -609,8 +607,6 @@
                         <i class="fab fa-bitcoin me-3 fs-4 text-warning"></i>
                       {% elseif method.icon == 'paypal' %}
                         <i class="fab fa-paypal me-3 fs-4 text-primary"></i>
-                      {% else %}
-                        <i class="fas fa-mobile-alt me-3 fs-4 text-info"></i>
                       {% endif %}
                       {{ method.label }}
                     </label>
@@ -618,25 +614,28 @@
                 {% endfor %}
               </div>
             </div>
-            <div id="mobileInstructions" class="d-none mt-3">
-              <div class="alert alert-info">
-                <h6 class="fw-bold">Instructions pour Mobile Money</h6>
-                <ul class="list-group mb-2">
-                  <li class="list-group-item bg-dark text-light">
-                    <strong>MTN :</strong><br />
-                    Numéro : 0161023011<br />
-                    Nom : GANHOUN DANSSI
-                  </li>
-                  <li class="list-group-item bg-dark text-light">
-                    <strong>MOOV :</strong><br />
-                    Numéro : 0168752934<br />
-                    Nom : AZOIHOUN ELISE
-                  </li>
-                </ul>
-                <p class="mb-0">Effectuez le dépôt et envoyez une capture d’écran au service client pour que votre compte soit crédité.</p>
-              </div>
+
+            <!-- Mobile Money Info (toujours visible) -->
+            <div class="alert alert-info">
+              <h6 class="fw-bold">Dépôt via Mobile Money</h6>
+              <ul class="list-group mb-2">
+                <li class="list-group-item bg-dark text-light">
+                  <strong>MTN :</strong><br />
+                  Numéro : 0161023011<br />
+                  Nom : GANHOUN DANSSI
+                </li>
+                <li class="list-group-item bg-dark text-light">
+                  <strong>MOOV :</strong><br />
+                  Numéro : 0168752934<br />
+                  Nom : AZOIHOUN ELISE
+                </li>
+              </ul>
+              <p class="mb-0">Effectuez le dépôt sur l’un des numéros ci-dessus puis envoyez une capture d’écran de la transaction au service client pour créditer votre compte.</p>
             </div>
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fas fa-arrow-right me-2"></i>Continuer</button>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+              <i class="fas fa-arrow-right me-2"></i>Continuer
+            </button>
           </form>
         </div>
       </div>
@@ -693,7 +692,7 @@
                   Nom : AZOIHOUN ELISE
                 </li>
               </ul>
-              <p class="mb-0">Veuillez contacter le service client après avoir rempli le formulaire ci-dessus pour fournir les informations nécessaires au retrait.</p>
+              <p class="mb-0">Veuillez contacter le service client, inutile de remplir le formulaire ci-dessus pour fournir les informations nécessaires au retrait. Contacter nous en envoyant votre numero.</p>
             </div>
             <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fas fa-check-circle me-2"></i>Confirmer</button>
           </form>

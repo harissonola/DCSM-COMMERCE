@@ -6,6 +6,7 @@ use App\Repository\TransactionsRepository;
 use App\Repository\UserRepository;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
@@ -66,7 +67,8 @@ final class ProfileController extends AbstractController
     #[Route('/profile/send-message-to-inactive', name: 'app_send_message_to_inactive', methods: ['POST'])]
     public function sendMessageToInactive(
         UserRepository $userRepository,
-        MailerInterface $mailer
+        MailerInterface $mailer,
+        Request $request,
     ): Response {
         $user = $this->getUser();
         if (!$user) {

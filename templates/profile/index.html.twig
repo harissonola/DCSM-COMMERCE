@@ -573,36 +573,71 @@
     </div>
   </div>
 
-  <!-- Deposit Modal -->
+   <!-- Dépôt Modal -->
   <div class="modal fade" id="depositModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2 text-warning"></i>Instructions de Dépôt</h5>
+          <h5 class="modal-title fw-bold"><i class="fas fa-coins me-2 text-warning"></i>Déposer des fonds</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p class="mb-3">Veuillez effectuer un dépôt mobile money sur l'un des numéros suivants :</p>
-
-          <ul class="list-group mb-3">
-            <li class="list-group-item bg-dark text-light">
-              <strong>Numéro :</strong> 0161023011<br />
-              <strong>Nom :</strong> GANHOUN DANSSI<br />
-              <strong>Réseau :</strong> MTN Bénin
-            </li>
-            <li class="list-group-item bg-dark text-light">
-              <strong>Numéro :</strong> 0168752934<br />
-              <strong>Nom :</strong> AZOIHOUN ELISE<br />
-              <strong>Réseau :</strong> MOOV Bénin
-            </li>
-          </ul>
-
-          <p class="mb-3">Après avoir effectué le dépôt, envoyez une capture d'écran de la transaction au service client pour que nous créditons votre compte.</p>
-
-          <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>
-            Contactez le support via <strong>WhatsApp</strong> ou <strong>Email</strong> pour fournir la preuve de paiement.
-          </div>
+          <form id="depositForm" action="{{ path('app_deposit') }}" method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token('deposit') }}" />
+            <div class="mb-4">
+              <label class="form-label fw-bold">Montant (USD)</label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-dark text-light">$</span>
+                <input type="number" name="amount" class="form-control" required step="0.01" min="{{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}" />
+              </div>
+              <small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_DEPOSIT_AMOUNT') }} - Max: ${{ constant('App\\Controller\\PaymentController::MAX_DEPOSIT_AMOUNT') }}</small>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-bold">Méthode de paiement</label>
+              <div class="d-grid gap-2">
+                {% set paymentMethods = [
+                  { id: 'crypto', label: 'Crypto', icon: 'currency-btc' },
+                  { id: 'paypal', label: 'PayPal', icon: 'paypal' },
+                  { id: 'mtn', label: 'Mobile Money - MTN Bénin', icon: 'mobile' },
+                  { id: 'moov', label: 'Mobile Money - MOOV Bénin', icon: 'mobile' }
+                ] %}
+                {% for method in paymentMethods %}
+                  <div class="form-check payment-method-card p-3 rounded bg-dark border-0">
+                    <input class="form-check-input" type="radio" name="method" id="{{ method.id }}" value="{{ method.id }}" required />
+                    <label class="form-check-label d-flex align-items-center fw-bold" for="{{ method.id }}">
+                      {% if method.icon == 'currency-btc' %}
+                        <i class="fab fa-bitcoin me-3 fs-4 text-warning"></i>
+                      {% elseif method.icon == 'paypal' %}
+                        <i class="fab fa-paypal me-3 fs-4 text-primary"></i>
+                      {% else %}
+                        <i class="fas fa-mobile-alt me-3 fs-4 text-info"></i>
+                      {% endif %}
+                      {{ method.label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div id="mobileInstructions" class="d-none mt-3">
+              <div class="alert alert-info">
+                <h6 class="fw-bold">Instructions pour Mobile Money</h6>
+                <ul class="list-group mb-2">
+                  <li class="list-group-item bg-dark text-light">
+                    <strong>MTN :</strong><br />
+                    Numéro : 0161023011<br />
+                    Nom : GANHOUN DANSSI
+                  </li>
+                  <li class="list-group-item bg-dark text-light">
+                    <strong>MOOV :</strong><br />
+                    Numéro : 0168752934<br />
+                    Nom : AZOIHOUN ELISE
+                  </li>
+                </ul>
+                <p class="mb-0">Effectuez le dépôt et envoyez une capture d’écran au service client pour que votre compte soit crédité.</p>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fas fa-arrow-right me-2"></i>Continuer</button>
+          </form>
         </div>
       </div>
     </div>
@@ -613,25 +648,39 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold"><i class="fas fa-wallet me-2 text-success"></i>Instructions de Retrait</h5>
+          <h5 class="modal-title fw-bold"><i class="fas fa-wallet me-2 text-success"></i>Retirer des fonds</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p class="mb-3">Pour retirer votre solde, veuillez contacter le service client avec votre demande de retrait et les informations suivantes :</p>
-          <ul class="list-group mb-3">
-            <li class="list-group-item bg-dark text-light">
-              <strong>Numéro MTN :</strong> 0161023011 (GANHOUN DANSSI)
-            </li>
-            <li class="list-group-item bg-dark text-light">
-              <strong>Numéro MOOV :</strong> 0168752934 (AZOIHOUN ELISE)
-            </li>
-          </ul>
-          <p class="mb-3">Nous traiterons votre demande et effectuerons le transfert après vérification.</p>
-
-          <div class="alert alert-warning">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            Des frais de retrait peuvent s’appliquer selon le montant.
-          </div>
+          <form action="{{ path('app_withdraw') }}" method="post" data-turbo="false">
+            <input type="hidden" name="_token" value="{{ csrf_token('withdraw') }}" />
+            <div class="mb-3">
+              <label class="form-label fw-bold">Montant (USD)</label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-dark text-light">$</span>
+                <input type="number" name="amount" class="form-control" step="0.01" required min="{{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }}" max="{{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}" />
+              </div>
+              <small class="text-muted">Min: ${{ constant('App\\Controller\\PaymentController::MIN_WITHDRAWAL_AMOUNT') }} - Max: ${{ constant('App\\Controller\\PaymentController::MAX_WITHDRAWAL_AMOUNT') }}</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Type de crypto</label>
+              <select id="cryptoType" name="currency" class="form-select" required>
+                <option value="">Sélectionnez une crypto</option>
+                {% for key, label in constant('App\\Controller\\PaymentController::SUPPORTED_CRYPTOS') %}
+                  <option value="{{ key }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-bold">Adresse de réception</label>
+              <input type="text" name="address" class="form-control" placeholder="Ex: 0x... (ETH) ou 1... (BTC)" required />
+            </div>
+            <div class="alert alert-dark border-0 bg-glass mb-4">
+              <i class="fas fa-info-circle me-2 text-accent"></i>
+              Frais de retrait: 5% (≤20$), 3% (≤100$), 2% (≤500$), 1% (>500$)
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold"><i class="fas fa-check-circle me-2"></i>Confirmer</button>
+          </form>
         </div>
       </div>
     </div>
